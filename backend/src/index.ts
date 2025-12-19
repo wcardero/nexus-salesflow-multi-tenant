@@ -45,6 +45,26 @@ app.post('/api/login', async (req: Request, res: Response) => {
     }
 });
 
+app.post('/api/users', async (req: Request, res: Response) => {
+    const { name, password, role, storeId } = req.body;
+    if (!name || !password || !role) {
+        return res.status(400).json({ message: 'Name, password, and role are required.' });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUserId = `user-${Date.now()}`; // Generate a unique ID
+        const result = await db.query(
+            'INSERT INTO "User" (id, name, password, role, "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, role, "storeId"',
+            [newUserId, name, hashedPassword, role, storeId || null]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('User creation error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 app.put('/api/users/:id/password', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { oldPassword, newPassword } = req.body;
@@ -73,70 +93,4 @@ app.put('/api/users/:id/password', async (req: Request, res: Response) => {
 app.get('/api/users', async (req, res) => {
   const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"', []);
   res.json(rows);
-});
-
-app.get('/api/stores', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "Store"', []);
-  // In a real app, you'd probably do a JOIN or separate query for exchange rates
-  res.json(rows);
-});
-
-app.get('/api/products', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "Product"', []);
-  res.json(rows);
-});
-
-app.get('/api/inventory', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "InventoryItem"', []);
-  res.json(rows);
-});
-
-app.get('/api/sales', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "Sale"', []);
-  res.json(rows);
-});
-
-app.get('/api/closings', async (req, res) => {
-  // This would require a JOIN for sales
-  const { rows } = await db.query('SELECT * FROM "Closing"', []);
-  res.json(rows);
-});
-
-// ======================================================================
-// Server Startup
-// ======================================================================
-
-const createDefaultAdmin = async () => {
-    try {
-        const result = await db.query('SELECT * FROM "User" WHERE role = $1', ['ADMIN']);
-        if (result.rows.length === 0) {
-            console.log('No ADMIN user found. Creating default admin...');
-            const adminId = 'user-admin-01';
-            const adminName = 'admin';
-            const adminPass = 'admin123';
-            const saltRounds = 10;
-            const hashedPassword = await bcrypt.hash(adminPass, saltRounds);
-            
-            await db.query(
-                'INSERT INTO "User" (id, name, password, role) VALUES ($1, $2, $3, $4)',
-                [adminId, adminName, hashedPassword, 'ADMIN']
-            );
-            console.log(`Default admin user '${adminName}' with password '${adminPass}' created.`);
-        } else {
-            console.log('Admin user already exists.');
-        }
-    } catch (error: any) {
-        // Error code '42P01' is for 'undefined_table' in PostgreSQL
-        if (error.code === '42P01') {
-            console.warn('Tables not found. Please run the schema SQL script.');
-        } else {
-            console.error('Error creating default admin:', error);
-        }
-    }
-};
-
-app.listen(PORT, async () => {
-  console.log(`Server is listening on port ${PORT}`);
-  // Check for admin user on startup
-  await createDefaultAdmin();
 });

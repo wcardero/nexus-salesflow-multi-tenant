@@ -11,44 +11,44 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const refreshDb = async () => {
+    try {
+      const resources = ['users', 'stores', 'products', 'inventory', 'sales', 'closings'];
+      const promises = resources.map(resource => 
+        fetch(`http://localhost:3001/api/${resource}`).then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
+          }
+          return res.json();
+        })
+      );
+      
+      const [users, stores, products, inventory, sales, closings] = await Promise.all(promises);
+
+      // Assemble the database object
+      const data: MockDB = { users, stores, products, inventory, sales, closings };
+
+      // Dates are transmitted as strings, so we need to convert them back to Date objects
+      data.stores.forEach(s => s.exchangeRates.forEach(xr => {
+          xr.startDate = new Date(xr.startDate);
+          if(xr.endDate) xr.endDate = new Date(xr.endDate);
+      }));
+      data.inventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
+      data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
+      data.closings.forEach(c => {
+          c.initiatedAt = new Date(c.initiatedAt);
+          if(c.completedAt) c.completedAt = new Date(c.completedAt);
+      });
+
+      setDb(data);
+    } catch (err: any) {
+      setError(`Failed to fetch data: ${err.message}`);
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const resources = ['users', 'stores', 'products', 'inventory', 'sales', 'closings'];
-        const promises = resources.map(resource => 
-          fetch(`http://localhost:3001/api/${resource}`).then(res => {
-            if (!res.ok) {
-              throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
-            }
-            return res.json();
-          })
-        );
-        
-        const [users, stores, products, inventory, sales, closings] = await Promise.all(promises);
-
-        // Assemble the database object
-        const data: MockDB = { users, stores, products, inventory, sales, closings };
-
-        // Dates are transmitted as strings, so we need to convert them back to Date objects
-        data.stores.forEach(s => s.exchangeRates.forEach(xr => {
-            xr.startDate = new Date(xr.startDate);
-            if(xr.endDate) xr.endDate = new Date(xr.endDate);
-        }));
-        data.inventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
-        data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
-        data.closings.forEach(c => {
-            c.initiatedAt = new Date(c.initiatedAt);
-            if(c.completedAt) c.completedAt = new Date(c.completedAt);
-        });
-
-        setDb(data);
-      } catch (err: any) {
-        setError(`Failed to fetch data: ${err.message}`);
-        console.error(err);
-      }
-    };
-
-    fetchData();
+    refreshDb();
   }, []);
 
   const activeStore = useMemo(() => {
@@ -60,6 +60,7 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    refreshDb(); // Refresh data after login, especially if a new user was created
   };
 
   const handleLogout = () => {
