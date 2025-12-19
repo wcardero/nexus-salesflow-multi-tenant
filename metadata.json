@@ -1,0 +1,5 @@
+{
+  "name": "Nexus SalesFlow Multi-Tenant",
+  "description": "A comprehensive multi-tenant sales management system featuring hierarchical roles (Admin, Manager, Gestor), dynamic exchange rate handling, automated commission calculations, and physical closure validation flows.",
+  "requestFramePermissions": []
+}
