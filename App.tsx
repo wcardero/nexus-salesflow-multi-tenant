@@ -14,11 +14,21 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/db');
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data: MockDB = await response.json();
+        const resources = ['users', 'stores', 'products', 'inventory', 'sales', 'closings'];
+        const promises = resources.map(resource => 
+          fetch(`http://localhost:3001/api/${resource}`).then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
+            }
+            return res.json();
+          })
+        );
+        
+        const [users, stores, products, inventory, sales, closings] = await Promise.all(promises);
+
+        // Assemble the database object
+        const data: MockDB = { users, stores, products, inventory, sales, closings };
+
         // Dates are transmitted as strings, so we need to convert them back to Date objects
         data.stores.forEach(s => s.exchangeRates.forEach(xr => {
             xr.startDate = new Date(xr.startDate);
