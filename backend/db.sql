@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRat
 
 -- ENUMS would be custom types in PostgreSQL
 DROP TYPE IF EXISTS "Role";
-CREATE TYPE "Role" AS ENUM ('ADMIN', 'MANAGER', 'GESTOR');
+CREATE TYPE "Role" AS ENUM ('Admin', 'Manager', 'Gestor');
 
 DROP TYPE IF EXISTS "InventoryStatus";
 CREATE TYPE "InventoryStatus" AS ENUM ('Available', 'Sold');
