@@ -4,21 +4,31 @@ import { mockDB as initialDB } from './store';
 import AdminDashboard from './views/AdminDashboard';
 import ManagerDashboard from './views/ManagerDashboard';
 import GestorDashboard from './views/GestorDashboard';
+import Login from './views/Login';
 import { Layout } from './components/Layout';
 
 const App: React.FC = () => {
-  // El estado principal de la app es la base de datos completa.
-  // Esto permite a los componentes hijos modificarla.
   const [db, setDb] = useState<MockDB>(initialDB);
-  const [currentUser, setCurrentUser] = useState<User>(db.users[0]); // Default to Admin
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // Logged out by default
 
-  // Derivamos la tienda activa del usuario actual
   const activeStore = useMemo(() => {
-    if (currentUser.storeId) {
+    if (currentUser?.storeId) {
       return db.stores.find(s => s.id === currentUser.storeId);
     }
     return undefined;
   }, [currentUser, db.stores]);
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
+
+  if (!currentUser) {
+    return <Login db={db} onLogin={handleLogin} />;
+  }
 
   const renderContent = () => {
     switch (currentUser.role) {
@@ -37,9 +47,8 @@ const App: React.FC = () => {
 
   return (
     <Layout 
-      users={db.users} 
       currentUser={currentUser} 
-      setCurrentUser={setCurrentUser}
+      onLogout={handleLogout}
       storeName={activeStore?.name}
     >
       {renderContent()}

@@ -5,16 +5,15 @@ import { User } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
-  users: User[];
   currentUser: User;
-  setCurrentUser: (user: User) => void;
+  onLogout: () => void;
   storeName?: string;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, users, currentUser, setCurrentUser, storeName }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, storeName }) => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-      {/* Simulation Header */}
+      {/* Header */}
       <header className="bg-white dark:bg-slate-800 shadow-md z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-2">
@@ -30,22 +29,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, users, currentUser, se
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Simulador de Rol:</span>
-              <select
-                value={currentUser.id}
-                onChange={(e) => {
-                  const user = users.find(u => u.id === e.target.value);
-                  if (user) setCurrentUser(user);
-                }}
-                className="bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md px-3 py-1 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500"
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{currentUser.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser.role}</p>
+              </div>
+              <button
+                onClick={onLogout}
+                className="bg-slate-200 dark:bg-slate-700 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-slate-600 dark:text-slate-300 font-bold py-2 px-3 rounded-md transition-colors text-xs"
+                title="Cerrar Sesión"
               >
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role})
-                  </option>
-                ))}
-              </select>
+                Cerrar Sesión
+              </button>
             </div>
           </div>
         </div>

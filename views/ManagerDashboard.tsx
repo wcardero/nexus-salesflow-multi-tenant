@@ -10,7 +10,7 @@ interface ManagerDashboardProps {
   setDb: React.Dispatch<React.SetStateAction<MockDB>>;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports';
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
@@ -57,6 +57,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const storeClosings = db.closings.filter(c => storeGestores.some(g => g.id === c.gestorId));
+  const storeSales = db.sales.filter(s => storeGestores.some(g => g.id === s.gestorId));
 
   const renderContent = () => {
     switch (activeTab) {
@@ -70,6 +71,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <GestoresView db={db} setDb={setDb} store={store} />;
       case 'rate':
         return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
+      case 'reports':
+        return <ReportsView sales={storeSales} gestores={storeGestores} />;
       default:
         return null;
     }
@@ -80,6 +83,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
       <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
@@ -110,6 +114,57 @@ const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (t
     {name}
   </button>
 );
+
+// --- REPORTS VIEW ---
+const ReportsView: React.FC<{sales: MockDB['sales'], gestores: User[]}> = ({ sales, gestores }) => {
+  
+  const salesByGestor = gestores.map(gestor => {
+    const gestorSales = sales.filter(s => s.gestorId === gestor.id);
+    const totalSales = gestorSales.length;
+    const totalFinalMN = gestorSales.reduce((sum, s) => sum + s.finalMN, 0);
+    const totalBaseMN = gestorSales.reduce((sum, s) => sum + s.baseMN, 0);
+    const totalCommission = gestorSales.reduce((sum, s) => sum + s.commission, 0);
+
+    return {
+      gestorName: gestor.name,
+      totalSales,
+      totalFinalMN,
+      totalBaseMN,
+      totalCommission,
+    };
+  });
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold mb-4">Reporte de Ventas por Gestor</h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-700">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Vendido</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Base a Pagar</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            {salesByGestor.map(report => (
+              <tr key={report.gestorName}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{report.gestorName}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{report.totalSales}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalFinalMN)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalBaseMN)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalCommission)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 
 // --- CIERRES VIEW ---
 const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (id: string) => void}> = ({ closings, users, onValidate }) => {
