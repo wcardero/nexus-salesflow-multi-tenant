@@ -81,7 +81,26 @@ app.get('/api/stores', async (req, res) => {
   res.json(rows);
 });
 
-// Add other GET endpoints as needed...
+app.get('/api/products', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "Product"', []);
+  res.json(rows);
+});
+
+app.get('/api/inventory', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "InventoryItem"', []);
+  res.json(rows);
+});
+
+app.get('/api/sales', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "Sale"', []);
+  res.json(rows);
+});
+
+app.get('/api/closings', async (req, res) => {
+  // This would require a JOIN for sales
+  const { rows } = await db.query('SELECT * FROM "Closing"', []);
+  res.json(rows);
+});
 
 // ======================================================================
 // Server Startup
