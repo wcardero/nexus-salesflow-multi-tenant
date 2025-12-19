@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Role, User, Store, MockDB } from './types';
-import { mockDB as initialDB } from './store';
 import AdminDashboard from './views/AdminDashboard';
 import ManagerDashboard from './views/ManagerDashboard';
 import GestorDashboard from './views/GestorDashboard';
@@ -8,15 +7,46 @@ import Login from './views/Login';
 import { Layout } from './components/Layout';
 
 const App: React.FC = () => {
-  const [db, setDb] = useState<MockDB>(initialDB);
-  const [currentUser, setCurrentUser] = useState<User | null>(null); // Logged out by default
+  const [db, setDb] = useState<MockDB | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/db');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data: MockDB = await response.json();
+        // Dates are transmitted as strings, so we need to convert them back to Date objects
+        data.stores.forEach(s => s.exchangeRates.forEach(xr => {
+            xr.startDate = new Date(xr.startDate);
+            if(xr.endDate) xr.endDate = new Date(xr.endDate);
+        }));
+        data.inventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
+        data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
+        data.closings.forEach(c => {
+            c.initiatedAt = new Date(c.initiatedAt);
+            if(c.completedAt) c.completedAt = new Date(c.completedAt);
+        });
+
+        setDb(data);
+      } catch (err: any) {
+        setError(`Failed to fetch data: ${err.message}`);
+        console.error(err);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const activeStore = useMemo(() => {
-    if (currentUser?.storeId) {
+    if (currentUser?.storeId && db) {
       return db.stores.find(s => s.id === currentUser.storeId);
     }
     return undefined;
-  }, [currentUser, db.stores]);
+  }, [currentUser, db]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -25,6 +55,24 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
   };
+  
+  // Placeholder for mutations
+  const handleSetDb = (newDbState: React.SetStateAction<MockDB>) => {
+      // In a real app, this would trigger a POST/PUT request to the backend.
+      // For now, we'll just optimistically update the UI.
+      // @ts-ignore
+      setDb(newDbState);
+      console.warn("setDb is a placeholder. Data mutations are not sent to the backend in this version.");
+  }
+
+
+  if (!db) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+        {error ? <p className="text-red-500">{error}</p> : <p>Loading database...</p>}
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <Login db={db} onLogin={handleLogin} />;
@@ -33,13 +81,13 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentUser.role) {
       case Role.ADMIN:
-        return <AdminDashboard db={db} setDb={setDb} />;
+        return <AdminDashboard db={db} setDb={handleSetDb} />;
       case Role.MANAGER:
         if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
+        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} />;
       case Role.GESTOR:
         if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
-        return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
+        return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} />;
       default:
         return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
     }
