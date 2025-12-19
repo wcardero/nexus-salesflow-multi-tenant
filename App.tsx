@@ -1,62 +1,49 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
-import { Role, User, Store } from './types';
-import { mockDB } from './store';
+import React, { useState, useMemo } from 'react';
+import { Role, User, Store, MockDB } from './types';
+import { mockDB as initialDB } from './store';
 import AdminDashboard from './views/AdminDashboard';
 import ManagerDashboard from './views/ManagerDashboard';
 import GestorDashboard from './views/GestorDashboard';
+import { Layout } from './components/Layout';
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User>(mockDB.users[0]); // Default to Admin for demo
-  const [activeStore, setActiveStore] = useState<Store | undefined>(mockDB.stores[0]);
+  // El estado principal de la app es la base de datos completa.
+  // Esto permite a los componentes hijos modificarla.
+  const [db, setDb] = useState<MockDB>(initialDB);
+  const [currentUser, setCurrentUser] = useState<User>(db.users[0]); // Default to Admin
 
-  // Handle auto-switching store when user changes (Manager/Gestor)
-  useEffect(() => {
+  // Derivamos la tienda activa del usuario actual
+  const activeStore = useMemo(() => {
     if (currentUser.storeId) {
-      const store = mockDB.stores.find(s => s.id === currentUser.storeId);
-      setActiveStore(store);
+      return db.stores.find(s => s.id === currentUser.storeId);
     }
-  }, [currentUser]);
+    return undefined;
+  }, [currentUser, db.stores]);
 
   const renderContent = () => {
     switch (currentUser.role) {
       case Role.ADMIN:
-        return <AdminDashboard />;
+        return <AdminDashboard db={db} setDb={setDb} />;
       case Role.MANAGER:
-        return <ManagerDashboard user={currentUser} store={activeStore!} />;
+        if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
+        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
       case Role.GESTOR:
-        return <GestorDashboard user={currentUser} store={activeStore!} />;
+        if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
+        return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
       default:
-        return <div>Access Denied</div>;
+        return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Simulation Header for Role Switching */}
-      <header className="bg-slate-900 text-white px-4 py-2 flex justify-between items-center text-xs">
-        <div className="flex gap-4 items-center">
-          <span className="font-bold uppercase tracking-widest text-slate-400">Environment Simulator:</span>
-          <div className="flex gap-2">
-            {mockDB.users.map(u => (
-              <button 
-                key={u.id}
-                onClick={() => setCurrentUser(u)}
-                className={`px-3 py-1 rounded transition-colors ${currentUser.id === u.id ? 'bg-primary text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`}
-              >
-                {u.name} ({u.role})
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-sm">info</span>
-          <span>Switching users mimics multi-tenant login states</span>
-        </div>
-      </header>
-
+    <Layout 
+      users={db.users} 
+      currentUser={currentUser} 
+      setCurrentUser={setCurrentUser}
+      storeName={activeStore?.name}
+    >
       {renderContent()}
-    </div>
+    </Layout>
   );
 };
 

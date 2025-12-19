@@ -1,29 +1,129 @@
+// store.ts
 
-import { Role, Store, User, Product, Sale, Closure, ClosureStatus } from './types';
+import { MockDB, Role, User, Store, Product, InventoryItem, ClosingStatus } from './types';
 
-export const INITIAL_STORES: Store[] = [
-  { id: 'st_1', name: 'Sucursal Centro', location: 'Madrid, ES', exchangeRate: 300, commissionPct: 0.10 },
-  { id: 'st_2', name: 'Sucursal Norte', location: 'Barcelona, ES', exchangeRate: 310, commissionPct: 0.10 },
-];
+// ====================================================================================
+// IDs para mantener consistencia
+// ====================================================================================
+const ADMIN_ID = 'user-admin-01';
+const MANAGER_A_ID = 'user-manager-01';
+const MANAGER_B_ID = 'user-manager-02';
+const GESTOR_A1_ID = 'user-gestor-01';
+const GESTOR_A2_ID = 'user-gestor-02';
+const GESTOR_B1_ID = 'user-gestor-03';
 
-export const INITIAL_USERS: User[] = [
-  { id: 'u_1', name: 'Admin Master', email: 'admin@nexus.com', role: Role.ADMIN },
-  { id: 'u_2', name: 'Sarah Jenkins', email: 's.jenkins@store.com', role: Role.MANAGER, storeId: 'st_1', avatar: 'https://picsum.photos/seed/sarah/100/100' },
-  { id: 'u_3', name: 'Alejandro M.', email: 'alejandro@gestor.com', role: Role.GESTOR, storeId: 'st_1', avatar: 'https://picsum.photos/seed/alejandro/100/100' },
-];
+const STORE_A_ID = 'store-a';
+const STORE_B_ID = 'store-b';
 
-export const INITIAL_PRODUCTS: Product[] = [
-  { id: 'p_1', name: 'iPhone 13 Pro', sku: 'APP-13P', costUsd: 800, marginPct: 0.25, stock: 50 },
-  { id: 'p_2', name: 'Sony WH-1000XM4', sku: 'SNY-XM4', costUsd: 250, marginPct: 0.30, stock: 30 },
-  { id: 'p_3', name: 'Nike Air Max', sku: 'NKE-AM', costUsd: 100, marginPct: 0.40, stock: 100 },
-];
+const PRODUCT_1_ID = 'prod-001';
+const PRODUCT_2_ID = 'prod-002';
+const PRODUCT_3_ID = 'prod-003';
 
-// Mock database state
-export const mockDB = {
-  stores: INITIAL_STORES,
-  users: INITIAL_USERS,
-  products: INITIAL_PRODUCTS,
-  batches: [] as any[],
-  sales: [] as Sale[],
-  closures: [] as Closure[]
+// ====================================================================================
+// MOCK DATABASE
+// ====================================================================================
+
+export let mockDB: MockDB = {
+  // ================================================================================
+  // USUARIOS
+  // ================================================================================
+  users: [
+    { id: ADMIN_ID, name: 'Admin User', role: Role.ADMIN },
+    { id: MANAGER_A_ID, name: 'Manager A', role: Role.MANAGER, storeId: STORE_A_ID },
+    { id: MANAGER_B_ID, name: 'Manager B', role: Role.MANAGER, storeId: STORE_B_ID },
+    { id: GESTOR_A1_ID, name: 'Gestor A1', role: Role.GESTOR, storeId: STORE_A_ID },
+    { id: GESTOR_A2_ID, name: 'Gestor A2', role: Role.GESTOR, storeId: STORE_A_ID },
+    { id: GESTOR_B1_ID, name: 'Gestor B1', role: Role.GESTOR, storeId: STORE_B_ID },
+  ],
+
+  // ================================================================================
+  // TIENDAS
+  // ================================================================================
+  stores: [
+    {
+      id: STORE_A_ID,
+      name: 'Tienda Principal',
+      defaultCommissionRate: 0.10,
+      exchangeRates: [
+        { id: 'xr-a-1', rate: 290, startDate: new Date('2023-01-01'), endDate: new Date('2023-06-30') },
+        { id: 'xr-a-2', rate: 300, startDate: new Date('2023-07-01') },
+      ],
+    },
+    {
+      id: STORE_B_ID,
+      name: 'Sucursal Norte',
+      defaultCommissionRate: 0.12,
+      exchangeRates: [
+        { id: 'xr-b-1', rate: 305, startDate: new Date('2023-01-01') },
+      ],
+    },
+  ],
+
+  // ================================================================================
+  // PRODUCTOS
+  // ================================================================================
+  products: [
+    { id: PRODUCT_1_ID, storeId: STORE_A_ID, name: 'Producto Alpha', costUSD: 10, margin: 0.30 },
+    { id: PRODUCT_2_ID, storeId: STORE_A_ID, name: 'Producto Beta', costUSD: 25, margin: 0.25 },
+    { id: PRODUCT_3_ID, storeId: STORE_B_ID, name: 'Producto Gamma', costUSD: 50, margin: 0.20 },
+  ],
+  
+  // ================================================================================
+  // INVENTARIO
+  // ================================================================================
+  inventory: [
+    // Inventario para Gestor A1 (Tienda A)
+    { id: 'inv-001', productId: PRODUCT_1_ID, gestorId: GESTOR_A1_ID, assignedAt: new Date(), status: 'Available' },
+    { id: 'inv-002', productId: PRODUCT_1_ID, gestorId: GESTOR_A1_ID, assignedAt: new Date(), status: 'Available' },
+    { id: 'inv-003', productId: PRODUCT_2_ID, gestorId: GESTOR_A1_ID, assignedAt: new Date(), status: 'Available' },
+    
+    // Inventario para Gestor A2 (Tienda A)
+    { id: 'inv-004', productId: PRODUCT_1_ID, gestorId: GESTOR_A2_ID, assignedAt: new Date(), status: 'Available' },
+    
+    // Inventario para Gestor B1 (Tienda B)
+    { id: 'inv-005', productId: PRODUCT_3_ID, gestorId: GESTOR_B1_ID, assignedAt: new Date(), status: 'Available' },
+    { id: 'inv-006', productId: PRODUCT_3_ID, gestorId: GESTOR_B1_ID, assignedAt: new Date(), status: 'Available' },
+    
+    // Un item ya vendido para el ejemplo
+    { id: 'inv-007', productId: PRODUCT_3_ID, gestorId: GESTOR_B1_ID, assignedAt: new Date('2023-10-01'), status: 'Sold', saleId: 'sale-001' }
+  ],
+
+  // ================================================================================
+  // VENTAS
+  // ================================================================================
+  sales: [
+    {
+      id: 'sale-001',
+      inventoryItemId: 'inv-007',
+      gestorId: GESTOR_B1_ID,
+      soldAt: new Date('2023-10-10'),
+      exchangeRateUsed: 305,
+      costUSD: 50,
+      margin: 0.20,
+      saleUSD: 60, // 50 * 1.20
+      baseMN: 18300, // 60 * 305
+      commission: 2196, // 18300 * 0.12
+      finalMN: 20496, // 18300 + 2196
+    }
+  ],
+  
+  // ================================================================================
+  // CIERRES
+  // ================================================================================
+  closings: [
+    {
+      id: 'closing-001',
+      gestorId: GESTOR_B1_ID,
+      initiatedAt: new Date('2023-10-11'),
+      status: ClosingStatus.PENDING,
+      sales: [
+        // En un caso real, aquí iría el objeto completo de la venta 'sale-001'
+        // @ts-ignore
+        { saleId: 'sale-001' } 
+      ],
+      totalBaseMN: 18300,
+      totalCommission: 2196,
+      totalFinalMN: 20496,
+    }
+  ],
 };

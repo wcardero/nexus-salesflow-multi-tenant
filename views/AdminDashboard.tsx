@@ -1,96 +1,160 @@
-
+// views/AdminDashboard.tsx
 import React, { useState } from 'react';
-import { mockDB } from '../store';
-import { Role } from '../types';
-import Layout from '../components/Layout';
+import { MockDB, Role, Store, User } from '../types';
 
-const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+interface AdminDashboardProps {
+  db: MockDB;
+  setDb: React.Dispatch<React.SetStateAction<MockDB>>;
+}
 
-  const navItems = [
-    { icon: 'dashboard', label: 'Overview', id: 'overview' },
-    { icon: 'storefront', label: 'Stores', id: 'stores' },
-    { icon: 'group', label: 'Managers', id: 'managers' },
-    { icon: 'settings_suggest', label: 'System Settings', id: 'settings' },
-  ];
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, setDb }) => {
+  const [newStoreName, setNewStoreName] = useState('');
+  const [newManagerName, setNewManagerName] = useState('');
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
 
-  const renderOverview = () => (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-[#dbe0e6] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[#617589] text-sm font-bold uppercase tracking-wider">Total Stores</span>
-            <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">storefront</span>
-          </div>
-          <p className="text-4xl font-black">{mockDB.stores.length}</p>
-          <p className="text-[#078838] text-sm font-bold mt-2">+2 this month</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-[#dbe0e6] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[#617589] text-sm font-bold uppercase tracking-wider">Active Managers</span>
-            <span className="material-symbols-outlined text-purple-600 bg-purple-50 p-2 rounded-lg">badge</span>
-          </div>
-          <p className="text-4xl font-black">{mockDB.users.filter(u => u.role === Role.MANAGER).length}</p>
-          <p className="text-slate-500 text-sm font-medium mt-2">Verified users</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-[#dbe0e6] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[#617589] text-sm font-bold uppercase tracking-wider">Platform Status</span>
-            <span className="material-symbols-outlined text-teal-600 bg-teal-50 p-2 rounded-lg">dns</span>
-          </div>
-          <p className="text-2xl font-black text-teal-600">Operational</p>
-          <p className="text-slate-500 text-sm font-medium mt-2">All regions stable</p>
-        </div>
-      </div>
+  const handleCreateStore = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStoreName.trim()) {
+      alert('El nombre de la tienda no puede estar vacío.');
+      return;
+    }
 
-      <div className="bg-white rounded-2xl border border-[#dbe0e6] shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-[#dbe0e6] flex justify-between items-center">
-          <h3 className="font-bold text-lg">System Directory</h3>
-          <button className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold">Register New Tenant</button>
-        </div>
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 text-[10px] font-bold uppercase text-[#617589] tracking-widest">
-            <tr>
-              <th className="px-6 py-4">Tenant Name</th>
-              <th className="px-6 py-4">Location</th>
-              <th className="px-6 py-4">Current Manager</th>
-              <th className="px-6 py-4 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {mockDB.stores.map(store => {
-              const manager = mockDB.users.find(u => u.storeId === store.id && u.role === Role.MANAGER);
-              return (
-                <tr key={store.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-sm">{store.name}</td>
-                  <td className="px-6 py-4 text-sm text-[#617589]">{store.location}</td>
-                  <td className="px-6 py-4 text-sm font-medium">{manager?.name || 'Unassigned'}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tighter">Active</span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    const newStore: Store = {
+      id: `store-${Date.now()}`,
+      name: newStoreName,
+      defaultCommissionRate: 0.1, // Default value
+      exchangeRates: [ // Add a default exchange rate
+        { id: `xr-${Date.now()}`, rate: 300, startDate: new Date() }
+      ]
+    };
+
+    setDb(prevDb => ({
+      ...prevDb,
+      stores: [...prevDb.stores, newStore]
+    }));
+    setNewStoreName('');
+    alert(`Tienda "${newStore.name}" creada exitosamente.`);
+  };
+
+  const handleCreateManager = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newManagerName.trim()) {
+      alert('El nombre del manager no puede estar vacío.');
+      return;
+    }
+    if (!selectedStoreId) {
+      alert('Debe seleccionar una tienda.');
+      return;
+    }
+
+    const newManager: User = {
+      id: `user-manager-${Date.now()}`,
+      name: newManagerName,
+      role: Role.MANAGER,
+      storeId: selectedStoreId,
+    };
+
+    setDb(prevDb => ({
+      ...prevDb,
+      users: [...prevDb.users, newManager]
+    }));
+    setNewManagerName('');
+    alert(`Manager "${newManager.name}" asignado a la tienda seleccionada.`);
+  };
+
 
   return (
-    <Layout 
-      user={mockDB.users[0]} 
-      title="System Administration" 
-      navItems={navItems} 
-      activeTab={activeTab} 
-      onTabChange={setActiveTab}
-    >
-      {activeTab === 'overview' ? renderOverview() : (
-        <div className="flex items-center justify-center h-64 border-2 border-dashed border-gray-200 rounded-2xl">
-          <p className="text-gray-400 font-medium italic">Feature section: {activeTab} coming soon</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Columna de Gestión */}
+      <div className="space-y-8">
+        {/* Crear Tienda */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-200">Crear Nueva Tienda</h2>
+          <form onSubmit={handleCreateStore} className="space-y-4">
+            <div>
+              <label htmlFor="storeName" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Nombre de la Tienda</label>
+              <input
+                id="storeName"
+                type="text"
+                value={newStoreName}
+                onChange={(e) => setNewStoreName(e.target.value)}
+                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                placeholder="Ej: Sucursal Central"
+              />
+            </div>
+            <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+              Crear Tienda
+            </button>
+          </form>
         </div>
-      )}
-    </Layout>
+
+        {/* Crear Manager */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-200">Crear y Asignar Manager</h2>
+          <form onSubmit={handleCreateManager} className="space-y-4">
+            <div>
+              <label htmlFor="managerName" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Nombre del Manager</label>
+              <input
+                id="managerName"
+                type="text"
+                value={newManagerName}
+                onChange={(e) => setNewManagerName(e.target.value)}
+                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                placeholder="Ej: Juan Pérez"
+              />
+            </div>
+            <div>
+              <label htmlFor="storeId" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Asignar a Tienda</label>
+              <select
+                id="storeId"
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+              >
+                <option value="" disabled>Seleccione una tienda</option>
+                {db.stores.map(store => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+              Crear Manager
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Columna de Visualización */}
+      <div className="space-y-8">
+         {/* Lista de Tiendas */}
+         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-200">Tiendas Existentes</h2>
+            <ul className="space-y-2">
+              {db.stores.map(store => (
+                <li key={store.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300">{store.name}</p>
+                </li>
+              ))}
+            </ul>
+        </div>
+
+        {/* Lista de Managers */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-200">Managers y sus Tiendas</h2>
+          <ul className="space-y-2">
+            {db.users.filter(u => u.role === Role.MANAGER).map(manager => {
+              const storeName = db.stores.find(s => s.id === manager.storeId)?.name || 'Sin tienda';
+              return (
+                <li key={manager.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300">{manager.name}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{storeName}</p>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 };
 
