@@ -1,7 +1,7 @@
 -- SQL for Nexus SalesFlow Database
 
 -- Drop tables if they exist to ensure a clean slate
-DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRate", "User", "Store" CASCADE;
+DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRate", "User", "Store", "_ClosingToSale" CASCADE;
 
 -- ENUMS would be custom types in PostgreSQL
 DROP TYPE IF EXISTS "Role";

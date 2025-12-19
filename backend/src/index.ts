@@ -94,3 +94,34 @@ app.get('/api/users', async (req, res) => {
   const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"', []);
   res.json(rows);
 });
+
+app.get('/api/stores', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "Store"', []);
+  res.json(rows);
+});
+
+app.get('/api/products', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "Product"', []);
+  res.json(rows);
+});
+
+app.get('/api/inventory', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "InventoryItem"', []);
+  res.json(rows);
+});
+
+app.get('/api/sales', async (req, res) => {
+  const { rows } = await db.query('SELECT * FROM "Sale"', []);
+  res.json(rows);
+});
+
+app.get('/api/closings', async (req, res) => {
+  // This would require a JOIN for sales
+  const { rows } = await db.query('SELECT * FROM "Closing"', []);
+  res.json(rows);
+});
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
