@@ -10,7 +10,7 @@ interface ManagerDashboardProps {
   setDb: React.Dispatch<React.SetStateAction<MockDB>>;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate';
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
@@ -25,6 +25,32 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         ),
       }));
     }
+  };
+
+  const handleSetExchangeRate = (newRate: number, startDate: Date) => {
+    setDb(prevDb => {
+      const updatedStores = prevDb.stores.map(s => {
+        if (s.id === store.id) {
+          // Marca el tipo de cambio actual como histórico
+          const updatedExchangeRates = s.exchangeRates.map(xr => {
+            if (!xr.endDate) { // Es el tipo de cambio vigente
+              return { ...xr, endDate: startDate }; // Termina la vigencia del anterior
+            }
+            return xr;
+          });
+          // Agrega el nuevo tipo de cambio como vigente
+          const newExchangeRate = {
+            id: `xr-${Date.now()}`,
+            rate: newRate,
+            startDate: startDate,
+          };
+          return { ...s, exchangeRates: [...updatedExchangeRates, newExchangeRate] };
+        }
+        return s;
+      });
+      return { ...prevDb, stores: updatedStores };
+    });
+    alert(`Tipo de cambio actualizado a ${newRate} desde ${startDate.toLocaleDateString()}.`);
   };
   
   // Data filtered for the manager's store
@@ -42,6 +68,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <ProductsView db={db} setDb={setDb} store={store} />;
       case 'gestores':
         return <GestoresView db={db} setDb={setDb} store={store} />;
+      case 'rate':
+        return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
       default:
         return null;
     }
@@ -55,6 +83,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
           <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Tipo de Cambio" tab="rate" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
       </div>
       <div className="py-6">
@@ -107,6 +136,79 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
   );
 };
 
+// --- EXCHANGE RATE VIEW ---
+const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: number, startDate: Date) => void }> = ({ store, onSetExchangeRate }) => {
+  const [newRate, setNewRate] = useState<string>('');
+  const [effectiveDate, setEffectiveDate] = useState<string>(new Date().toISOString().split('T')[0]); // Default to today
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const rate = parseFloat(newRate);
+    if (isNaN(rate) || rate <= 0) {
+      alert('Por favor, introduce un tipo de cambio válido y positivo.');
+      return;
+    }
+    onSetExchangeRate(rate, new Date(effectiveDate));
+    setNewRate('');
+  };
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold mb-4">Configurar Tipo de Cambio (USD a MN)</h3>
+      <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+        <div>
+          <label htmlFor="newRate" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Nuevo Tipo de Cambio (MN por USD)</label>
+          <input
+            id="newRate"
+            type="number"
+            step="0.01"
+            value={newRate}
+            onChange={(e) => setNewRate(e.target.value)}
+            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+            placeholder="Ej: 300.50"
+          />
+        </div>
+        <div>
+          <label htmlFor="effectiveDate" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Fecha de Vigencia (desde)</label>
+          <input
+            id="effectiveDate"
+            type="date"
+            value={effectiveDate}
+            onChange={(e) => setEffectiveDate(e.target.value)}
+            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+          />
+        </div>
+        <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+          Actualizar Tipo de Cambio
+        </button>
+      </form>
+
+      <h4 className="font-bold text-lg mb-3">Historial de Tipos de Cambio</h4>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-700">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tasa</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vigente Desde</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vigente Hasta</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            {store.exchangeRates.sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map(xr => (
+              <tr key={xr.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{xr.rate}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{new Date(xr.startDate).toLocaleDateString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {xr.endDate ? new Date(xr.endDate).toLocaleDateString() : 'Actualmente vigente'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 // --- GESTORES VIEW ---
 const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
