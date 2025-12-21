@@ -166,26 +166,25 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${passwordChangeManager.id}`, {
+      const response = await fetch(`http://localhost:3001/api/users/${passwordChangeManager.id}/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          name: passwordChangeManager.name,
-          role: passwordChangeManager.role,
-          storeId: passwordChangeManager.storeId,
           password: newPassword
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error actualizando la contraseña');
+        const errorText = await response.text();
+        console.error('Password change error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       closePasswordModal();
+      await refreshDb();
       alert('Contraseña actualizada exitosamente.');
     } catch (error: any) {
       console.error('Error changing password:', error);

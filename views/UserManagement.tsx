@@ -100,8 +100,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
 
   const handleDeleteUser = async (userId: string) => {
     // Prevent admin from deleting their own account
-    const currentUserId = JSON.parse(localStorage.getItem('user') || '{}').id;
-    if (userId === currentUserId) {
+    let currentUserData;
+    try {
+      currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+    } catch (e) {
+      console.error('Error parsing current user data:', e);
+      currentUserData = {};
+    }
+
+    if (userId === currentUserData.id) {
       alert('No puedes eliminar tu propia cuenta de administrador.');
       return;
     }
@@ -119,8 +126,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error eliminando el usuario');
+        const errorText = await response.text();
+        console.error('Delete user error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       await refreshDb();
@@ -162,26 +170,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${passwordChangeUser.id}`, {
+      const response = await fetch(`http://localhost:3001/api/users/${passwordChangeUser.id}/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          name: passwordChangeUser.name,
-          role: passwordChangeUser.role,
-          storeId: passwordChangeUser.storeId,
           password: newPassword
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error actualizando la contraseña');
+        const errorText = await response.text();
+        console.error('Password change error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       closePasswordModal();
+      await refreshDb();
       alert('Contraseña actualizada exitosamente.');
     } catch (error: any) {
       console.error('Error changing password:', error);
