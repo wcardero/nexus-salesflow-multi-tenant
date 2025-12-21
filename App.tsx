@@ -6,6 +6,8 @@ import GestorDashboard from './views/GestorDashboard';
 import Login from './views/Login';
 import { Layout } from './components/Layout';
 import DirectorDashboard from './views/DirectorDashboard';
+import StoreManagement from './views/StoreManagement';
+import UserManagement from './views/UserManagement';
 
 const App: React.FC = () => {
   const [db, setDb] = useState<MockDB | null>(null);
@@ -166,6 +168,27 @@ const App: React.FC = () => {
           case Role.GESTOR:
             if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
             return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
+          default:
+            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+        }
+      case 'stores':
+        switch (currentUser.role) {
+          case Role.ADMIN:
+            return <StoreManagement db={db} refreshDb={refreshDb} />;
+          default:
+            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+        }
+      case 'users':
+        switch (currentUser.role) {
+          case Role.ADMIN:
+            return <UserManagement db={db} refreshDb={refreshDb} />;
+          default:
+            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+        }
+      case 'managers':
+        switch (currentUser.role) {
+          case Role.DIRECTOR:
+            return <DirectorDashboard db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }

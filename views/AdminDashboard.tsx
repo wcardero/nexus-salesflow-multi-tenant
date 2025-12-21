@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MockDB, Role } from '../types';
+import { MockDB, Role, User } from '../types';
 
 interface AdminDashboardProps {
   db: MockDB;
@@ -14,17 +14,17 @@ const StatCard: React.FC<{
   changeType?: 'positive' | 'negative' | 'stable';
   iconColor?: string;
 }> = ({ icon, label, value, change, changeType = 'stable', iconColor = 'text-primary' }) => (
-  <div className="flex flex-col gap-2 rounded-xl p-6 border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm">
+  <div className="flex flex-col gap-2 rounded-xl p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
     <div className="flex items-center justify-between">
-      <p className="text-[#617589] dark:text-gray-400 text-sm font-medium">{label}</p>
+      <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{label}</p>
       <span className={`material-symbols-outlined p-1.5 rounded-lg ${iconColor}`}>{icon}</span>
     </div>
-    <p className="text-[#111418] dark:text-white tracking-light text-2xl font-bold leading-tight">{value}</p>
+    <p className="text-gray-800 dark:text-gray-200 tracking-light text-2xl font-bold leading-tight">{value}</p>
     {change && (
       <div className="flex items-center gap-1 text-sm">
         <span
           className={`font-medium flex items-center ${
-            changeType === 'positive' ? 'text-[#078838]' : changeType === 'negative' ? 'text-red-600' : 'text-[#617589]'
+            changeType === 'positive' ? 'text-[#078838]' : changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
           }`}
         >
           {changeType !== 'stable' && (
@@ -46,22 +46,159 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
   
   const handleCreateStore = async () => {
-    // Logic from the old component
-    alert(`Creando tienda: ${newStoreName}`);
-    await refreshDb();
+    if (!newStoreName.trim()) {
+      alert('Por favor, ingrese un nombre para la tienda.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/stores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: newStoreName.trim(),
+          defaultCommissionRate: 0.10 // Default 10% commission rate
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error creando la tienda');
+      }
+
+      const newStore = await response.json();
+      setNewStoreName('');
+      await refreshDb();
+      alert(`Tienda "${newStore.name}" creada exitosamente.`);
+    } catch (error: any) {
+      console.error('Error creating store:', error);
+      alert(`Error al crear la tienda: ${error.message}`);
+    }
   };
-  
+
   const handleCreateManager = async () => {
-    // Logic from the old component
-    alert(`Creando manager: ${newManagerName} para la tienda ${selectedStoreId}`);
-    await refreshDb();
+    if (!newManagerName.trim()) {
+      alert('Por favor, ingrese un nombre para el manager.');
+      return;
+    }
+
+    try {
+      // First, create the user
+      const userResponse = await fetch('http://localhost:3001/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: newManagerName.trim(),
+          role: Role.MANAGER,
+          storeId: selectedStoreId
+        })
+      });
+
+      if (!userResponse.ok) {
+        const errorData = await userResponse.json();
+        throw new Error(errorData.message || 'Error creando el manager');
+      }
+
+      const newUser = await userResponse.json();
+
+      // Then update the store to add the manager to its managerIds
+      const store = db.stores.find(s => s.id === selectedStoreId);
+      if (store) {
+        const updatedManagerIds = [...(store.managerIds || []), newUser.id];
+
+        const updateStoreResponse = await fetch(`http://localhost:3001/api/stores/${selectedStoreId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            ...store,
+            managerIds: updatedManagerIds
+          })
+        });
+
+        if (!updateStoreResponse.ok) {
+          const errorData = await updateStoreResponse.json();
+          console.error('Error updating store with new manager:', errorData);
+          // Continue anyway since the user was created
+        }
+      }
+
+      setNewManagerName('');
+      await refreshDb();
+      alert(`Manager "${newUser.name}" creado exitosamente.`);
+    } catch (error: any) {
+      console.error('Error creating manager:', error);
+      alert(`Error al crear el manager: ${error.message}`);
+    }
   };
 
   const handleCreateDirector = async () => {
-    // Logic from the old component
-    alert(`Creando director: ${newDirectorName} para la tienda ${selectedStoreId}`);
-    await refreshDb();
+    if (!newDirectorName.trim()) {
+      alert('Por favor, ingrese un nombre para el director.');
+      return;
+    }
+
+    try {
+      // First, create the user
+      const userResponse = await fetch('http://localhost:3001/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: newDirectorName.trim(),
+          role: Role.DIRECTOR,
+          storeId: selectedStoreId
+        })
+      });
+
+      if (!userResponse.ok) {
+        const errorData = await userResponse.json();
+        throw new Error(errorData.message || 'Error creando el director');
+      }
+
+      const newUser = await userResponse.json();
+
+      // Then update the store to assign this user as the director
+      const store = db.stores.find(s => s.id === selectedStoreId);
+      if (store) {
+        const updateStoreResponse = await fetch(`http://localhost:3001/api/stores/${selectedStoreId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            ...store,
+            directorId: newUser.id
+          })
+        });
+
+        if (!updateStoreResponse.ok) {
+          const errorData = await updateStoreResponse.json();
+          console.error('Error updating store with new director:', errorData);
+          // Continue anyway since the user was created
+        }
+      }
+
+      setNewDirectorName('');
+      await refreshDb();
+      alert(`Director "${newUser.name}" creado exitosamente.`);
+    } catch (error: any) {
+      console.error('Error creating director:', error);
+      alert(`Error al crear el director: ${error.message}`);
+    }
   };
+
 
   const totalStores = db.stores.length;
   const totalManagers = db.users.filter(u => u.role === Role.MANAGER).length;
@@ -128,5 +265,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                 <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"/>
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+                </select>
+                <button onClick={handleCreateManager} className="w-full bg-primary text-white rounded-md py-2 text-sm font-bold hover:bg-blue-600 transition-colors">Crear Manager</button>
+             </div>
+          </div>
+        </div>
+
+        {/* Top Performing Stores Table */}
+        <div className="flex flex-col gap-4 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+          <div className="flex justify-between items-center">
+            <h3 className="text-gray-800 dark:text-gray-200 text-xl font-bold leading-tight">Tiendas y Directores</h3>
+            <a className="text-sm text-primary font-medium hover:underline" href="#">Ver Todas</a>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-600 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-700">
+                <tr>
+                  <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre de la Tienda</th>
+                  <th className="px-4 py-3" scope="col">Director</th>
+                  <th className="px-4 py-3 text-right rounded-r-lg" scope="col">Managers</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {db.stores.map(store => {
+                  const director = db.users.find(u => u.id === store.directorId);
+                  const managers = db.users.filter(u => store.managerIds?.includes(u.id));
+                  return (
+                    <tr key={store.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{store.name}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{director?.name || 'N/A'}</td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-800 dark:text-gray-200">{managers.length}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+};
 
 export default AdminDashboard;

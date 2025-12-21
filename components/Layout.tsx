@@ -7,16 +7,20 @@ interface LayoutProps {
   currentUser: User;
   onLogout: () => void;
   storeName?: string;
+  onNavigate: (view: string) => void;
+  currentView: string;
 }
 
 const NavLink: React.FC<{
-  href: string;
   icon: string;
   label: string;
-  active?: boolean;
-}> = ({ href, icon, label, active }) => (
+  view: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ icon, label, active, onClick }) => (
   <a
-    href={href}
+    href="#"
+    onClick={onClick}
     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
       active
         ? 'bg-primary/10 text-primary'
@@ -28,7 +32,7 @@ const NavLink: React.FC<{
   </a>
 );
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, storeName }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, storeName, onNavigate, currentView }) => {
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -36,28 +40,28 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
     switch (role) {
       case Role.ADMIN:
         return [
-          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
-          { href: '#', icon: 'storefront', label: 'Tiendas' },
-          { href: '#', icon: 'group', label: 'Usuarios' },
+          { view: 'dashboard', icon: 'dashboard', label: 'Panel de Control' },
+          { view: 'stores', icon: 'storefront', label: 'Tiendas' },
+          { view: 'users', icon: 'group', label: 'Usuarios' },
         ];
       case Role.DIRECTOR:
         return [
-          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
-          { href: '#', icon: 'group', label: 'Managers' },
-          { href: '#', icon: 'inventory_2', label: 'Inventario' },
-          { href: '#', icon: 'receipt_long', label: 'Cierres' },
+          { view: 'dashboard', icon: 'dashboard', label: 'Panel de Control' },
+          { view: 'managers', icon: 'group', label: 'Managers' },
+          { view: 'inventory', icon: 'inventory_2', label: 'Inventario' },
+          { view: 'closings', icon: 'receipt_long', label: 'Cierres' },
         ];
       case Role.MANAGER:
         return [
-          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
-          { href: '#', icon: 'inventory_2', label: 'Inventario' },
-          { href: '#', icon: 'receipt_long', label: 'Cierres' },
+          { view: 'dashboard', icon: 'dashboard', label: 'Panel de Control' },
+          { view: 'inventory', icon: 'inventory_2', label: 'Inventario' },
+          { view: 'closings', icon: 'receipt_long', label: 'Cierres' },
         ];
       case Role.GESTOR:
         return [
-          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
-          { href: '#', icon: 'point_of_sale', label: 'Ventas' },
-          { href: '#', icon: 'receipt_long', label: 'Cierres' },
+          { view: 'dashboard', icon: 'dashboard', label: 'Panel de Control' },
+          { view: 'sales', icon: 'point_of_sale', label: 'Ventas' },
+          { view: 'closings', icon: 'receipt_long', label: 'Cierres' },
         ];
       default:
         return [];
@@ -94,7 +98,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
           </div>
           <nav className="flex flex-col gap-2">
             {navigationItems.map((item) => (
-              <NavLink key={item.label} {...item} />
+              <NavLink 
+                key={item.view}
+                {...item}
+                active={currentView === item.view}
+                onClick={() => {
+                  onNavigate(item.view);
+                  setIsMenuOpen(false);
+                }} 
+              />
             ))}
           </nav>
         </div>

@@ -93,6 +93,13 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - Control de acceso basado en roles
 - Validación de permisos por operación
 
+### 6. Gestión completa de tiendas y usuarios
+- **Administrador**: Puede crear, editar y eliminar tiendas y usuarios (directores, managers, gestores)
+- **Administrador**: Puede gestionar contraseñas de todos los usuarios
+- **Director**: Puede gestionar (crear, editar, eliminar) managers de su tienda
+- **Director**: Puede gestionar contraseñas de los managers de su tienda
+- **Menú lateral**: Navegación específica por rol (Tiendas, Usuarios para Admin; Managers para Director)
+
 ## FLUJO DE CIERRE DETALLADO
 1. **Gestor ejecuta cierre** → sistema muestra resumen con:
    - Listado de artículos vendidos
