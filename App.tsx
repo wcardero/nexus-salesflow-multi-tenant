@@ -10,23 +10,42 @@ const App: React.FC = () => {
   const [db, setDb] = useState<MockDB | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true); // New state to track auth check
 
   const refreshDb = async () => {
     try {
-      const resources = ['users', 'stores', 'products', 'inventory', 'sales', 'closings'];
-      const promises = resources.map(resource => 
-        fetch(`http://localhost:3001/api/${resource}`).then(res => {
+      // Get the token from localStorage or wherever it's stored
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        // If there's no token, don't show an error, just return
+        // The user will be redirected to login via the rendering logic
+        return;
+      }
+
+      const resources = ['users', 'stores', 'products', 'inventory', 'product-stock', 'assigned-inventory', 'sales', 'closings', 'audit-logs'];
+      const promises = resources.map(resource =>
+        fetch(`http://localhost:3001/api/${resource}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }).then(res => {
           if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+              // Token might be expired, redirect to login
+              localStorage.removeItem('token');
+              window.location.href = '/';
+            }
             throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
           }
           return res.json();
         })
       );
-      
-      const [users, stores, products, inventory, sales, closings] = await Promise.all(promises);
+
+      const [users, stores, products, inventory, productStock, assignedInventory, sales, closings, auditLogs] = await Promise.all(promises);
 
       // Assemble the database object
-      const data: MockDB = { users, stores, products, inventory, sales, closings };
+      const data: MockDB = { users, stores, products, inventory, productStock, assignedInventory, sales, closings, auditLogs };
 
       // Dates are transmitted as strings, so we need to convert them back to Date objects
       data.stores.forEach(s => s.exchangeRates.forEach(xr => {
@@ -34,11 +53,13 @@ const App: React.FC = () => {
           if(xr.endDate) xr.endDate = new Date(xr.endDate);
       }));
       data.inventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
+      data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
       data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
       data.closings.forEach(c => {
           c.initiatedAt = new Date(c.initiatedAt);
           if(c.completedAt) c.completedAt = new Date(c.completedAt);
       });
+      data.auditLogs.forEach(log => log.timestamp = new Date(log.timestamp));
 
       setDb(data);
     } catch (err: any) {
@@ -48,7 +69,39 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    refreshDb();
+    const checkAuthAndLoadData = async () => {
+      const token = localStorage.getItem('token');
+
+      if (token) {
+        // If there's a token, try to load the database
+        try {
+          // Verify token is still valid by making a simple request
+          const response = await fetch('http://localhost:3001/api/users', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            // Token is valid, load the full database
+            await refreshDb();
+          } else {
+            // Token is invalid/expired, remove it and show login
+            localStorage.removeItem('token');
+            setCheckingAuth(false);
+          }
+        } catch (err) {
+          // Network error or other issue, remove token and show login
+          localStorage.removeItem('token');
+          setCheckingAuth(false);
+        }
+      } else {
+        // No token, just finish checking
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuthAndLoadData();
   }, []);
 
   const activeStore = useMemo(() => {
@@ -65,6 +118,8 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    // Clear the token from localStorage
+    localStorage.removeItem('token');
   };
   
   // Placeholder for mutations
@@ -77,28 +132,40 @@ const App: React.FC = () => {
   }
 
 
-  if (!db) {
+  if (checkingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
-        {error ? <p className="text-red-500">{error}</p> : <p>Loading database...</p>}
+        <p>Loading...</p>
       </div>
     );
   }
 
-  if (!currentUser) {
-    return <Login db={db} onLogin={handleLogin} />;
+  if (!db) {
+    // If database is still null after auth check, load empty data for Login component
+    return <Login onLogin={handleLogin} />;
   }
+
+  if (!currentUser) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+import DirectorDashboard from './views/DirectorDashboard';
+
+// ... (imports and component logic)
 
   const renderContent = () => {
     switch (currentUser.role) {
       case Role.ADMIN:
-        return <AdminDashboard db={db} setDb={handleSetDb} currentUser={currentUser} refreshDb={refreshDb} />;
+        return <AdminDashboard db={db} refreshDb={refreshDb} />;
+      case Role.DIRECTOR:
+        if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
+        return <DirectorDashboard />;
       case Role.MANAGER:
         if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} refreshDb={refreshDb} />;
+        return <ManagerDashboard user={currentUser} store={activeStore} db={db} refreshDb={refreshDb} />;
       case Role.GESTOR:
         if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
-        return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} />;
+        return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
       default:
         return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
     }

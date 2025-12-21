@@ -5,6 +5,7 @@
  */
 export enum Role {
   ADMIN = 'Admin',
+  DIRECTOR = 'Director',
   MANAGER = 'Manager',
   GESTOR = 'Gestor',
 }
@@ -28,6 +29,7 @@ export interface Store {
   // Un historial para permitir cambios en el tiempo
   exchangeRates: ExchangeRate[];
   defaultCommissionRate: number; // e.g., 0.10 for 10%
+  managerIds?: string[]; // IDs of managers assigned to this store
 }
 
 /**
@@ -61,6 +63,27 @@ export interface InventoryItem {
   assignedAt: Date;
   status: 'Available' | 'Sold';
   saleId?: string;
+}
+
+/**
+ * Represents product stock at the store level.
+ */
+export interface ProductStock {
+  id: string;
+  productId: string;
+  storeId: string;
+  quantity: number;
+}
+
+/**
+ * Represents assigned inventory quantities to a gestor.
+ */
+export interface AssignedInventory {
+  id: string;
+  productId: string;
+  gestorId: string;
+  quantity: number;
+  assignedAt: Date;
 }
 
 /**
@@ -107,6 +130,21 @@ export interface Closing {
 }
 
 /**
+ * Represents an audit log entry.
+ */
+export interface AuditLog {
+  id: string;
+  userId: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  oldValues?: any;
+  newValues?: any;
+  timestamp: Date;
+  storeId?: string;
+}
+
+/**
  * La base de datos simulada que contiene todos los datos de la aplicación.
  */
 export interface MockDB {
@@ -114,6 +152,9 @@ export interface MockDB {
   stores: Store[];
   products: Product[];
   inventory: InventoryItem[];
+  productStock: ProductStock[];
+  assignedInventory: AssignedInventory[];
   sales: Sale[];
   closings: Closing[];
+  auditLogs: AuditLog[];
 }

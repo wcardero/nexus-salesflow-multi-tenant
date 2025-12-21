@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manager Dashboard - RetailManager</title>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        /* Custom scrollbar for clean look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#111418] dark:text-white overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Sidebar -->
+<aside class="flex flex-col w-64 h-full bg-white dark:bg-[#1a202c] border-r border-[#f0f2f4] dark:border-gray-800 flex-shrink-0 z-20 hidden lg:flex">
+<div class="p-5 flex items-center gap-3">
+<div class="bg-primary/10 flex items-center justify-center rounded-lg size-10">
+<span class="material-symbols-outlined text-primary text-2xl">storefront</span>
+</div>
+<h1 class="text-[#111418] dark:text-white text-lg font-bold tracking-tight">RetailManager</h1>
+</div>
+<nav class="flex flex-col gap-1 px-3 py-2 flex-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary group" href="#">
+<span class="material-symbols-outlined fill-1">dashboard</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#617589] hover:bg-[#f0f2f4] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-sm font-medium">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#617589] hover:bg-[#f0f2f4] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors" href="#">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="text-sm font-medium">Sales</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#617589] hover:bg-[#f0f2f4] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors" href="#">
+<div class="relative flex items-center justify-center">
+<span class="material-symbols-outlined">lock_clock</span>
+<span class="absolute -top-0.5 -right-0.5 size-2 bg-red-500 rounded-full border border-white"></span>
+</div>
+<span class="text-sm font-medium">Closures</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#617589] hover:bg-[#f0f2f4] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Team Management</span>
+</a>
+<div class="my-2 border-t border-[#f0f2f4] dark:border-gray-800"></div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#617589] hover:bg-[#f0f2f4] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Store Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-[#f0f2f4] dark:border-gray-800">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 ring-2 ring-white dark:ring-gray-700" data-alt="User profile photo showing a professional manager" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB0HKJWESddDtU07LaXyPYM8IQjg6Vr5r2GEjQgSxMS_LbVa4qfrjLGusok6V5XbX32v5AjcckC7bIS9FAleneA4DVFjjLjIU-HX66z8HYnWp-i_FQOluHM7X7m_qKMH62zSXF5zzbkHzeJgxG96_u3y6FF2JC8ysCXEilsIPmW_SfrR2XRW3VtRsGyrAeWtkYyvXcEg5TGp5OfGHt4lC_e7QN-iY68LnX7tiQlMJ25qt3pRh0roaTCm6LT_SA1YQm8hCD22eebgwUX");'></div>
+<div class="flex flex-col">
+<p class="text-sm font-bold text-[#111418] dark:text-white">Alex Morgan</p>
+<p class="text-xs text-[#617589] dark:text-gray-400">Store Manager</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<div class="flex flex-col flex-1 h-full overflow-hidden relative">
+<!-- Top Header -->
+<header class="flex items-center justify-between bg-white dark:bg-[#1a202c] border-b border-[#f0f2f4] dark:border-gray-800 px-6 py-3 flex-shrink-0 z-10">
+<div class="flex items-center gap-4">
+<button class="lg:hidden p-2 text-[#617589]">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight">Downtown Branch</h2>
+<span class="hidden md:inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        Open
+                    </span>
+</div>
+<div class="flex items-center gap-4 lg:gap-8">
+<div class="hidden md:flex relative group min-w-[320px]">
+<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[#617589]">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="block w-full p-2 pl-10 text-sm text-gray-900 border border-gray-200 rounded-lg bg-[#f9fafb] focus:ring-primary focus:border-primary dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Search orders, products, or staff..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-[#617589] hover:bg-[#f0f2f4] rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 size-2 bg-red-500 rounded-full border border-white"></span>
+</button>
+<button class="p-2 text-[#617589] hover:bg-[#f0f2f4] rounded-full transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Scrollable Page Content -->
+<main class="flex-1 overflow-y-auto p-4 md:p-8 bg-background-light dark:bg-background-dark">
+<div class="max-w-7xl mx-auto flex flex-col gap-6">
+<!-- Page Heading & Date -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-2xl md:text-3xl font-bold text-[#111418] dark:text-white tracking-tight">Overview</h1>
+<p class="text-[#617589] dark:text-gray-400 text-sm mt-1">Daily store performance and pending actions.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center bg-white dark:bg-[#1a202c] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-sm">
+<span class="material-symbols-outlined text-[#617589] mr-2 text-sm">calendar_today</span>
+<span class="text-sm font-medium text-[#111418] dark:text-white">Today: Oct 24, 2023</span>
+<span class="material-symbols-outlined text-[#617589] ml-2 text-sm">expand_more</span>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm shadow-blue-200 dark:shadow-none transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                                New Shift
+                            </button>
+</div>
+</div>
+<!-- Stats KPI Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Stat Card 1 -->
+<div class="flex flex-col p-5 bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+<div class="absolute right-0 top-0 h-full w-1 bg-blue-500"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium">Total Daily Sales</p>
+<h3 class="text-2xl font-bold text-[#111418] dark:text-white mt-1">$1,250.00</h3>
+</div>
+<div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined">payments</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-sm">
+<span class="text-green-600 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded font-medium flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> 12%
+                                </span>
+<span class="text-[#617589] dark:text-gray-500 ml-1">vs yesterday</span>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="flex flex-col p-5 bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
+<div class="absolute right-0 top-0 h-full w-1 bg-indigo-500"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium">Monthly Revenue</p>
+<h3 class="text-2xl font-bold text-[#111418] dark:text-white mt-1">$45,300.00</h3>
+</div>
+<div class="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+<span class="material-symbols-outlined">bar_chart</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-sm">
+<span class="text-green-600 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded font-medium flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> 5%
+                                </span>
+<span class="text-[#617589] dark:text-gray-500 ml-1">vs last month</span>
+</div>
+</div>
+<!-- Stat Card 3 (Action Item) -->
+<div class="flex flex-col p-5 bg-white dark:bg-[#1a202c] rounded-xl border border-orange-200 dark:border-orange-900/50 shadow-sm relative overflow-hidden">
+<div class="absolute right-0 top-0 h-full w-1 bg-orange-500"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium">Pending Closures</p>
+<h3 class="text-2xl font-bold text-[#111418] dark:text-white mt-1">3</h3>
+</div>
+<div class="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-600 dark:text-orange-400 animate-pulse">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-sm">
+<span class="text-orange-700 font-medium">Requires Action</span>
+<span class="text-[#617589] dark:text-gray-500 ml-1">- Consolidate Sales</span>
+</div>
+</div>
+<!-- Stat Card 4 -->
+<div class="flex flex-col p-5 bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
+<div class="absolute right-0 top-0 h-full w-1 bg-red-500"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium">Low Stock Alerts</p>
+<h3 class="text-2xl font-bold text-[#111418] dark:text-white mt-1">5</h3>
+</div>
+<div class="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400">
+<span class="material-symbols-outlined">production_quantity_limits</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-sm">
+<span class="text-red-600 font-medium">Restock needed</span>
+<span class="text-[#617589] dark:text-gray-500 ml-1">for key items</span>
+</div>
+</div>
+</div>
+<!-- Row 2: Charts & Inventory -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Revenue Chart -->
+<div class="lg:col-span-2 bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h3 class="text-lg font-bold text-[#111418] dark:text-white">Revenue Overview</h3>
+<p class="text-sm text-[#617589] dark:text-gray-400">Gross sales performance over the last 30 days</p>
+</div>
+<button class="text-sm font-medium text-primary hover:text-primary/80 flex items-center">
+                                    View Detailed Report 
+                                    <span class="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+</button>
+</div>
+<!-- Chart Placeholder using SVG -->
+<div class="relative w-full h-64 overflow-hidden">
+<svg class="w-full h-full text-primary" fill="none" preserveaspectratio="none" viewbox="0 0 800 200">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="currentColor" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Grid Lines -->
+<line stroke="#e2e8f0" stroke-width="1" x1="0" x2="800" y1="199" y2="199"></line>
+<line stroke="#e2e8f0" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="800" y1="150" y2="150"></line>
+<line stroke="#e2e8f0" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="800" y1="100" y2="100"></line>
+<line stroke="#e2e8f0" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="800" y1="50" y2="50"></line>
+<!-- Area Path -->
+<path d="M0,150 C50,140 100,160 150,120 C200,80 250,90 300,70 C350,50 400,60 450,40 C500,20 550,50 600,60 C650,70 700,40 750,30 L750,200 L0,200 Z" fill="url(#chartGradient)"></path>
+<!-- Line Path -->
+<path d="M0,150 C50,140 100,160 150,120 C200,80 250,90 300,70 C350,50 400,60 450,40 C500,20 550,50 600,60 C650,70 700,40 750,30" fill="none" stroke="currentColor" stroke-width="3"></path>
+<!-- Data Points -->
+<circle class="fill-white dark:fill-gray-800 stroke-current" cx="150" cy="120" r="4" stroke-width="2"></circle>
+<circle class="fill-white dark:fill-gray-800 stroke-current" cx="450" cy="40" r="4" stroke-width="2"></circle>
+<circle class="fill-white dark:fill-gray-800 stroke-current" cx="750" cy="30" r="4" stroke-width="2"></circle>
+</svg>
+</div>
+<div class="flex justify-between text-xs text-[#617589] mt-2 px-2">
+<span>Oct 01</span>
+<span>Oct 08</span>
+<span>Oct 15</span>
+<span>Oct 22</span>
+<span>Oct 29</span>
+</div>
+</div>
+<!-- Inventory Health Widget -->
+<div class="bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 flex flex-col">
+<h3 class="text-lg font-bold text-[#111418] dark:text-white mb-4">Inventory Health</h3>
+<div class="flex items-center gap-6 mb-6">
+<div class="relative size-24 flex-shrink-0">
+<!-- Donut Chart Simulated with SVG -->
+<svg class="size-full rotate-[-90deg]" viewbox="0 0 36 36">
+<!-- Background Circle -->
+<path class="text-gray-100 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.8"></path>
+<!-- Stock Segment (Green) -->
+<path class="text-green-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="80, 100" stroke-width="3.8"></path>
+<!-- Low Stock Segment (Orange) -->
+<path class="text-orange-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="15, 100" stroke-dashoffset="-80" stroke-width="3.8"></path>
+<!-- Out of Stock (Red) -->
+<path class="text-red-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="5, 100" stroke-dashoffset="-95" stroke-width="3.8"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center flex-col">
+<span class="text-2xl font-bold text-[#111418] dark:text-white">85%</span>
+<span class="text-[10px] uppercase text-[#617589]">Healthy</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 flex-1">
+<div class="flex justify-between items-center text-sm">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-green-500"></span>
+<span class="text-[#617589] dark:text-gray-400">In Stock</span>
+</div>
+<span class="font-bold">1,240</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-orange-500"></span>
+<span class="text-[#617589] dark:text-gray-400">Low Stock</span>
+</div>
+<span class="font-bold">45</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-red-500"></span>
+<span class="text-[#617589] dark:text-gray-400">Out of Stock</span>
+</div>
+<span class="font-bold">12</span>
+</div>
+</div>
+</div>
+<div class="mt-auto">
+<h4 class="text-sm font-semibold mb-3 text-[#111418] dark:text-white">Top selling categories</h4>
+<div class="space-y-3">
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span>Electronics</span>
+<span class="font-medium">45%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+<div class="bg-primary h-1.5 rounded-full" style="width: 45%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span>Accessories</span>
+<span class="font-medium">30%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+<div class="bg-purple-500 h-1.5 rounded-full" style="width: 30%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Row 3: Pending Closures (Actionable) & Top Products -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+<!-- Pending Closures Table -->
+<div class="xl:col-span-2 bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col">
+<div class="p-6 border-b border-[#f0f2f4] dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<h3 class="text-lg font-bold text-[#111418] dark:text-white flex items-center gap-2">
+                                        Pending Sales Closures
+                                        <span class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-0.5 rounded-full">3 New</span>
+</h3>
+<p class="text-sm text-[#617589] dark:text-gray-400">Consolidate daily sales submitted by gestors.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 text-sm font-medium text-[#617589] bg-[#f0f2f4] dark:bg-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors">History</button>
+<button class="px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm">Consolidate All</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-[#617589] uppercase bg-[#f9fafb] dark:bg-gray-800 dark:text-gray-400">
+<tr>
+<th class="px-6 py-3 font-medium" scope="col">Date/Shift</th>
+<th class="px-6 py-3 font-medium" scope="col">Gestor</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">Declared</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">System</th>
+<th class="px-6 py-3 font-medium text-center" scope="col">Status</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#f0f2f4] dark:divide-gray-700">
+<!-- Row 1 -->
+<tr class="bg-white dark:bg-[#1a202c] hover:bg-[#fcfcfc] dark:hover:bg-gray-800/50">
+<td class="px-6 py-4 font-medium text-[#111418] dark:text-white">
+                                                Oct 23, 2023 <br/>
+<span class="text-xs text-[#617589] font-normal">Evening Shift</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-cover bg-center" data-alt="Portrait of Sarah J." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAhTi2npPGwbM3xyLjb1NuHaTMtDNLNaje-9EDbNcQckZKyxM9WbGhw-HN1hnfU1MU3T11tUb-_dlQp-i7bnkwn8-qIweF02aI80XTFlRtqTwc5aQzbuDNa23UNBHLdSmdTPlcWJrYDQFWl176q6T2QgO-MqoUdOxuVXQZPesDHudhdXVuBtXzChdJXHtHutF2T59xAYTnUrnLPxlk3RZJlveYBqgQlLHQtzwsKIXcGAipvNNaoXImo8CjvPcVs7hxvNYarNu30poNi')"></div>
+<div class="font-medium text-[#111418] dark:text-white">Sarah J.</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-medium text-[#111418] dark:text-white">$842.50</td>
+<td class="px-6 py-4 text-right text-[#617589]">$842.50</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Matched
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 font-medium text-sm">Approve</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-white dark:bg-[#1a202c] hover:bg-[#fcfcfc] dark:hover:bg-gray-800/50">
+<td class="px-6 py-4 font-medium text-[#111418] dark:text-white">
+                                                Oct 23, 2023 <br/>
+<span class="text-xs text-[#617589] font-normal">Morning Shift</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-cover bg-center" data-alt="Portrait of Michael Chen" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDruaoPPeF7VefDEQ2gcmkhfNWH5GZX58OHAXALMsPvHn-piCLgBde3Xfh_c-A7A2OxHLjIB-gloSaqRCZCJb83lAUoI6iIkLEfaIpIGS-AnxQgNBTiwUj-eL5qm46qXT1fQmSLZWy_yz3Az2Ug37V8biEOHqbajgnHBYLEouJdzfi1XuVO4xKVScKfXSH6XTORgWx5mqPu9TWVyblxUdm_dRbMLaoQF0dRXQ0ICbD2JA6wJVTiDzR0YdLPGBn0KIy1QSMSml9T1ekM')"></div>
+<div class="font-medium text-[#111418] dark:text-white">Michael C.</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-medium text-[#111418] dark:text-white">$650.00</td>
+<td class="px-6 py-4 text-right text-[#617589]">$655.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    -$5.00
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 font-medium text-sm">Review</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="bg-white dark:bg-[#1a202c] hover:bg-[#fcfcfc] dark:hover:bg-gray-800/50">
+<td class="px-6 py-4 font-medium text-[#111418] dark:text-white">
+                                                Oct 22, 2023 <br/>
+<span class="text-xs text-[#617589] font-normal">Evening Shift</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-cover bg-center" data-alt="Portrait of David K." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBxL-AUGme_nrRv85pavv0tZivUP1wYkOEmdWadA8vxfue84b5U_ERVQ0RxwulXKjCYZ7FLH7HXe8e0NkXPez8e1nT44f9f1IWG4KY8UZFJeDjeaZUMsyruaPKP9PBOpMqz6OCc9448cGzNwWMKL8VBTPbfHOhUJmfyKwi3CmRRq65gD80q7MkSUQBT9OjwGeVz65JiF6l97RWoA7zFlr19_CwD2cb-PfnXR_GbNddHbapevnvwSDZO9mmeWdBW3Q1cmoBhknml7y5z')"></div>
+<div class="font-medium text-[#111418] dark:text-white">David K.</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-medium text-[#111418] dark:text-white">$920.00</td>
+<td class="px-6 py-4 text-right text-[#617589]">$920.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Matched
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 font-medium text-sm">Approve</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Top Selling Products List -->
+<div class="bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 flex flex-col">
+<h3 class="text-lg font-bold text-[#111418] dark:text-white mb-4">Top Selling (Oct)</h3>
+<div class="flex flex-col gap-4">
+<!-- Item 1 -->
+<div class="flex items-center gap-4 group cursor-pointer">
+<div class="size-12 rounded-lg bg-gray-100 dark:bg-gray-700 bg-cover bg-center flex-shrink-0 border border-gray-200" data-alt="Wireless Headphones product image" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDYPHwcTtfD0LTvf1r2pJKViKjkcCqn1VqNvwwn1hA3ICTRXfY8OwQH8M5dk6uGEI-sliQqe_2rcvxOr-dc2q3pxJSdUoq0NwAaZr5jyUCa47HsW6VZol1snR9Tqxo2DGagy5jMQ9ry3KS3IsS0GYfDWIqoe2GHwWvyQ6H5IzlS6JedEsZTc7JUi70NuLwWyrmKNst4pum3J4h2TaKekkFACvQs0WY-Leyos4tlSt9RairGTEFbOckPIRdtAnP2oZpt4LrIvm6kP7nm')">
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-[#111418] dark:text-white truncate">Wireless Headphones</p>
+<p class="text-xs text-[#617589] truncate">Electronics • Stock: 12</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-[#111418] dark:text-white">124</p>
+<p class="text-xs text-green-600 font-medium">Sold</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center gap-4 group cursor-pointer">
+<div class="size-12 rounded-lg bg-gray-100 dark:bg-gray-700 bg-cover bg-center flex-shrink-0 border border-gray-200" data-alt="Smart Watch product image" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjmijhAla3NHKMS5bKIk0zBg78svvmgFBhQzWyCAKfn8ICU_k9auEq_ll5vgfvWVNgyyWialDwKmuo5QESUeGGhCsDcEzrldY7kLlY_laTsIf96t2KmCs5hdXsohDcNFJzY5Pu5QyAM5VWKtRcK-KxpYp5H8fw_KlFaBSZstMwdJOikM-hMoS8ZvYj88MwEfCfl2GtQASrvEyixchjHO0it5yrPQDIFgec6y4Da2JevnrYR9_QOOYsX0QmrKSF5oLQNEWBK_PCNc3r')">
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-[#111418] dark:text-white truncate">Series 5 Watch</p>
+<p class="text-xs text-[#617589] truncate">Wearables • Stock: 8</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-[#111418] dark:text-white">89</p>
+<p class="text-xs text-green-600 font-medium">Sold</p>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center gap-4 group cursor-pointer">
+<div class="size-12 rounded-lg bg-gray-100 dark:bg-gray-700 bg-cover bg-center flex-shrink-0 border border-gray-200" data-alt="Modern backpack product image" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDba4nnNcxLU7DqBY4cRq-XP4D-2U_QViapURqdoKhA29qthxPzQLUToT2sRjeSvDAbIdnCicNnehME1CKLK5h5G7K1Ovo90v-ClAxCuwr7_jlC13sOP2RpNVdGqDsUrhdXwrGfrn3HwvIbGsriC8vOHfSOJtWjq5qq3kNOkAw4QsBrC6P3_ExeLj4L7Ghr5hbJ-F8xbfyJIiTEWJnxP4BWuAvpymeWwL-Rp2YxRqBhi_kZI_8P_a0tBqySiM_Nw12SW1nv9McMuAdF')">
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-[#111418] dark:text-white truncate">Urban Backpack</p>
+<p class="text-xs text-[#617589] truncate">Accessories • Stock: 45</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-[#111418] dark:text-white">65</p>
+<p class="text-xs text-green-600 font-medium">Sold</p>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="flex items-center gap-4 group cursor-pointer">
+<div class="size-12 rounded-lg bg-gray-100 dark:bg-gray-700 bg-cover bg-center flex-shrink-0 border border-gray-200" data-alt="Coffee Mug product image" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCBPa_hjL8XS7V0-4dt88AGYqewecpDqAjZdq-OEfs_EB-_iQJOySg4K-DdDl4tRoegWLm-Cd7qsFEE8KB41eXmyIN5G7_Aqy2cmCNRHVeroOpnYJXjwAXQf4XXNmE3mEOwNXGkrTPexGLGcPYIhHwneIqVi9G3gwS-vCWZ-2j_m_NEGthkf1h-2Zr8H37VvVCmB-4cMYsmQYD_TvQnppPE5i58hKdiFWSlbnqFo18Ij9knBDafr5OiQrwlGycOLrcGRudLSECjdB9h')">
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-[#111418] dark:text-white truncate">Travel Mug</p>
+<p class="text-xs text-[#617589] truncate">Home • Stock: 120</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-[#111418] dark:text-white">42</p>
+<p class="text-xs text-green-600 font-medium">Sold</p>
+</div>
+</div>
+</div>
+<button class="mt-auto pt-4 w-full text-center text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                View All Products
+                            </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

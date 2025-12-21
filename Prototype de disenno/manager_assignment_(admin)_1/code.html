@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manager Assignment - Admin</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a242f",
+                        "border-light": "#dbe0e6",
+                        "border-dark": "#2c3642",
+                        "text-main-light": "#111418",
+                        "text-main-dark": "#ffffff",
+                        "text-sub-light": "#617589",
+                        "text-sub-dark": "#9ca3af",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark font-display antialiased min-h-screen flex flex-col overflow-x-hidden">
+<!-- Navigation Bar -->
+<header class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark sticky top-0 z-50">
+<div class="px-4 md:px-10 py-3 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="size-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">admin_panel_settings</span>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight">Sales Admin</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-end gap-8 items-center">
+<nav class="flex items-center gap-6">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium hover:text-primary transition-colors text-primary" href="#">Stores</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Users</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="size-10 rounded-full bg-background-light dark:bg-background-dark flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-text-sub-light dark:text-text-sub-dark">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-10 rounded-full bg-cover bg-center border-2 border-white dark:border-gray-700 shadow-sm" data-alt="User profile avatar gradient" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDHym3VKKXYo_VdLNMBdIPSjerbAGQG5Xft7DC2--ib_0-8XwdkUUDG8crClUAghwz2j9TH-2HavfdaEWhq1rbJOGzbEahQ9q2s6PpveSnlkN2ApODxEzCSCQCGmNP_G-XUVhoGwaAm3qe_iSpCyrdQQICSLutCIUjniO7uTnodHQJLoxpI0W4Z9OmVKCUaSlIElZh0eQZZR03-KMb1oQVg-Fp2XI8-OHQTuTTSFMW4V6fSktAzVbJf_0zxclp3ivM82TnAoN0BaieX");'></div>
+</div>
+</div>
+<!-- Mobile Menu Button -->
+<button class="md:hidden p-2 text-text-main-light dark:text-text-main-dark">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col items-center py-8 px-4 md:px-8 lg:px-40 w-full max-w-[1440px] mx-auto">
+<div class="w-full max-w-[1024px] flex flex-col gap-8">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div>
+<h1 class="text-3xl md:text-4xl font-black leading-tight tracking-tight mb-2">Assign Managers</h1>
+<p class="text-text-sub-light dark:text-text-sub-dark text-base">Select a store and manage the leadership team assigned to it.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark font-bold text-sm bg-surface-light dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        View History
+                    </button>
+</div>
+</div>
+<!-- Store Selector Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+<label class="flex flex-col gap-2">
+<span class="text-base font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">storefront</span>
+                        Select Target Store
+                    </span>
+<div class="relative">
+<select class="w-full h-14 pl-4 pr-10 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none text-base font-medium cursor-pointer transition-all">
+<option disabled="" selected="" value="">Search by Store Name or ID...</option>
+<option value="store_1">Flagship Store - New York (NY-001)</option>
+<option value="store_2">Downtown Outlet - Chicago (CHI-045)</option>
+<option value="store_3">Suburban Mall - Austin (TX-202)</option>
+</select>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-sub-light dark:text-text-sub-dark">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+<p class="text-sm text-text-sub-light dark:text-text-sub-dark mt-1">Current team: 2 assigned managers</p>
+</label>
+</div>
+<!-- Dual List Component -->
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-start h-auto lg:h-[600px]">
+<!-- Left Column: Available -->
+<div class="flex flex-col h-[500px] lg:h-full bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden flex-1">
+<div class="p-4 border-b border-border-light dark:border-border-dark bg-gray-50 dark:bg-surface-dark/50">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-bold text-lg">Available Managers</h3>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">142</span>
+</div>
+<!-- Search Bar -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-sub-light dark:text-text-sub-dark text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Filter by name or email..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+<!-- Manager Item 1 -->
+<div class="group flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAajEW7iDiVIxIgfXOt5AnHFHcu3KIDg3RyPOL-kdFAcXJnRkbZqdN87o9dhoKrtTXN9bwJTz7uBFh2C_IfopGdnVUCN5Z3GHaNgbK2oWS4P-oqITXdtnphp6m8rAsl3LjzGJmq6BKzlrpH1zcRmkeEvDM-okWDWUDjF5URJJv8ib92TYDqtM6SzLbTxznNj3ZTwlkmS-OzlXTfjcqRKwB0u9lwrnPwBHQXl7jsWNIM85O-TkenpDFNgmz-lKkuRbk4pj2LBncNbTCl");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">Sarah Jenkins</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">s.jenkins@example.com</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500" title="Active"></span>
+<div class="size-5 rounded border border-border-light dark:border-border-dark flex items-center justify-center bg-white dark:bg-surface-dark group-hover:border-primary transition-colors">
+<!-- Unchecked state empty -->
+</div>
+</div>
+</div>
+<!-- Manager Item 2 -->
+<div class="group flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCozbasr-ZY7i275OUKAdedZ0iGWvkPruJyeZbcNGziTV8OwMmAMWjuKuPEvTDenr1prBOkMLVXAlcNbGb1DQdZRddEsQS33wgRpDtg_IM9mAxxnTTLouhWXRK3O88dynkkfBjA2Oak53AO9tf3qR7Uq_5dw1QAk62Jnb_C-u0KMWHZ3Lg9bmnq5zTb__SK5F6SZDE_Lz8rh_pGjH27SFJBSpQSPFjwZkeOgit6aQQQviC8wwNeCabZN-xq6Ze1bHLo40hVEV9oHZlY");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">Michael Chen</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">m.chen@example.com</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500 text-base" title="Managing max stores">warning</span>
+<div class="size-5 rounded border border-border-light dark:border-border-dark flex items-center justify-center bg-white dark:bg-surface-dark group-hover:border-primary transition-colors"></div>
+</div>
+</div>
+<!-- Manager Item 3 (Selected) -->
+<div class="group flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/30 cursor-pointer transition-all">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDkzWShfyyD7lVrlyvvvLkZ8wwkLtMpFYp4rvgGHSycRvdOKeYmIrB4_b1O3djNMWrtaGObj0Ji9AZCtWmEV5fDS2fX3LZi_y_lBV8pwwt1_b6A6MkprC7XkrD6uxzNnWUc9xNSv5T1hhHI66VxLUM0fgBnTPOI_g7QdapiXSXFt3gl1ZI7lTYNtCsIKuSuRSJjPnSuIRFHI00i0F4jgNyB1npf5KJsQSbrfzRLbcfar1UZvy0bLteGP1tUgHIQH8iao3G5cdSX-b5T");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">Jessica Alverez</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">j.alverez@example.com</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+<div class="size-5 rounded border border-primary bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+</div>
+</div>
+<!-- More Items for visual density -->
+<div class="group flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all opacity-60">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0 grayscale" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBL1MCd5ZBvGy9jwIB8une-Ph2sV4avRXCE0SEicVuRb2sYtZZ8Nkdt1Atz3VNznso0V320TPiOOflLNqrgx3NLB9s5F0Lv3ajZn1T-C-6tu0H82FwsrJpqGz1TWQCix22JIIVMs2Y0P-Pxdv684t7OLph_KIQoirxH7e3D2FXYhypqM5_EhvUAslCHfnxvVlWogtdbirSFmnLRytsoeTAuCKCYAuRShCYHUPe2-ioIt1a5HgfZLEtXdDLlRnJiRle9c5Xs7uN0N2EA");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">Robert Fox</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">Inactive</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-gray-300"></span>
+<div class="size-5 rounded border border-border-light dark:border-border-dark flex items-center justify-center bg-white dark:bg-surface-dark"></div>
+</div>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAcrBlHUtZ8ubi5qdvYtphl2U98isU90rPwaq4lZg9Oz7yYHXqv0qHtH9CmLzp54F2GDy595_BConwwX39ZBvxCzP9PrWaOvhi5hCTE8ZqWiJ1sEuMGsEK-n-FcnIAwQ0FQ8UqkuxtvJYfa0GUfTcbpPBXELyB946H-c_kt0oSv0a9FZw9FJ_wB_4ykHMM1EjA_ro33ZmSFCqUK_FGk-YMfxLr3Nj0b1nNXFqL2p87E9Uxg6W_Xpl2Fid1bADAHy2ww0incLjsUUVIA");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">David Kim</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">d.kim@example.com</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+<div class="size-5 rounded border border-border-light dark:border-border-dark flex items-center justify-center bg-white dark:bg-surface-dark group-hover:border-primary transition-colors"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Middle Actions -->
+<div class="flex lg:flex-col items-center justify-center gap-3 py-2 lg:py-0">
+<button class="size-10 lg:size-12 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center shadow-sm group disabled:opacity-50 disabled:cursor-not-allowed">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform lg:rotate-0 rotate-90">chevron_right</span>
+</button>
+<button class="size-10 lg:size-12 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center shadow-sm group disabled:opacity-50 disabled:cursor-not-allowed">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform lg:rotate-0 rotate-90">chevron_left</span>
+</button>
+<div class="hidden lg:block w-px h-8 bg-border-light dark:bg-border-dark my-2"></div>
+<button class="size-10 lg:size-12 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center shadow-sm group">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform lg:rotate-0 rotate-90">keyboard_double_arrow_right</span>
+</button>
+<button class="size-10 lg:size-12 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center shadow-sm group">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform lg:rotate-0 rotate-90">keyboard_double_arrow_left</span>
+</button>
+</div>
+<!-- Right Column: Assigned -->
+<div class="flex flex-col h-[500px] lg:h-full bg-surface-light dark:bg-surface-dark rounded-xl border-2 border-primary/20 dark:border-primary/20 shadow-sm overflow-hidden flex-1 relative">
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<div class="p-4 border-b border-border-light dark:border-border-dark bg-gray-50 dark:bg-surface-dark/50">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-bold text-lg text-primary">Assigned to Store</h3>
+<span class="px-2 py-0.5 rounded-full bg-primary text-white text-xs font-bold">2</span>
+</div>
+<!-- Search Bar -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-sub-light dark:text-text-sub-dark text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Search assigned..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+<!-- Assigned Item 1 -->
+<div class="group flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCfsTUlcgeoJ85Vxw4N3yjTlf1fgf3D93AR3W3qhnNJssdTVLoPfZGcGpXxLQqvFuwvjVh0dyf3t0sSvC2WcQDKruUDitu6QHmEGf1B-chshZ-Kc5pL9m76-YRUDONgxGVHMJZttFcS5xhwx1u_IQ1Ar0IbLV1NrmX8R3ULkbKXVV9pGU6Jt1mOS9QV6XqxlTOSH2zwpge6f9WryXJUdJxRnC8jkB2agwCnC_yT5wiX3BJMltT5ncBV-n7AL--Jcaw9Ztqi_ZX_bImk");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">Amanda Lowery</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">a.lowery@example.com</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+<button class="p-1 rounded-md text-text-sub-light hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+<!-- Assigned Item 2 -->
+<div class="group flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Manager avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCLFQYtZpGExNkfkvllDB3TV__ED0kzBZAA-O5GOQowjtsq0It76G2aN5XQ-8dyCoPMMgPBDOexrTmCasGumQqSwPjVPbKqxxn3_6TZ9n2j_-gZQLYSpT917-1LJFFftWg1YQmp2Aoy9nfojdw9h0l0f0gs-LyHT0FomEZ6iljnGYdfq-CIQTsY4YPZt0QrOOgsdC8e4g__N1luTfexvuEdtD9vQ5KIH_ecZIQfazpQO7k5RqSdQjIRBSfGbd9NNiMfv5U_vVekx8H2");'></div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">John Smith</p>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark truncate">j.smith@example.com</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+<button class="p-1 rounded-md text-text-sub-light hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State Hint (Hidden when items present, but shown for design completeness concept) -->
+<!-- 
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-text-sub-light dark:text-text-sub-dark bg-surface-light dark:bg-surface-dark z-10 hidden">
+                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50">group_add</span>
+                        <p class="text-sm">No managers assigned yet</p>
+                    </div> 
+                    -->
+</div>
+</div>
+<!-- Action Footer -->
+<div class="flex flex-col-reverse sm:flex-row justify-end items-center gap-4 pt-4 border-t border-border-light dark:border-border-dark">
+<button class="w-full sm:w-auto px-6 py-3 rounded-lg text-text-sub-light dark:text-text-sub-dark hover:bg-gray-100 dark:hover:bg-gray-800 font-bold text-sm transition-colors">
+                    Cancel
+                </button>
+<button class="w-full sm:w-auto px-8 py-3 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">save</span>
+                    Save Assignments
+                </button>
+</div>
+</div>
+</main>
+<style>
+        /* Custom scrollbar for better look inside the lists */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #dbe0e6;
+            border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #2c3642;
+        }
+    </style>
+</body></html>

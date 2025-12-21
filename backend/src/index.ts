@@ -2,15 +2,54 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { body, param, query, validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import db from './db';
+
+// Secret for JWT tokens (should be in environment variables)
+const JWT_SECRET = process.env.JWT_SECRET || 'nexus_salesflow_secret';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Rate limiting middleware
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Login rate limiting (more restrictive)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login requests per windowMs
+  message: 'Too many login attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(limiter); // Apply general rate limiting to all requests
+
+// Helper function to create audit logs
+const createAuditLog = async (userId: string, action: string, entityType: string, entityId?: string, oldValues?: any, newValues?: any, storeId?: string) => {
+  try {
+    const auditId = `audit-${Date.now()}`;
+    await db.query(
+      'INSERT INTO "AuditLog" (id, "userId", "action", "entityType", "entityId", "oldValues", "newValues", "storeId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [auditId, userId, action, entityType, entityId, oldValues, newValues, storeId]
+    );
+  } catch (error) {
+    console.error('Error creating audit log:', error);
+    // Don't throw error as audit logging shouldn't break the main functionality
+  }
+};
 
 // ======================================================================
 // API Routes
@@ -20,12 +59,59 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Nexus SalesFlow API is running!');
 });
 
-// --- AUTH Endpoints ---
-app.post('/api/login', async (req: Request, res: Response) => {
-    const { name, password } = req.body;
-    if (!name || !password) {
-        return res.status(400).json({ message: 'Username and password are required.' });
+// Public endpoint to check if any users exist (for initial setup)
+app.get('/api/users/exists', async (req: Request, res: Response) => {
+  try {
+    const result = await db.query('SELECT COUNT(*) FROM "User"');
+    const userCount = parseInt(result.rows[0].count);
+    res.json({ exists: userCount > 0, count: userCount });
+  } catch (error) {
+    console.error('Check users exists error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Authentication middleware
+const authenticateToken = (req: Request, res: Response, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      return res.status(403).json({ message: 'Invalid or expired token' });
     }
+    (req as any).user = user;
+    next();
+  });
+};
+
+// Validation middleware for login
+const validateLogin = [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Username must be between 1 and 50 characters')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
+  body('password')
+    .isLength({ min: 6, max: 100 })
+    .withMessage('Password must be between 6 and 100 characters'),
+  (req: Request, res: Response, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
+    next();
+  }
+];
+
+// --- AUTH Endpoints ---
+app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Response) => {
+    const { name, password } = req.body;
     try {
         const result = await db.query('SELECT * FROM "User" WHERE name = $1', [name]);
         if (result.rows.length === 0) {
@@ -36,19 +122,81 @@ app.post('/api/login', async (req: Request, res: Response) => {
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
+
+        // Create JWT token
+        const token = jwt.sign(
+          { id: user.id, name: user.name, role: user.role, storeId: user.storeId },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
         // Don't send password back to client
         delete user.password;
-        res.json(user);
+
+        res.json({ ...user, token });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-app.post('/api/users', async (req: Request, res: Response) => {
+// Validation middleware for user creation
+const validateUserCreation = [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Name must be between 1 and 50 characters')
+    .matches(/^[a-zA-Z0-9\s_]+$/)
+    .withMessage('Name can only contain letters, numbers, spaces, and underscores'),
+  body('password')
+    .isLength({ min: 6, max: 100 })
+    .withMessage('Password must be between 6 and 100 characters'),
+  body('role')
+    .isIn(['Admin', 'Director', 'Manager', 'Gestor'])
+    .withMessage('Role must be Admin, Manager, or Gestor'),
+  body('storeId')
+    .optional()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Store ID must be between 1 and 100 characters if provided'),
+  (req: Request, res: Response, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
+    next();
+  }
+];
+
+app.post('/api/users', async (req: Request, res: Response, next: any) => {
+    // Check if any users exist
+    try {
+        const checkResult = await db.query('SELECT COUNT(*) FROM "User"');
+        const userCount = parseInt(checkResult.rows[0].count);
+        
+        if (userCount === 0) {
+            // If no users exist, allow creating the first admin without a token
+            return next();
+        }
+        
+        // If users exist, enforce authentication
+        authenticateToken(req, res, next);
+    } catch (error) {
+        console.error('Error checking user count:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}, validateUserCreation, async (req: Request, res: Response) => {
     const { name, password, role, storeId } = req.body;
-    if (!name || !password || !role) {
-        return res.status(400).json({ message: 'Name, password, and role are required.' });
+
+    // Check if any users exist to see if this is the first one
+    const checkResult = await db.query('SELECT COUNT(*) FROM "User"');
+    const isFirstUser = parseInt(checkResult.rows[0].count) === 0;
+
+    // If not the first user, check if the requesting user has admin role
+    if (!isFirstUser) {
+        const requestingUser = (req as any).user;
+        if (!requestingUser || requestingUser.role !== 'Admin') {
+            return res.status(403).json({ message: 'Only admins can create users.' });
+        }
     }
 
     try {
@@ -65,9 +213,15 @@ app.post('/api/users', async (req: Request, res: Response) => {
     }
 });
 
-app.put('/api/users/:id/password', async (req: Request, res: Response) => {
+app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { oldPassword, newPassword } = req.body;
+    const requestingUser = (req as any).user;
+
+    // Only allow users to change their own password or admins to change any password
+    if (requestingUser.id !== id && requestingUser.role !== 'Admin') {
+        return res.status(403).json({ message: 'Access denied. You can only change your own password.' });
+    }
 
     try {
         const result = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
@@ -75,10 +229,15 @@ app.put('/api/users/:id/password', async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'User not found.' });
         }
         const user = result.rows[0];
-        const passwordMatch = await bcrypt.compare(oldPassword, user.password);
-        if (!passwordMatch) {
-            return res.status(400).json({ message: 'Invalid old password.' });
+
+        // For admin changing other user's password, skip old password check
+        if (requestingUser.id === id) {
+            const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+            if (!passwordMatch) {
+                return res.status(400).json({ message: 'Invalid old password.' });
+            }
         }
+
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
         await db.query('UPDATE "User" SET password = $1 WHERE id = $2', [hashedNewPassword, id]);
         res.status(200).json({ message: 'Password updated successfully.' });
@@ -90,24 +249,89 @@ app.put('/api/users/:id/password', async (req: Request, res: Response) => {
 
 
 // --- GET Endpoints ---
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  // Only admins can see all users
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Access denied. Only admins can view all users.' });
+  }
+
   const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"', []);
   res.json(rows);
 });
 
-app.get('/api/stores', async (req: Request, res: Response) => {
-  const { rows: stores } = await db.query('SELECT * FROM "Store"', []);
-  const storesWithRates = await Promise.all(stores.map(async (store) => {
+app.get('/api/stores', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  // Managers can only see their assigned stores
+  let storeCondition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    storeCondition = `WHERE s.id IN (
+      SELECT stum."A" FROM "_StoreToUser" stum
+      JOIN "User" u ON stum."B" = u.id
+      WHERE u.id = $1
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    // Gestors can only see their store
+    if (requestingUser.storeId) {
+      storeCondition = 'WHERE s.id = $1';
+      params.push(requestingUser.storeId);
+    } else {
+      return res.status(403).json({ message: 'Gestor not assigned to a store.' });
+    }
+  }
+
+  const query = `SELECT s.* FROM "Store" s ${storeCondition}`;
+  const { rows: stores } = await db.query(query, params);
+
+  const storesWithRatesAndManagers = await Promise.all(stores.map(async (store) => {
     const { rows: exchangeRates } = await db.query('SELECT * FROM "ExchangeRate" WHERE "storeId" = $1', [store.id]);
-    return { ...store, exchangeRates };
+
+    // Get managers for this store using the junction table
+    const { rows: storeManagers } = await db.query(`
+      SELECT u.id FROM "_StoreToUser" stum
+      JOIN "User" u ON stum."B" = u.id
+      WHERE stum."A" = $1 AND u.role = 'Manager'
+    `, [store.id]);
+
+    const managerIds = storeManagers.map(row => row.id);
+
+    return { ...store, exchangeRates, managerIds };
   }));
-  res.json(storesWithRates);
+  res.json(storesWithRatesAndManagers);
 });
 
-app.post('/api/stores', async (req: Request, res: Response) => {
+// Validation middleware for store creation
+const validateStoreCreation = [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Store name must be between 1 and 100 characters')
+    .matches(/^[a-zA-Z0-9\s\-_]+$/)
+    .withMessage('Store name can only contain letters, numbers, spaces, hyphens, and underscores'),
+  body('defaultCommissionRate')
+    .optional()
+    .isFloat({ min: 0, max: 1 })
+    .withMessage('Default commission rate must be a number between 0 and 1'),
+  (req: Request, res: Response, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
+    next();
+  }
+];
+
+app.post('/api/stores', authenticateToken, validateStoreCreation, async (req: Request, res: Response) => {
     const { name, defaultCommissionRate } = req.body;
-    if (!name) {
-        return res.status(400).json({ message: 'Store name is required.' });
+    const requestingUser = (req as any).user;
+
+    if (requestingUser.role !== 'Admin') {
+        return res.status(403).json({ message: 'Access denied. Only admins can create stores.' });
     }
 
     try {
@@ -116,6 +340,8 @@ app.post('/api/stores', async (req: Request, res: Response) => {
             'INSERT INTO "Store" (id, name, "defaultCommissionRate") VALUES ($1, $2, $3) RETURNING *',
             [newStoreId, name, defaultCommissionRate || 0.10]
         );
+        // Create audit log for store creation
+        await createAuditLog(requestingUser.id, 'CREATE_STORE', 'Store', result.rows[0].id, null, result.rows[0], result.rows[0].id);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Store creation error:', error);
@@ -123,17 +349,42 @@ app.post('/api/stores', async (req: Request, res: Response) => {
     }
 });
 
-app.put('/api/stores/:id', async (req: Request, res: Response) => {
+app.put('/api/stores/:id', authenticateToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name } = req.body;
+    const requestingUser = (req as any).user;
+
+    if (requestingUser.role !== 'Admin') {
+        return res.status(403).json({ message: 'Access denied. Only admins can update stores.' });
+    }
+
     if (!name) {
         return res.status(400).json({ message: 'Store name is required.' });
     }
+
+    // Get the current store for audit logging
+    const currentStoreResult = await db.query('SELECT * FROM "Store" WHERE id = $1', [id]);
+    if (currentStoreResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Store not found.' });
+    }
+
     try {
         const result = await db.query('UPDATE "Store" SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Store not found.' });
         }
+
+        // Create audit log for store update
+        await createAuditLog(
+          requestingUser.id,
+          'UPDATE_STORE',
+          'Store',
+          id,
+          currentStoreResult.rows[0],
+          result.rows[0],
+          id
+        );
+
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('Store update error:', error);
@@ -141,30 +392,701 @@ app.put('/api/stores/:id', async (req: Request, res: Response) => {
     }
 });
 
-app.get('/api/products', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "Product"', []);
+// Endpoint to assign a manager to a store
+app.post('/api/stores/:storeId/assign-manager', authenticateToken, async (req: Request, res: Response) => {
+  const { storeId } = req.params;
+  const { userId } = req.body;
+  const requestingUser = (req as any).user;
+
+  // Only admins can assign managers to stores
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Access denied. Only admins can assign managers to stores.' });
+  }
+
+  if (!userId) {
+    return res.status(400).json({ message: 'User ID is required.' });
+  }
+
+  try {
+    // Check if the store exists
+    const storeResult = await db.query('SELECT id FROM "Store" WHERE id = $1', [storeId]);
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Store not found.' });
+    }
+
+    // Check if the user exists and is a manager
+    const userResult = await db.query('SELECT id, role FROM "User" WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    if (userResult.rows[0].role !== 'Manager') {
+      return res.status(400).json({ message: 'User is not a manager.' });
+    }
+
+    // Assign the manager to the store
+    await db.query(
+      'INSERT INTO "_StoreToUser" ("A", "B") VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [storeId, userId]
+    );
+
+    // Create audit log for manager assignment
+    await createAuditLog(
+      requestingUser.id,
+      'ASSIGN_MANAGER_TO_STORE',
+      'StoreUser',
+      storeId,
+      null,
+      { storeId, userId },
+      storeId
+    );
+
+    res.status(200).json({ message: 'Manager assigned to store successfully.' });
+  } catch (error) {
+    console.error('Assign manager to store error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Endpoint to remove a manager from a store
+app.delete('/api/stores/:storeId/remove-manager/:userId', authenticateToken, async (req: Request, res: Response) => {
+  const { storeId, userId } = req.params;
+  const requestingUser = (req as any).user;
+
+  // Only admins can remove managers from stores
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Access denied. Only admins can remove managers from stores.' });
+  }
+
+  try {
+    await db.query(
+      'DELETE FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
+      [storeId, userId]
+    );
+
+    // Create audit log for manager removal
+    await createAuditLog(
+      requestingUser.id,
+      'REMOVE_MANAGER_FROM_STORE',
+      'StoreUser',
+      storeId,
+      { storeId, userId },
+      null,
+      storeId
+    );
+
+    res.status(200).json({ message: 'Manager removed from store successfully.' });
+  } catch (error) {
+    console.error('Remove manager from store error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Endpoint to get product stock
+app.get('/api/product-stock', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  let storeCondition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    storeCondition = `WHERE ps."storeId" IN (
+      SELECT stum."A" FROM "_StoreToUser" stum
+      JOIN "User" u ON stum."B" = u.id
+      WHERE u.id = $1
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    if (requestingUser.storeId) {
+      storeCondition = 'WHERE ps."storeId" = $1';
+      params.push(requestingUser.storeId);
+    } else {
+      return res.status(403).json({ message: 'Gestor not assigned to a store.' });
+    }
+  }
+
+  const query = `
+    SELECT ps.*, p.name as productName, s.name as storeName
+    FROM "ProductStock" ps
+    JOIN "Product" p ON ps."productId" = p.id
+    JOIN "Store" s ON ps."storeId" = s.id
+    ${storeCondition}
+  `;
+  const { rows } = await db.query(query, params);
   res.json(rows);
 });
 
-app.get('/api/inventory', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "InventoryItem"', []);
+// Validation middleware for product stock
+const validateProductStock = [
+  body('productId')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Product ID must be between 1 and 100 characters'),
+  body('storeId')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Store ID must be between 1 and 100 characters'),
+  body('quantity')
+    .isInt({ min: 0, max: 1000000 })
+    .withMessage('Quantity must be a positive integer between 0 and 1,000,000'),
+  (req: Request, res: Response, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
+    next();
+  }
+];
+
+// Endpoint to set product stock
+app.post('/api/product-stock', authenticateToken, validateProductStock, async (req: Request, res: Response) => {
+  const { productId, storeId, quantity } = req.body;
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Manager') {
+    return res.status(403).json({ message: 'Access denied. Only managers can set product stock.' });
+  }
+
+  // Check if the manager has access to this store
+  const storeAccess = await db.query(
+    'SELECT * FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
+    [storeId, requestingUser.id]
+  );
+  if (storeAccess.rows.length === 0) {
+    return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
+  }
+
+  try {
+    // Check if stock record already exists
+    const existingStock = await db.query(
+      'SELECT * FROM "ProductStock" WHERE "productId" = $1 AND "storeId" = $2',
+      [productId, storeId]
+    );
+
+    let result;
+    if (existingStock.rows.length > 0) {
+      // Update existing stock
+      result = await db.query(
+        'UPDATE "ProductStock" SET "quantity" = $1 WHERE "productId" = $2 AND "storeId" = $3 RETURNING *',
+        [quantity, productId, storeId]
+      );
+    } else {
+      // Create new stock record
+      const stockId = `stock-${Date.now()}`;
+      result = await db.query(
+        'INSERT INTO "ProductStock" (id, "productId", "storeId", "quantity") VALUES ($1, $2, $3, $4) RETURNING *',
+        [stockId, productId, storeId, quantity]
+      );
+    }
+
+    // Create audit log for stock update
+    await createAuditLog(
+      requestingUser.id,
+      'UPDATE_STOCK',
+      'ProductStock',
+      result.rows[0]?.id,
+      existingStock.rows[0] || null,
+      result.rows[0],
+      storeId
+    );
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Product stock error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Endpoint to get assigned inventory
+app.get('/api/assigned-inventory', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  let condition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    condition = `WHERE ai."gestorId" IN (
+      SELECT u.id FROM "User" u
+      WHERE u."storeId" IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        JOIN "User" mgr ON stum."B" = mgr.id
+        WHERE mgr.id = $1
+      )
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    condition = 'WHERE ai."gestorId" = $1';
+    params.push(requestingUser.id);
+  }
+
+  const query = `
+    SELECT ai.*, p.name as productName, u.name as gestorName
+    FROM "AssignedInventory" ai
+    JOIN "Product" p ON ai."productId" = p.id
+    JOIN "User" u ON ai."gestorId" = u.id
+    ${condition}
+  `;
+  const { rows } = await db.query(query, params);
   res.json(rows);
 });
 
-app.get('/api/sales', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "Sale"', []);
+// Validation middleware for inventory assignment
+const validateInventoryAssignment = [
+  body('productId')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Product ID must be between 1 and 100 characters'),
+  body('gestorId')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Gestor ID must be between 1 and 100 characters'),
+  body('quantity')
+    .isInt({ min: 1, max: 1000000 })
+    .withMessage('Quantity must be a positive integer between 1 and 1,000,000'),
+  (req: Request, res: Response, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
+    next();
+  }
+];
+
+// Endpoint to assign inventory to gestor
+app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignment, async (req: Request, res: Response) => {
+  const { productId, gestorId, quantity } = req.body;
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Manager') {
+    return res.status(403).json({ message: 'Access denied. Only managers can assign inventory.' });
+  }
+
+  try {
+    // Check if the manager has access to the gestor's store
+    const gestor = await db.query('SELECT "storeId" FROM "User" WHERE id = $1', [gestorId]);
+    if (gestor.rows.length === 0 || !gestor.rows[0].storeId) {
+      return res.status(400).json({ message: 'Gestor not assigned to a store.' });
+    }
+
+    const storeId = gestor.rows[0].storeId;
+
+    // Check if the manager has access to this store
+    const storeAccess = await db.query(
+      'SELECT * FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
+      [storeId, requestingUser.id]
+    );
+    if (storeAccess.rows.length === 0) {
+      return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
+    }
+
+    const stockResult = await db.query(
+      'SELECT "quantity" FROM "ProductStock" WHERE "productId" = $1 AND "storeId" = $2',
+      [productId, storeId]
+    );
+
+    if (stockResult.rows.length === 0) {
+      return res.status(400).json({ message: 'Product stock not found for this store.' });
+    }
+
+    const availableStock = stockResult.rows[0].quantity;
+    if (availableStock < quantity) {
+      return res.status(400).json({ message: `Not enough stock available. Requested: ${quantity}, Available: ${availableStock}` });
+    }
+
+    // Create or update assigned inventory
+    const assignedId = `assign-${Date.now()}`;
+    const result = await db.query(
+      'INSERT INTO "AssignedInventory" (id, "productId", "gestorId", "quantity") VALUES ($1, $2, $3, $4) RETURNING *',
+      [assignedId, productId, gestorId, quantity]
+    );
+
+    // Update product stock by reducing the assigned quantity
+    await db.query(
+      'UPDATE "ProductStock" SET "quantity" = "quantity" - $1 WHERE "productId" = $2 AND "storeId" = $3',
+      [quantity, productId, storeId]
+    );
+
+    // Create audit log for inventory assignment
+    await createAuditLog(
+      requestingUser.id,
+      'ASSIGN_INVENTORY',
+      'AssignedInventory',
+      result.rows[0]?.id,
+      null,
+      result.rows[0],
+      storeId
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Assign inventory error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.get('/api/products', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  let storeCondition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    storeCondition = 'WHERE "storeId" IN (SELECT "A" FROM "_StoreToUser" WHERE "B" = $1)';
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    if (requestingUser.storeId) {
+      storeCondition = 'WHERE "storeId" = $1';
+      params.push(requestingUser.storeId);
+    } else {
+      return res.status(403).json({ message: 'Gestor not assigned to a store.' });
+    }
+  }
+
+  const query = `SELECT * FROM "Product" ${storeCondition}`;
+  const { rows } = await db.query(query, params);
   res.json(rows);
 });
 
-app.get('/api/closings', async (req, res) => {
+app.get('/api/inventory', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  let condition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    // Managers can see inventory for their stores
+    condition = `WHERE "gestorId" IN (
+      SELECT u.id FROM "User" u
+      WHERE u."storeId" IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        JOIN "User" mgr ON stum."B" = mgr.id
+        WHERE mgr.id = $1
+      )
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    // Gestors can only see their own inventory
+    condition = 'WHERE "gestorId" = $1';
+    params.push(requestingUser.id);
+  }
+
+  const query = `SELECT * FROM "InventoryItem" ${condition}`;
+  const { rows } = await db.query(query, params);
+  res.json(rows);
+});
+
+app.get('/api/sales', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  let condition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    // Managers can see sales for gestors in their stores
+    condition = `WHERE "gestorId" IN (
+      SELECT u.id FROM "User" u
+      WHERE u."storeId" IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        JOIN "User" mgr ON stum."B" = mgr.id
+        WHERE mgr.id = $1
+      )
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    // Gestors can only see their own sales
+    condition = 'WHERE "gestorId" = $1';
+    params.push(requestingUser.id);
+  }
+
+  const query = `SELECT * FROM "Sale" ${condition}`;
+  const { rows } = await db.query(query, params);
+  res.json(rows);
+});
+
+app.get('/api/closings', authenticateToken, async (req, res) => {
+  const requestingUser = (req as any).user;
+
+  let condition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    // Managers can see closings for gestors in their stores
+    condition = `WHERE "gestorId" IN (
+      SELECT u.id FROM "User" u
+      WHERE u."storeId" IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        JOIN "User" mgr ON stum."B" = mgr.id
+        WHERE mgr.id = $1
+      )
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    // Gestors can only see their own closings
+    condition = 'WHERE "gestorId" = $1';
+    params.push(requestingUser.id);
+  }
+
   // This would require a JOIN for sales
-  const { rows } = await db.query('SELECT * FROM "Closing"', []);
+  const query = `SELECT * FROM "Closing" ${condition}`;
+  const { rows } = await db.query(query, params);
   res.json(rows);
 });
+
+// Endpoint to create an audit log entry
+app.post('/api/audit-logs', authenticateToken, async (req: Request, res: Response) => {
+  const { userId, action, entityType, entityId, oldValues, newValues, storeId } = req.body;
+  const requestingUser = (req as any).user;
+
+  // Only admins can create audit logs for other users
+  if (requestingUser.role !== 'Admin' && userId !== requestingUser.id) {
+    return res.status(403).json({ message: 'Access denied. You can only create audit logs for yourself.' });
+  }
+
+  if (!userId || !action || !entityType) {
+    return res.status(400).json({ message: 'User ID, action, and entity type are required.' });
+  }
+
+  try {
+    const auditId = `audit-${Date.now()}`;
+    const result = await db.query(
+      'INSERT INTO "AuditLog" (id, "userId", "action", "entityType", "entityId", "oldValues", "newValues", "storeId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [auditId, userId, action, entityType, entityId, oldValues, newValues, storeId]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Audit log error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Endpoint to get audit logs
+app.get('/api/audit-logs', authenticateToken, async (req, res) => {
+  const { storeId, userId, entityType, action, limit = 50, offset = 0 } = req.query;
+  const requestingUser = (req as any).user;
+
+  try {
+    // Non-admins can only see their own audit logs or logs for their stores
+    let query = 'SELECT * FROM "AuditLog" WHERE 1=1';
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (requestingUser.role === 'Manager') {
+      // Managers can see logs for their stores
+      query += ` AND ("userId" = $${paramIndex} OR "storeId" IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        WHERE stum."B" = $${paramIndex}
+      ))`;
+      params.push(requestingUser.id);
+      paramIndex++;
+    } else if (requestingUser.role === 'Gestor') {
+      // Gestors can only see their own logs
+      query += ` AND "userId" = $${paramIndex}`;
+      params.push(requestingUser.id);
+      paramIndex++;
+    } else if (requestingUser.role === 'Admin') {
+      // Admins can see all logs, but can still filter
+      if (storeId) {
+        query += ` AND "storeId" = $${paramIndex}`;
+        params.push(storeId);
+        paramIndex++;
+      }
+      if (userId) {
+        query += ` AND "userId" = $${paramIndex}`;
+        params.push(userId);
+        paramIndex++;
+      }
+    } else {
+      // If not admin, gestor, or manager, restrict access
+      query += ` AND "userId" = $${paramIndex}`;
+      params.push(requestingUser.id);
+      paramIndex++;
+    }
+
+    if (entityType) {
+      query += ` AND "entityType" = $${paramIndex}`;
+      params.push(entityType);
+      paramIndex++;
+    }
+    if (action) {
+      query += ` AND "action" = $${paramIndex}`;
+      params.push(action);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY "timestamp" DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(parseInt(limit as string), parseInt(offset as string));
+
+    const { rows } = await db.query(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get audit logs error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Function to initialize database tables if they don't exist
+async function initializeDatabase() {
+  try {
+    console.log('Checking database tables...');
+
+    // Just check if a key table exists instead of dropping everything
+    const tableCheck = await db.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'User'");
+    
+    if (tableCheck.rows.length > 0) {
+      console.log('Database already initialized.');
+      return;
+    }
+
+    console.log('Initializing database tables...');
+
+    // Check if main tables exist, if not create them
+    const dbSchema = `-- SQL for Nexus SalesFlow Database
+CREATE TABLE "Store" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL UNIQUE,
+    "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
+    "directorId" TEXT,
+    CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "password" TEXT NOT NULL, -- Added password field
+    "role" TEXT NOT NULL CHECK (role IN ('Admin', 'Director', 'Manager', 'Gestor')),
+    "storeId" TEXT,
+    CONSTRAINT "User_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE "ExchangeRate" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "rate" DOUBLE PRECISION NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "endDate" TIMESTAMP(3),
+    "storeId" TEXT NOT NULL,
+    CONSTRAINT "ExchangeRate_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE "Product" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "costUSD" DOUBLE PRECISION NOT NULL,
+    "margin" DOUBLE PRECISION NOT NULL,
+    "storeId" TEXT NOT NULL,
+    CONSTRAINT "Product_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE "InventoryItem" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" "InventoryStatus" NOT NULL DEFAULT 'Available',
+    "productId" TEXT NOT NULL,
+    "gestorId" TEXT NOT NULL,
+    CONSTRAINT "InventoryItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "InventoryItem_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Table for tracking product quantities per store (for initial stock)
+CREATE TABLE "ProductStock" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "productId" TEXT NOT NULL,
+    "storeId" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 0,
+    CONSTRAINT "ProductStock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "ProductStock_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Table for tracking assigned quantities to gestors
+CREATE TABLE "AssignedInventory" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "productId" TEXT NOT NULL,
+    "gestorId" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 0,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AssignedInventory_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "AssignedInventory_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Table for audit trail
+CREATE TABLE "AuditLog" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT,
+    "oldValues" JSONB,
+    "newValues" JSONB,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "storeId" TEXT,
+    CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "AuditLog_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE "Sale" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "soldAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "exchangeRateUsed" DOUBLE PRECISION NOT NULL,
+    "costUSD" DOUBLE PRECISION NOT NULL,
+    "margin" DOUBLE PRECISION NOT NULL,
+    "saleUSD" DOUBLE PRECISION NOT NULL,
+    "baseMN" DOUBLE PRECISION NOT NULL,
+    "commission" DOUBLE PRECISION NOT NULL,
+    "finalMN" DOUBLE PRECISION NOT NULL,
+    "inventoryItemId" TEXT NOT NULL UNIQUE,
+    "gestorId" TEXT NOT NULL,
+    CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE "Closing" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "initiatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP(3),
+    "status" "ClosingStatus" NOT NULL DEFAULT 'PENDING',
+    "totalBaseMN" DOUBLE PRECISION NOT NULL,
+    "totalCommission" DOUBLE PRECISION NOT NULL,
+    "totalFinalMN" DOUBLE PRECISION NOT NULL,
+    "gestorId" TEXT NOT NULL,
+    CONSTRAINT "Closing_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Many-to-many relation for Sales in a Closing
+CREATE TABLE "_ClosingToSale" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+    CONSTRAINT "_ClosingToSale_A_fkey" FOREIGN KEY ("A") REFERENCES "Closing"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_ClosingToSale_B_fkey" FOREIGN KEY ("B") REFERENCES "Sale"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Many-to-many relation for Stores and Managers
+CREATE TABLE "_StoreToUser" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+    CONSTRAINT "_StoreToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_StoreToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE UNIQUE INDEX "_ClosingToSale_AB_unique" ON "_ClosingToSale"("A", "B");
+CREATE INDEX "_ClosingToSale_B_index" ON "_ClosingToSale"("B");
+
+CREATE UNIQUE INDEX "_StoreToUser_AB_unique" ON "_StoreToUser"("A", "B");
+CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
+`;
+
+    await db.query(dbSchema);
+    console.log('Database tables created successfully!');
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
+  }
+}
 
 // Start Server
 try {
-  db.connect().then(() => {
+  db.connect().then(async () => {
+    // Initialize database tables on startup
+    await initializeDatabase();
+
     app.listen(PORT, () => {
       console.log(`Server is listening on port ${PORT}`);
     });

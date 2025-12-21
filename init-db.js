@@ -1,7 +1,16 @@
--- SQL for Nexus SalesFlow Database
+// Simple script to initialize the database with required tables
+import { Pool } from 'pg';
+import 'dotenv/config';
+
+// Use the same connection string as the backend
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/nexusdb',
+});
+
+const dbSchema = `-- SQL for Nexus SalesFlow Database
 
 -- Drop tables if they exist to ensure a clean slate
-DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRate", "User", "Store", "_ClosingToSale", "_StoreToUser" CASCADE;
+DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRate", "User", "Store", "_ClosingToSale", "_StoreToUser", "ProductStock", "AssignedInventory", "AuditLog" CASCADE;
 
 -- ENUMS would be custom types in PostgreSQL
 DROP TYPE IF EXISTS "Role";
@@ -143,3 +152,24 @@ CREATE INDEX "_ClosingToSale_B_index" ON "_ClosingToSale"("B");
 
 CREATE UNIQUE INDEX "_StoreToUser_AB_unique" ON "_StoreToUser"("A", "B");
 CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
+`;
+
+async function initDB() {
+  try {
+    console.log('Connecting to database...');
+    await pool.query('SELECT NOW()'); // Test connection
+    console.log('Connected to database successfully!');
+    
+    console.log('Creating tables...');
+    await pool.query(dbSchema);
+    console.log('Tables created successfully!');
+    
+    await pool.end();
+    console.log('Database initialization completed.');
+  } catch (err) {
+    console.error('Error initializing database:', err);
+    process.exit(1);
+  }
+}
+
+initDB();

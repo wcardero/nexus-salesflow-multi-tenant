@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Store Management - Admin Console</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a242d",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#2d3748",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="hidden lg:flex w-72 flex-col bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark h-full">
+<div class="p-6 flex flex-col gap-1">
+<h1 class="text-slate-900 dark:text-white text-xl font-bold tracking-tight">Admin Console</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">Super Admin</p>
+</div>
+<nav class="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:text-white dark:bg-primary/20 transition-colors" href="#">
+<span class="material-symbols-outlined text-primary fill-1">storefront</span>
+<span class="font-medium text-sm">Stores</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">group</span>
+<span class="font-medium text-sm">Users</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">inventory_2</span>
+<span class="font-medium text-sm">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">bar_chart</span>
+<span class="font-medium text-sm">Reports</span>
+</a>
+<div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+<p class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-2">System</p>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</div>
+</nav>
+<div class="p-4 border-t border-border-light dark:border-border-dark">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-center bg-cover" data-alt="Profile picture of the current admin user" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDmKNZY2C1HzYhBHsrtBN0lnlx-tyDzP2YoiYzv8p83q4LbmeFUk82SdDypFnDOSZwJXv-g6lknxOG2w2TSCBQAQndg_nRmkT99SxvAOIftg8DyGhYD4M2nUjM2Zid9Zo466kR0KU53NPBitfsSqdKe1RoyuuCAwDGwGEj_Wp5_mlmymUNNSHjNkajXO42IHk57MYdc2iMKH3cOqR1upyvjQ8G4c5eZUjh9hvyOLGGdsQ6dlPM4IT6xdA4WgcYpoUaDJ6bL3kRd_bck');"></div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Alex Morgan</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">super@admin.com</span>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<header class="h-16 flex items-center justify-between px-6 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark shrink-0 z-10">
+<div class="flex items-center gap-4 lg:hidden">
+<button class="text-slate-500 hover:text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h2 class="text-lg font-bold text-slate-900 dark:text-white">Store Management</h2>
+</div>
+<div class="hidden lg:flex flex-1 max-w-md ml-4">
+<div class="relative w-full group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="Search stores by name, ID or manager..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-auto">
+<button class="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border-2 border-white dark:border-surface-dark"></span>
+</button>
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
+<div class="max-w-[1400px] mx-auto flex flex-col gap-6">
+<nav class="flex items-center text-sm text-slate-500 dark:text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Admin</a>
+<span class="mx-2 text-slate-300 dark:text-slate-600">/</span>
+<span class="text-slate-900 dark:text-white font-medium">Store Management</span>
+</nav>
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+<div class="flex flex-col gap-2">
+<h1 class="text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Store Directory</h1>
+<p class="text-slate-500 dark:text-slate-400 max-w-2xl">Create and manage store entities, assign managers, and update location status.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-slate-700 dark:text-slate-200 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+<span>Filter</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-slate-700 dark:text-slate-200 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>Export CSV</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-sm transition-colors shadow-md shadow-blue-500/20">
+<span class="material-symbols-outlined text-[20px]">add_business</span>
+<span>Add New Store</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+<div class="p-5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm flex items-center justify-between">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Entities</span>
+<span class="text-3xl font-bold text-slate-900 dark:text-white">14</span>
+</div>
+<div class="h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">store</span>
+</div>
+</div>
+<div class="p-5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm flex items-center justify-between">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-medium text-slate-500 dark:text-slate-400">Active Locations</span>
+<span class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">12</span>
+</div>
+<div class="h-12 w-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+</div>
+<div class="p-5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm flex items-center justify-between">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-medium text-slate-500 dark:text-slate-400">Pending Setup</span>
+<span class="text-3xl font-bold text-amber-600 dark:text-amber-400">2</span>
+</div>
+<div class="h-12 w-12 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col xl:flex-row gap-6 items-start h-full">
+<div class="flex-1 w-full bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden flex flex-col">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+<h3 class="font-bold text-slate-900 dark:text-white text-lg">Store List</h3>
+<div class="flex items-center gap-2 text-sm text-slate-500">
+<span class="hidden sm:inline">Sorted by:</span>
+<select class="bg-transparent border-none font-medium text-slate-700 dark:text-slate-300 focus:ring-0 p-0 cursor-pointer">
+<option>Name (A-Z)</option>
+<option>Date Created (Newest)</option>
+<option>Status</option>
+</select>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm whitespace-nowrap">
+<thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+<tr>
+<th class="px-6 py-3 font-semibold">Store Identity</th>
+<th class="px-6 py-3 font-semibold">Assigned Manager</th>
+<th class="px-6 py-3 font-semibold">Region</th>
+<th class="px-6 py-3 font-semibold">Contact Info</th>
+<th class="px-6 py-3 font-semibold">Status</th>
+<th class="px-6 py-3 font-semibold">Created On</th>
+<th class="px-6 py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-light dark:divide-border-dark">
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[20px]">store</span>
+</div>
+<div>
+<p class="font-bold text-slate-900 dark:text-white">Store #104</p>
+<p class="text-xs text-slate-500">Downtown Plaza</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" data-alt="Manager Carlos photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD4Ql6hr82ipvOhfkDm7mMu8Cz6sM3GtKYBL3t3c96uotmNP53Q7ggcY_zjnx7fiVMq5TCBYXqHUrdHFwdBdFOlCJUV3vVsNGugixExyeQ3QQROyQ17TzsdPGCU2509SL6Do6q31a3SpxeUR49eDUTctNUrMpuO3YmKisv36k0Q7On0eo5ms8dwBUtxuusx88UlSne4G0Lh7AG_QseH8r7tKBUT9nG9nreowzQKFzSLOSHHp6-vj44Bjm2GFBfaznwnLM_dTZnuDLz0');"></div>
+<span class="text-slate-700 dark:text-slate-300">Carlos Ruiz</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">Madrid Central</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+<div class="flex flex-col text-xs">
+<span>+34 91 123 4567</span>
+<span class="text-slate-400">store104@company.com</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                                    Active
+                                                </span>
+</td>
+<td class="px-6 py-4 text-slate-500">Jan 15, 2023</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[20px]">store</span>
+</div>
+<div>
+<p class="font-bold text-slate-900 dark:text-white">Store #201</p>
+<p class="text-xs text-slate-500">Northside Mall</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" data-alt="Manager Sarah photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDQH0XF-qCS9DUATaPZ0tUKgvlRFZHngL8PI9xIlRmSDgrZgNmtpu68Det0_HVgTSdrjZ3LXd-RQKCETXKLT55XHGDFUo6_e7yJuhlaMc7dprw_tbF0zlTmNoiWzuqmul3kbK_r4WsMAXFutXdvCoZJEA7f_wczIEMnh4oNAhFX3s5BlKTKD_auRf4i1O6-6J-2fUeKjtj3Jtik95RjfE8ScdL9mlXG_vkFq8ILa4qsC0YFBjutZjsnLRlBewt6Qa1I4JXHAJF_Imdh');"></div>
+<span class="text-slate-700 dark:text-slate-300">Sarah Chen</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">Barcelona North</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+<div class="flex flex-col text-xs">
+<span>+34 93 987 6543</span>
+<span class="text-slate-400">store201@company.com</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                                    Maintenance
+                                                </span>
+</td>
+<td class="px-6 py-4 text-slate-500">Feb 20, 2023</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[20px]">store</span>
+</div>
+<div>
+<p class="font-bold text-slate-900 dark:text-white">Store #088</p>
+<p class="text-xs text-slate-500">Airport Terminal 2</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" data-alt="Manager Mike photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAYLpCut_e8i-DE09ECkHMS2QbJUtJCsnfCMWEjy2wq7UDXJNUgabAnmGhEDkdmukv6Zp3gLvAfuVCvU45qJe9fJ3u56DZoScLAf725dJSux1DzLG3JGM2reECwtkaDe0t8A8dosygnEvMxGM69tWUCLZDD8phhaLdhrkvPPeywAc8fMU77CocZhilMXHKcnDWkpa_RSW3aN7ECNbaZaWoYmRk7R7Ndq0sFlZYl6zFexvAu9nVJ6NqZc8TYa-2_cSWY1grEYmI_NYlc');"></div>
+<span class="text-slate-700 dark:text-slate-300">Mike Ross</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">Madrid Airport</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+<div class="flex flex-col text-xs">
+<span>+34 91 555 0199</span>
+<span class="text-slate-400">store088@company.com</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                                    Active
+                                                </span>
+</td>
+<td class="px-6 py-4 text-slate-500">Mar 10, 2023</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-blue-50/50 dark:bg-blue-900/10 border-l-2 border-l-primary">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-800/30 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">store</span>
+</div>
+<div>
+<p class="font-bold text-slate-900 dark:text-white">Store #305 (New)</p>
+<p class="text-xs text-slate-500">Westside Complex</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">?</div>
+<span class="text-slate-400 italic">Unassigned</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">Valencia West</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+<span class="text-xs italic text-slate-400">Pending details</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+<span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                                                    Pending
+                                                </span>
+</td>
+<td class="px-6 py-4 text-slate-500">Oct 28, 2023</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<button class="p-1.5 text-primary bg-primary/10 rounded hover:bg-primary/20 transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 border-t border-border-light dark:border-border-dark flex items-center justify-between mt-auto">
+<p class="text-sm text-slate-500 dark:text-slate-400">Showing <span class="font-medium text-slate-900 dark:text-white">1</span> to <span class="font-medium text-slate-900 dark:text-white">4</span> of <span class="font-medium text-slate-900 dark:text-white">14</span> results</p>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 disabled:opacity-50 transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="p-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<div class="w-full xl:w-96 shrink-0 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col sticky top-0">
+<div class="px-6 py-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+<h3 class="font-bold text-slate-900 dark:text-white text-lg">Edit Store</h3>
+<div class="flex gap-2">
+<span class="text-xs font-semibold px-2 py-1 rounded bg-blue-50 text-primary dark:bg-blue-900/20">ID: #305</span>
+</div>
+</div>
+<div class="p-6 flex flex-col gap-5">
+<div class="space-y-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Store Name</label>
+<input class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" type="text" value="Store #305 (New)"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Internal Code</label>
+<input class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" type="text" value="VAL-305"/>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Region</label>
+<select class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-no-repeat bg-[right_0.5rem_center]">
+<option>Madrid</option>
+<option>Barcelona</option>
+<option selected="">Valencia</option>
+<option>Seville</option>
+</select>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Address / Location</label>
+<div class="relative">
+<span class="absolute left-3 top-2.5 text-slate-400">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+</span>
+<input class="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" type="text" value="Westside Complex, Valencia"/>
+</div>
+<div class="h-24 w-full rounded-lg mt-2 bg-slate-100 dark:bg-slate-800 overflow-hidden relative border border-slate-200 dark:border-slate-700">
+<div class="absolute inset-0 bg-cover bg-center opacity-60" data-location="Valencia" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCTb70WF71loqpYh06M8PcbNhfKQrP3v5Cp_j3lh2RxsRtoxk2UtI0XMqKZrvjg6LXItwsPiqgfOudd9lqkcxEW5eOwDBQOHwKJFOKmu-FEQA3pW-AJs-0WrrPt9rjOg5HL6HOPZ6ACtE3A8sUx_yg3ZSmkyi0fzzyLqsMYw86GRJ-iKFjK5GroLMGWoL5tUCjOTE7dGu9M8Mb3VSzFWOd4Qi4bJbCg96j3IP9UcGQX8vjde0ibS-qT9CA7h6rXGFwKgV6LQbsWbYDr');"></div>
+<div class="absolute bottom-2 right-2 bg-white/90 dark:bg-black/70 px-2 py-1 rounded text-xs font-bold pointer-events-none">Map Preview</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Assigned Manager</label>
+<select class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-no-repeat bg-[right_0.5rem_center]">
+<option selected="">Select Manager...</option>
+<option>Carlos Ruiz</option>
+<option>Sarah Chen</option>
+<option>Mike Ross</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Contact Phone</label>
+<input class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" placeholder="+34 ..." type="tel"/>
+</div>
+<div class="pt-2 flex items-center justify-between">
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Store Status</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+<span class="ml-3 text-sm font-medium text-slate-500 dark:text-slate-400">Inactive</span>
+</label>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark flex gap-3">
+<button class="flex-1 py-2.5 px-4 bg-primary hover:bg-blue-600 text-white font-bold rounded-lg transition-colors text-sm shadow-md shadow-blue-500/20">
+                                    Save Store
+                                </button>
+<button class="px-4 py-2.5 bg-white dark:bg-slate-800 border border-border-light dark:border-border-dark text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm">
+                                    Cancel
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

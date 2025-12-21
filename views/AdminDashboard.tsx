@@ -42,6 +42,7 @@ const StatCard: React.FC<{
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   const [newStoreName, setNewStoreName] = useState('');
   const [newManagerName, setNewManagerName] = useState('');
+  const [newDirectorName, setNewDirectorName] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
   
   const handleCreateStore = async () => {
@@ -56,8 +57,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
     await refreshDb();
   };
 
+  const handleCreateDirector = async () => {
+    // Logic from the old component
+    alert(`Creando director: ${newDirectorName} para la tienda ${selectedStoreId}`);
+    await refreshDb();
+  };
+
   const totalStores = db.stores.length;
   const totalManagers = db.users.filter(u => u.role === Role.MANAGER).length;
+  const totalDirectors = db.users.filter(u => u.role === Role.DIRECTOR).length;
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-8">
@@ -86,9 +94,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon="storefront" label="Tiendas Totales" value={totalStores} change="+5% vs el mes pasado" changeType="positive" />
+        <StatCard icon="badge" label="Directores Activos" value={totalDirectors} change="Estable" changeType="stable" />
         <StatCard icon="badge" label="Managers Activos" value={totalManagers} change="Estable" changeType="stable" />
-        <StatCard icon="payments" label="Ventas Consolidadas" value="$124,500" change="+12% vs el mes pasado" changeType="positive" />
-        <StatCard icon="pending_actions" label="Cierres Pendientes" value="3" change="Acción Requerida" changeType="stable" iconColor="text-orange-500 bg-orange-50 dark:bg-orange-900/20" />
       </div>
 
       {/* Split Section: Quick Actions & Top Performers */}
@@ -106,51 +113,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                 <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"/>
                 <button onClick={handleCreateStore} className="w-full bg-primary text-white rounded-md py-2 text-sm font-bold hover:bg-blue-600 transition-colors">Añadir Tienda</button>
              </div>
+             {/* Create Director */}
+             <div className="flex flex-col items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <h4 className="text-gray-800 dark:text-gray-200 text-sm font-bold">Crear Director</h4>
+                <input type="text" placeholder="Nombre del Director" value={newDirectorName} onChange={e => setNewDirectorName(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"/>
+                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm">
+                  {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+                </select>
+                <button onClick={handleCreateDirector} className="w-full bg-primary text-white rounded-md py-2 text-sm font-bold hover:bg-blue-600 transition-colors">Crear Director</button>
+             </div>
              {/* Create Manager */}
              <div className="flex flex-col items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                 <h4 className="text-gray-800 dark:text-gray-200 text-sm font-bold">Crear Manager</h4>
                 <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"/>
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
-                </select>
-                <button onClick={handleCreateManager} className="w-full bg-primary text-white rounded-md py-2 text-sm font-bold hover:bg-blue-600 transition-colors">Crear Manager</button>
-             </div>
-          </div>
-        </div>
-
-        {/* Top Performing Stores Table */}
-        <div className="flex flex-col gap-4 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
-          <div className="flex justify-between items-center">
-            <h3 className="text-gray-800 dark:text-gray-200 text-xl font-bold leading-tight">Tiendas con Mejor Desempeño</h3>
-            <a className="text-sm text-primary font-medium hover:underline" href="#">Ver Todas</a>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-600 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-700">
-                <tr>
-                  <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre de la Tienda</th>
-                  <th className="px-4 py-3" scope="col">Manager</th>
-                  <th className="px-4 py-3 text-right rounded-r-lg" scope="col">Ventas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">Downtown Flagship</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Sarah Jenkins</td>
-                  <td className="px-4 py-3 text-right font-bold text-gray-800 dark:text-gray-200">$45,200</td>
-                </tr>
-                <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">North Hills Mall</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Michael Chen</td>
-                  <td className="px-4 py-3 text-right font-bold text-gray-800 dark:text-gray-200">$38,150</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default AdminDashboard;

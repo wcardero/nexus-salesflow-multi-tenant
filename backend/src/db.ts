@@ -17,6 +17,6 @@ const connect = async () => {
 };
 
 export default {
-  query: (text: string, params: any[]) => pool.query(text, params),
+  query: (text: string, params: any[] = []) => pool.query(text, params),
   connect: connect,
 };

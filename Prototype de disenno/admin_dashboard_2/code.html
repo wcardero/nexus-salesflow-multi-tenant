@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard - Multi-tenant Sales System</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#111418] dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex w-64 flex-col justify-between border-r border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] p-4 hidden md:flex">
+<div class="flex flex-col gap-4">
+<div class="flex gap-3 items-center mb-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Abstract blue geometric logo for admin dashboard" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-_390OM0Gn-9xZ1Iwa8Eykzu1grYN-3FgcrsxrzfBDQf8jAri2aKOhW4VoM8mXbR1-eUYp_UH3VMNqe57d8Y-3rZISVh1LakGHA5dWYsGow14Yqxqy0NYygYWfK4FMe9nU6iyLTwd_xZl39swVPZUBnbjLpVqmb90RZBFig56wIzGpHm8BL7Zs7jYBrmtYLirHyv_GYEpdFOsgMJY7e8kA_LdMP2kobNih5URs3ReFF2C8Cp4fUvHfwNn7TKJAvpTs-ozZ9XuRYSZ");'></div>
+<div class="flex flex-col">
+<h1 class="text-base font-bold leading-normal text-[#111418] dark:text-white">Admin Console</h1>
+<p class="text-[#617589] dark:text-gray-400 text-xs font-normal leading-normal">Multi-tenant System</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined fill">dashboard</span>
+<p class="text-sm font-medium leading-normal">Overview</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#111418] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<p class="text-sm font-medium leading-normal">Stores Management</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#111418] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-medium leading-normal">User Management</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#111418] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<p class="text-sm font-medium leading-normal">Permissions</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#111418] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" href="#">
+<span class="material-symbols-outlined">settings_system_daydream</span>
+<p class="text-sm font-medium leading-normal">System Logs</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#111418] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Global Settings</p>
+</a>
+<div class="flex items-center gap-3 px-3 py-4 mt-2 border-t border-[#dbe0e6] dark:border-gray-700">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8" data-alt="Portrait of the administrator user" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBA1NdEALHVBbVIUGvuY3b8kMxzJNZQgPkLQuSwCm7PZp44VPQz97bhV48WrQermfPGAEgL3NZ73K7Kdt6VhW0sCXrhv2cZx9Q8deWhinbTZaM92TGlaysI3VFP7kGfVnYrmMXsKbPL1yDqVMzbhE6wAuREvaUfgHNbUwz0dlRS3s3j3FVWqunNVfj1A7QZt5hy5GLjFR711wf04R6RU8GJnV1hkAfXqAoS7h2TomlNMH0QaEJwEBKOzliJYG2LwRMejYMkKuQDrVXc");'></div>
+<div class="flex flex-col">
+<p class="text-sm font-medium leading-tight text-[#111418] dark:text-white">Admin User</p>
+<p class="text-xs text-[#617589] dark:text-gray-400">Super Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<div class="md:hidden flex items-center justify-between p-4 bg-white dark:bg-[#1a2632] border-b border-[#dbe0e6] dark:border-gray-700">
+<span class="material-symbols-outlined">menu</span>
+<h1 class="font-bold text-lg">Admin Console</h1>
+<div class="size-8 rounded-full bg-gray-200" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDf-H-cihOxkBztj0vGGbdNXiQkvq7XUUQnxSs3AwZ3mfSJYXxGETji58eh831A9JkaEprWFkx4YEQPfmmHMD8tiXpjm7gQ5sT8kxzQTVn-QW3y8UuKfSbXATGUOU0_DDWABdv1MUL9FkKR1eWWvUbWZknCMeYztAN4q7AS_kS_46RlWARQT6UwmzUCe9yIivk12wTtI6q7fs74TbuLmuUmRKlgE_iQ0VQama2B_2NpHiwm9m6c5TFblBf3wjxCZRN_3MKsb1Rt33Vo"); background-size: cover;'></div>
+</div>
+<div class="flex-1 overflow-y-auto p-4 md:p-8">
+<div class="max-w-[1200px] mx-auto flex flex-col gap-8">
+<div class="flex flex-wrap justify-between items-end gap-4">
+<div class="flex flex-col gap-1">
+<h1 class="text-[#111418] dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">System Administration</h1>
+<p class="text-[#617589] dark:text-gray-400 text-base font-normal leading-normal">High-level overview of system topology and user access.</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 bg-white dark:bg-[#1a2632] border border-[#dbe0e6] dark:border-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-[20px]">history</span>
+<span>Audit Logs</span>
+</button>
+<button class="flex items-center gap-2 bg-primary text-white rounded-lg px-4 py-2 text-sm font-bold shadow-md hover:bg-blue-600 transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_business</span>
+<span>Register Tenant</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="absolute right-0 top-0 h-full w-1 bg-primary/20 group-hover:bg-primary transition-colors"></div>
+<div class="flex items-center justify-between">
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium uppercase tracking-wider">Total Stores</p>
+<span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">storefront</span>
+</div>
+<p class="text-[#111418] dark:text-white tracking-light text-4xl font-bold leading-tight mt-2">42</p>
+<div class="flex items-center gap-1 text-sm mt-1">
+<span class="text-[#078838] font-medium flex items-center bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded text-xs"><span class="material-symbols-outlined text-xs mr-1">add</span>2 New</span>
+<span class="text-[#617589] dark:text-gray-500 text-xs ml-1">this month</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="absolute right-0 top-0 h-full w-1 bg-purple-500/20 group-hover:bg-purple-500 transition-colors"></div>
+<div class="flex items-center justify-between">
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium uppercase tracking-wider">Active Managers</p>
+<span class="material-symbols-outlined text-purple-500 bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg">manage_accounts</span>
+</div>
+<p class="text-[#111418] dark:text-white tracking-light text-4xl font-bold leading-tight mt-2">15</p>
+<div class="flex items-center gap-1 text-sm mt-1">
+<span class="text-[#617589] dark:text-gray-500 font-medium text-xs">Full system access granted</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="absolute right-0 top-0 h-full w-1 bg-teal-500/20 group-hover:bg-teal-500 transition-colors"></div>
+<div class="flex items-center justify-between">
+<p class="text-[#617589] dark:text-gray-400 text-sm font-medium uppercase tracking-wider">System Status</p>
+<span class="material-symbols-outlined text-teal-500 bg-teal-50 dark:bg-teal-900/20 p-2 rounded-lg">dns</span>
+</div>
+<p class="text-[#111418] dark:text-white tracking-light text-2xl font-bold leading-tight mt-2">Operational</p>
+<div class="flex items-center gap-1 text-sm mt-2">
+<span class="text-teal-600 dark:text-teal-400 font-medium flex items-center text-xs"><span class="size-2 rounded-full bg-teal-500 mr-2 animate-pulse"></span>All services running</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 flex flex-col gap-6">
+<div class="rounded-xl border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm overflow-hidden">
+<div class="p-6 border-b border-[#dbe0e6] dark:border-gray-700 flex justify-between items-center">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold">Administrative Actions</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#dbe0e6] dark:divide-gray-700">
+<div class="p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="size-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined text-2xl">store</span>
+</div>
+<div>
+<h4 class="text-[#111418] dark:text-white font-bold text-lg">Store Management</h4>
+<p class="text-[#617589] dark:text-gray-400 text-sm mt-1">Configure physical locations, set regional parameters, and manage tenant settings.</p>
+</div>
+<div class="mt-auto pt-2 flex flex-col gap-2">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-white rounded-lg px-4 py-2.5 text-sm font-bold shadow hover:bg-blue-600 transition-colors">
+                                                Manage Stores
+                                            </button>
+<button class="w-full flex items-center justify-center gap-2 bg-white dark:bg-[#1a2632] border border-[#dbe0e6] dark:border-gray-600 text-[#111418] dark:text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                                Add New Location
+                                            </button>
+</div>
+</div>
+<div class="p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="size-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 mb-2">
+<span class="material-symbols-outlined text-2xl">supervisor_account</span>
+</div>
+<div>
+<h4 class="text-[#111418] dark:text-white font-bold text-lg">Manager Assignment</h4>
+<p class="text-[#617589] dark:text-gray-400 text-sm mt-1">Create manager accounts, assign them to specific stores, and handle access credentials.</p>
+</div>
+<div class="mt-auto pt-2 flex flex-col gap-2">
+<button class="w-full flex items-center justify-center gap-2 bg-white dark:bg-[#1a2632] border border-primary text-primary dark:text-white rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                                View Managers
+                                            </button>
+<button class="w-full flex items-center justify-center gap-2 bg-white dark:bg-[#1a2632] border border-[#dbe0e6] dark:border-gray-600 text-[#111418] dark:text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                                Invite New Manager
+                                            </button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col rounded-xl border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm overflow-hidden">
+<div class="flex justify-between items-center p-6 border-b border-[#dbe0e6] dark:border-gray-700">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold leading-tight">Recent System Activations</h3>
+<a class="text-sm text-primary font-medium hover:underline" href="#">View Directory</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-[#617589] dark:text-gray-400 uppercase bg-[#f0f2f4] dark:bg-gray-800/50">
+<tr>
+<th class="px-6 py-3" scope="col">Entity</th>
+<th class="px-6 py-3" scope="col">Type</th>
+<th class="px-6 py-3" scope="col">Assigned To</th>
+<th class="px-6 py-3 text-right" scope="col">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-6 py-4 font-medium text-[#111418] dark:text-white flex items-center gap-3">
+<div class="size-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500">
+<span class="material-symbols-outlined text-sm">store</span>
+</div>
+                                                    Downtown Flagship
+                                                </td>
+<td class="px-6 py-4 text-[#617589] dark:text-gray-400">Store</td>
+<td class="px-6 py-4 text-[#617589] dark:text-gray-400">Sarah Jenkins</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                        Active
+                                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-6 py-4 font-medium text-[#111418] dark:text-white flex items-center gap-3">
+<div class="size-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500">
+<span class="material-symbols-outlined text-sm">person</span>
+</div>
+                                                    Michael Chen
+                                                </td>
+<td class="px-6 py-4 text-[#617589] dark:text-gray-400">Manager</td>
+<td class="px-6 py-4 text-[#617589] dark:text-gray-400">North Hills Mall</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                        Active
+                                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-6 py-4 font-medium text-[#111418] dark:text-white flex items-center gap-3">
+<div class="size-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500">
+<span class="material-symbols-outlined text-sm">store</span>
+</div>
+                                                    Westside Plaza
+                                                </td>
+<td class="px-6 py-4 text-[#617589] dark:text-gray-400">Store</td>
+<td class="px-6 py-4 text-[#617589] dark:text-gray-400"><span class="italic text-gray-400">Unassigned</span></td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                                        Pending Setup
+                                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-6">
+<div class="rounded-xl border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm p-6">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold mb-4">Platform Health</h3>
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400">database</span>
+<span class="text-sm font-medium text-[#111418] dark:text-white">Database</span>
+</div>
+<span class="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Healthy</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400">cloud_queue</span>
+<span class="text-sm font-medium text-[#111418] dark:text-white">API Gateway</span>
+</div>
+<span class="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Healthy</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400">lock</span>
+<span class="text-sm font-medium text-[#111418] dark:text-white">Auth Server</span>
+</div>
+<span class="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Healthy</span>
+</div>
+<div class="h-px w-full bg-[#dbe0e6] dark:bg-gray-700 my-2"></div>
+<div class="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+<span class="font-bold block mb-1">System Notice:</span>
+                                        Scheduled maintenance for version 2.4.0 update on Sunday at 02:00 AM UTC. No downtime expected.
+                                    </div>
+</div>
+</div>
+<div class="rounded-xl border border-[#dbe0e6] dark:border-gray-700 bg-white dark:bg-[#1a2632] shadow-sm p-6">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold mb-4">User Hierarchy</h3>
+<div class="flex flex-col gap-4">
+<div class="space-y-2">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-[#617589] dark:text-gray-400">Managers (L2)</span>
+<span class="text-[#111418] dark:text-white font-bold">15 Users</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 25%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-[#617589] dark:text-gray-400">Gestors (L3)</span>
+<span class="text-[#111418] dark:text-white font-bold">84 Users</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+<div class="bg-blue-300 dark:bg-blue-500 h-2 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+<p class="text-xs text-[#617589] dark:text-gray-500 mt-2">
+                                        Managers oversee specific stores, while Gestors handle daily sales and inventory operations.
+                                    </p>
+</div>
+</div>
+</div>
+</div>
+<div class="h-10"></div> 
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

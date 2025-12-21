@@ -10,7 +10,7 @@ interface ManagerDashboardProps {
   setDb: React.Dispatch<React.SetStateAction<MockDB>>;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit';
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
@@ -73,6 +73,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
       case 'reports':
         return <ReportsView sales={storeSales} gestores={storeGestores} />;
+      case 'stock':
+        return <StockView db={db} setDb={setDb} store={store} />;
+      case 'audit':
+        return <AuditLogsView db={db} store={store} />;
       default:
         return null;
     }
@@ -84,10 +88,12 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Tipo de Cambio" tab="rate" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Auditoría" tab="audit" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
       </div>
       <div className="py-6">
@@ -323,6 +329,104 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   )
 };
 
+// --- STOCK VIEW ---
+const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
+  const [productId, setProductId] = useState('');
+  const [quantity, setQuantity] = useState(0);
+  const storeProducts = db.products.filter(p => p.storeId === store.id);
+
+  const handleSetStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productId || quantity < 0) return;
+
+    try {
+      const response = await fetch('http://localhost:3001/api/product-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          storeId: store.id,
+          quantity: parseInt(quantity.toString())
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error setting product stock');
+      }
+
+      await (db as any).refreshDb(); // This would trigger a refresh in the actual app
+      alert('Stock actualizado exitosamente.');
+      setQuantity(0);
+    } catch (error: any) {
+      console.error('Error setting stock:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  // Get current stock for this store
+  const storeStock = db.productStock.filter(stock => stock.storeId === store.id);
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold mb-4">Gestión de Stock Inicial</h3>
+      <form onSubmit={handleSetStock} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 items-end">
+        <select
+          value={productId}
+          onChange={e => setProductId(e.target.value)}
+          className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+        >
+          <option value="">Seleccionar producto</option>
+          {storeProducts.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <input
+          value={quantity}
+          onChange={e => setQuantity(parseInt(e.target.value) || 0)}
+          type="number"
+          min="0"
+          placeholder="Cantidad"
+          className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+        />
+        <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Actualizar Stock</button>
+      </form>
+
+      {/* Current stock list */}
+      <h4 className="font-bold mt-6 mb-2">Stock Actual</h4>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-700">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad Disponible</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            {storeStock.length > 0 ? storeStock.map(stock => {
+              const product = db.products.find(p => p.id === stock.productId);
+              return (
+                <tr key={stock.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                    {product?.name || 'Producto desconocido'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                    {stock.quantity}
+                  </td>
+                </tr>
+              );
+            }) : (
+              <tr>
+                <td colSpan={2} className="px-6 py-4 text-center text-sm text-slate-500">No hay stock registrado.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 // --- INVENTORY VIEW ---
 const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
   const [productId, setProductId] = useState('');
@@ -331,19 +435,39 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
 
-  const handleAssign = (e: React.FormEvent) => {
+  const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productId || !gestorId || quantity < 1) return;
-    const newItems: InventoryItem[] = Array.from({ length: quantity }, () => ({
-      id: `inv-${Date.now()}-${Math.random()}`,
-      productId,
-      gestorId,
-      assignedAt: new Date(),
-      status: 'Available',
-    }));
-    setDb(prev => ({ ...prev, inventory: [...prev.inventory, ...newItems] }));
-    alert(`${quantity} unidad(es) asignadas.`);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/assigned-inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          gestorId,
+          quantity: parseInt(quantity.toString())
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error assigning inventory');
+      }
+
+      await (db as any).refreshDb(); // This would trigger a refresh in the actual app
+      alert(`${quantity} unidad(es) asignadas.`);
+      setQuantity(1);
+    } catch (error: any) {
+      console.error('Error assigning inventory:', error);
+      alert(`Error: ${error.message}`);
+    }
   };
+
+  // Get assigned inventory for this store
+  const assignedInventory = db.assignedInventory.filter(ai =>
+    storeGestores.some(g => g.id === ai.gestorId)
+  );
 
   return(
     <div>
@@ -351,20 +475,102 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
       <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 items-end">
         <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
-        <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value))} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+        <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
         <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
       </form>
        {/* Simple inventory list */}
-       <h4 className="font-bold mt-6 mb-2">Inventario Total Asignado</h4>
-       <ul className="space-y-2 text-sm">
-        {db.inventory.filter(i => storeProducts.some(p => p.id === i.productId)).map(i => {
-          const product = db.products.find(p=>p.id === i.productId)?.name;
-          const gestor = db.users.find(u=>u.id === i.gestorId)?.name;
-          return <li key={i.id} className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-md">1x <span className="font-semibold">{product}</span> asignado a <span className="font-semibold">{gestor}</span> ({i.status})</li>
-        })}
-       </ul>
+       <h4 className="font-bold mt-6 mb-2">Inventario Asignado a Gestores</h4>
+       <div className="overflow-x-auto">
+         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+           <thead className="bg-slate-50 dark:bg-slate-700">
+             <tr>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
+             </tr>
+           </thead>
+           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+             {assignedInventory.length > 0 ? assignedInventory.map(ai => {
+               const product = db.products.find(p => p.id === ai.productId);
+               const gestor = db.users.find(u => u.id === ai.gestorId);
+               return (
+                 <tr key={ai.id}>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                     {product?.name || 'Producto desconocido'}
+                   </td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                     {gestor?.name || 'Gestor desconocido'}
+                   </td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                     {ai.quantity}
+                   </td>
+                 </tr>
+               );
+             }) : (
+               <tr>
+                 <td colSpan={3} className="px-6 py-4 text-center text-sm text-slate-500">No hay inventario asignado.</td>
+               </tr>
+             )}
+           </tbody>
+         </table>
+       </div>
     </div>
   )
+};
+
+// --- AUDIT LOGS VIEW ---
+const AuditLogsView: React.FC<{db: MockDB, store: Store}> = ({ db, store }) => {
+  // Filter audit logs for the current store
+  const storeAuditLogs = db.auditLogs
+    .filter(log => log.storeId === store.id)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort by newest first
+
+  // Get user names for display
+  const userNames = Object.fromEntries(db.users.map(u => [u.id, u.name]));
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold mb-4">Registro de Auditoría</h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-700">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Usuario</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Entidad</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Detalles</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            {storeAuditLogs.length > 0 ? storeAuditLogs.map(log => (
+              <tr key={log.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {new Date(log.timestamp).toLocaleString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                  {userNames[log.userId] || 'Usuario desconocido'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {log.action}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {log.entityType}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-300 max-w-xs">
+                  {log.entityId ? `ID: ${log.entityId}` : 'N/A'}
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No hay registros de auditoría.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 export default ManagerDashboard;

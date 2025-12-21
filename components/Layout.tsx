@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User, Role } from '../types';
 import { useTheme } from '../ThemeContext';
 
 interface LayoutProps {
@@ -32,13 +32,39 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const navigationItems = [
-    { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
-    { href: '#', icon: 'storefront', label: 'Tiendas' },
-    { href: '#', icon: 'group', label: 'Usuarios (Managers)' },
-    { href: '#', icon: 'inventory_2', label: 'Inventario' },
-    { href: '#', icon: 'receipt_long', label: 'Cierres' },
-  ];
+  const getNavigationItems = (role: Role) => {
+    switch (role) {
+      case Role.ADMIN:
+        return [
+          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
+          { href: '#', icon: 'storefront', label: 'Tiendas' },
+          { href: '#', icon: 'group', label: 'Usuarios' },
+        ];
+      case Role.DIRECTOR:
+        return [
+          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
+          { href: '#', icon: 'group', label: 'Managers' },
+          { href: '#', icon: 'inventory_2', label: 'Inventario' },
+          { href: '#', icon: 'receipt_long', label: 'Cierres' },
+        ];
+      case Role.MANAGER:
+        return [
+          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
+          { href: '#', icon: 'inventory_2', label: 'Inventario' },
+          { href: '#', icon: 'receipt_long', label: 'Cierres' },
+        ];
+      case Role.GESTOR:
+        return [
+          { href: '#', icon: 'dashboard', label: 'Panel de Control', active: true },
+          { href: '#', icon: 'point_of_sale', label: 'Ventas' },
+          { href: '#', icon: 'receipt_long', label: 'Cierres' },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const navigationItems = getNavigationItems(currentUser.role);
 
   return (
     <div className="flex h-screen w-full bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-200 font-display overflow-hidden">
