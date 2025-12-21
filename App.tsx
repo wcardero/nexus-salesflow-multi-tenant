@@ -12,6 +12,11 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true); // New state to track auth check
+  const [currentView, setCurrentView] = useState('dashboard');
+
+  const handleNavigate = (view: string) => {
+    setCurrentView(view);
+  };
 
   const refreshDb = async () => {
     try {
@@ -147,20 +152,26 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    switch (currentUser.role) {
-      case Role.ADMIN:
-        return <AdminDashboard db={db} refreshDb={refreshDb} />;
-      case Role.DIRECTOR:
-        if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
-        return <DirectorDashboard />;
-      case Role.MANAGER:
-        if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-        return <ManagerDashboard user={currentUser} store={activeStore} db={db} refreshDb={refreshDb} />;
-      case Role.GESTOR:
-        if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
-        return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
+    switch (currentView) {
+      case 'dashboard':
+        switch (currentUser.role) {
+          case Role.ADMIN:
+            return <AdminDashboard db={db} refreshDb={refreshDb} />;
+          case Role.DIRECTOR:
+            if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
+            return <DirectorDashboard />;
+          case Role.MANAGER:
+            if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
+            return <ManagerDashboard user={currentUser} store={activeStore} db={db} refreshDb={refreshDb} />;
+          case Role.GESTOR:
+            if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
+            return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
+          default:
+            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+        }
+      // Add other cases for other views here
       default:
-        return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+        return <div>Vista no encontrada</div>;
     }
   };
 
@@ -169,6 +180,8 @@ const App: React.FC = () => {
       currentUser={currentUser} 
       onLogout={handleLogout}
       storeName={activeStore?.name}
+      onNavigate={handleNavigate}
+      currentView={currentView}
     >
       {renderContent()}
     </Layout>
