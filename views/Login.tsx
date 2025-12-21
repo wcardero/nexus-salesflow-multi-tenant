@@ -8,13 +8,13 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
-  const [newUserName, setNewUserName] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [username, setUsername] = useState(''); // Use username for traditional login
+  const [password, setPassword] = useState(''); // Use password for traditional login
   const [loading, setLoading] = useState(false);
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserName || !newPassword) {
+    if (!username || !password) {
       alert('Por favor, ingresa un nombre de usuario y contraseña.');
       return;
     }
@@ -25,7 +25,7 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newUserName, password: newPassword, role: Role.ADMIN }),
+        body: JSON.stringify({ name: username, password: password, role: Role.ADMIN }),
       });
 
       if (!response.ok) {
@@ -43,14 +43,15 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
     }
   };
 
-  const handleLoginUser = async (user: User, passwordAttempt: string) => {
+  const handleLoginUser = async (loginUsername: string, loginPasswordAttempt: string) => {
+    setLoading(true);
     try {
         const response = await fetch('http://localhost:3001/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ name: user.name, password: passwordAttempt }),
+            body: JSON.stringify({ name: loginUsername, password: loginPasswordAttempt }),
         });
 
         if (!response.ok) {
@@ -65,6 +66,8 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
         console.error('Login failed:', error);
         alert('Error al iniciar sesión.');
         return false;
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -73,7 +76,7 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
         <div className="w-full max-w-md bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8">
-          <h1 className="text-3xl font-bold text-center text-sky-600 dark:text-sky-400 mb-2">
+          <h1 className="text-3xl font-bold text-center text-primary-600 dark:text-primary-400 mb-2">
             Nexus SalesFlow
           </h1>
           <p className="text-center text-slate-500 dark:text-slate-400 mb-8">
@@ -86,9 +89,9 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
               <input
                 id="adminName"
                 type="text"
-                value={newUserName}
-                onChange={(e) => setNewUserName(e.target.value)}
-                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                value={username} // Use username state
+                onChange={(e) => setUsername(e.target.value)} // Update username state
+                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 placeholder="ej: admin"
                 disabled={loading}
               />
@@ -98,16 +101,16 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
               <input
                 id="adminPassword"
                 type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                value={password} // Use password state
+                onChange={(e) => setPassword(e.target.value)} // Update password state
+                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 placeholder="ej: admin123"
                 disabled={loading}
               />
             </div>
             <button
               type="submit"
-              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? 'Creando...' : 'Crear Administrador'}
@@ -118,83 +121,57 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
     );
   }
 
-  // If there are users, display the selection
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [passwordAttempt, setPasswordAttempt] = useState('');
-
-  if (!selectedUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
-        <div className="w-full max-w-md bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8">
-          <h1 className="text-3xl font-bold text-center text-sky-600 dark:text-sky-400 mb-2">
-            Nexus SalesFlow
-          </h1>
-          <p className="text-center text-slate-500 dark:text-slate-400 mb-8">
-            Selecciona un usuario para iniciar sesión
-          </p>
-
-          <div className="space-y-3">
-            {db.users.map(user => (
-              <button
-                key={user.id}
-                onClick={() => setSelectedUser(user)}
-                className="w-full text-left p-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <p className="font-bold text-slate-800 dark:text-slate-200">{user.name}</p>
-                <p className="text-sm text-sky-600 dark:text-sky-500 font-semibold">{user.role}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Password entry for selected user
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+  // Traditional Login form
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    await handleLoginUser(selectedUser, passwordAttempt);
-    setLoading(false);
+    if (!username || !password) {
+      alert('Por favor, ingresa tu usuario y contraseña.');
+      return;
+    }
+    await handleLoginUser(username, password);
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
       <div className="w-full max-w-md bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-center text-sky-600 dark:text-sky-400 mb-2">
+        <h1 className="text-3xl font-bold text-center text-primary-600 dark:text-primary-400 mb-2">
           Nexus SalesFlow
         </h1>
-        <p className="text-center text-slate-500 dark:text-slate-400 mb-4">
-          Inicia sesión como <span className="font-bold text-sky-600 dark:text-sky-400">{selectedUser.name}</span>
+        <p className="text-center text-slate-500 dark:text-slate-400 mb-8">
+          Inicia sesión con tu usuario y contraseña
         </p>
 
-        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Contraseña</label>
+            <label htmlFor="loginUsername" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Usuario</label>
             <input
-              id="password"
+              id="loginUsername"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Tu nombre de usuario"
+              disabled={loading}
+            />
+          </div>
+          <div>
+            <label htmlFor="loginPassword" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Contraseña</label>
+            <input
+              id="loginPassword"
               type="password"
-              value={passwordAttempt}
-              onChange={(e) => setPasswordAttempt(e.target.value)}
-              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-              placeholder="Ingresa tu contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Tu contraseña"
               disabled={loading}
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
             disabled={loading}
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedUser(null)}
-            className="w-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 font-bold py-2 px-4 rounded-md transition-colors mt-2"
-            disabled={loading}
-          >
-            Cambiar de Usuario
           </button>
         </form>
       </div>

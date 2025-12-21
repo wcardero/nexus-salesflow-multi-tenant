@@ -92,10 +92,10 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentUser.role) {
       case Role.ADMIN:
-        return <AdminDashboard db={db} setDb={handleSetDb} />;
+        return <AdminDashboard db={db} setDb={handleSetDb} currentUser={currentUser} refreshDb={refreshDb} />;
       case Role.MANAGER:
         if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} />;
+        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} refreshDb={refreshDb} />;
       case Role.GESTOR:
         if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
         return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={handleSetDb} />;

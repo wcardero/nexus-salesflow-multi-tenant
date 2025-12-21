@@ -14,23 +14,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#137fec',
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          600: '#2563eb',
-          700: '#1d4ed8',
-        },
-        surface: {
-          light: '#ffffff',
-          dark: '#1a2632',
-          background: '#f6f7f8'
-        }
+        "primary": "#137fec",
+        "background-light": "#f6f7f8",
+        "background-dark": "#101922",
       },
       fontFamily: {
-        sans: ['Manrope', 'sans-serif'],
-      }
+        "display": ["Manrope", "sans-serif"]
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "full": "9999px"
+      },
     },
   },
   plugins: [],

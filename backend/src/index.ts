@@ -95,9 +95,50 @@ app.get('/api/users', async (req, res) => {
   res.json(rows);
 });
 
-app.get('/api/stores', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM "Store"', []);
-  res.json(rows);
+app.get('/api/stores', async (req: Request, res: Response) => {
+  const { rows: stores } = await db.query('SELECT * FROM "Store"', []);
+  const storesWithRates = await Promise.all(stores.map(async (store) => {
+    const { rows: exchangeRates } = await db.query('SELECT * FROM "ExchangeRate" WHERE "storeId" = $1', [store.id]);
+    return { ...store, exchangeRates };
+  }));
+  res.json(storesWithRates);
+});
+
+app.post('/api/stores', async (req: Request, res: Response) => {
+    const { name, defaultCommissionRate } = req.body;
+    if (!name) {
+        return res.status(400).json({ message: 'Store name is required.' });
+    }
+
+    try {
+        const newStoreId = `store-${Date.now()}`;
+        const result = await db.query(
+            'INSERT INTO "Store" (id, name, "defaultCommissionRate") VALUES ($1, $2, $3) RETURNING *',
+            [newStoreId, name, defaultCommissionRate || 0.10]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Store creation error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.put('/api/stores/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name) {
+        return res.status(400).json({ message: 'Store name is required.' });
+    }
+    try {
+        const result = await db.query('UPDATE "Store" SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Store not found.' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Store update error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 app.get('/api/products', async (req, res) => {
@@ -122,6 +163,13 @@ app.get('/api/closings', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
+try {
+  db.connect().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is listening on port ${PORT}`);
+    });
+  });
+} catch (error) {
+  console.error('Server failed to start:', error);
+  process.exit(1);
+}
