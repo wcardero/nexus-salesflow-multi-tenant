@@ -16,7 +16,7 @@ export default {
       colors: {
         "primary": "#137fec",
         "background-light": "#f6f7f8",
-        "background-dark": "#101922",
+        "background-dark": "#0d1117",
       },
       fontFamily: {
         "display": ["Manrope", "sans-serif"]

@@ -1,16 +1,32 @@
-// views/Login.tsx
-import React, { useState } from 'react';
-import { User, MockDB, Role } from '../types';
+import React, { useState, useEffect } from 'react';
+import { User, Role } from '../types';
 
 interface LoginProps {
-  db: MockDB;
   onLogin: (user: User) => void;
 }
 
-const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
-  const [username, setUsername] = useState(''); // Use username for traditional login
-  const [password, setPassword] = useState(''); // Use password for traditional login
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingUsers, setCheckingUsers] = useState(true);
+  const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkUsersExist = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/users/exists');
+        const data = await response.json();
+        setShowCreateAdmin(!data.exists);
+      } catch (error) {
+        console.error('Error checking if users exist:', error);
+        setShowCreateAdmin(false);
+      } finally {
+        setCheckingUsers(false);
+      }
+    };
+    checkUsersExist();
+  }, []);
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,19 +38,25 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
     try {
       const response = await fetch('http://localhost:3001/api/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: username, password: password, role: Role.ADMIN }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: username, password, role: Role.ADMIN }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const newUser: User = await response.json();
+
+      const loginResponse = await fetch('http://localhost:3001/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: username, password }),
+      });
+
+      if (!loginResponse.ok) throw new Error('Login failed after user creation');
+      const loginData = await loginResponse.json();
+      localStorage.setItem('token', loginData.token);
+
       alert(`Usuario '${newUser.name}' creado exitosamente.`);
-      onLogin(newUser); // Auto-login the new admin
+      onLogin(newUser);
     } catch (error: any) {
       console.error('Error creating admin:', error);
       alert(`Error al crear el administrador: ${error.message}`);
@@ -43,140 +65,115 @@ const Login: React.FC<LoginProps> = ({ db, onLogin }) => {
     }
   };
 
-  const handleLoginUser = async (loginUsername: string, loginPasswordAttempt: string) => {
-    setLoading(true);
-    try {
-        const response = await fetch('http://localhost:3001/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name: loginUsername, password: loginPasswordAttempt }),
-        });
-
-        if (!response.ok) {
-            alert('Credenciales inválidas.');
-            return false;
-        }
-
-        const loggedInUser: User = await response.json();
-        onLogin(loggedInUser);
-        return true;
-    } catch (error) {
-        console.error('Login failed:', error);
-        alert('Error al iniciar sesión.');
-        return false;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-
-  if (db.users.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
-        <div className="w-full max-w-md bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8">
-          <h1 className="text-3xl font-bold text-center text-primary-600 dark:text-primary-400 mb-2">
-            Nexus SalesFlow
-          </h1>
-          <p className="text-center text-slate-500 dark:text-slate-400 mb-8">
-            No hay usuarios registrados. Crea el primer usuario administrador.
-          </p>
-
-          <form onSubmit={handleCreateAdmin} className="space-y-4">
-            <div>
-              <label htmlFor="adminName" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Nombre de Usuario</label>
-              <input
-                id="adminName"
-                type="text"
-                value={username} // Use username state
-                onChange={(e) => setUsername(e.target.value)} // Update username state
-                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="ej: admin"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label htmlFor="adminPassword" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Contraseña</label>
-              <input
-                id="adminPassword"
-                type="password"
-                value={password} // Use password state
-                onChange={(e) => setPassword(e.target.value)} // Update password state
-                className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="ej: admin123"
-                disabled={loading}
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? 'Creando...' : 'Crear Administrador'}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Traditional Login form
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLoginUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) {
       alert('Por favor, ingresa tu usuario y contraseña.');
       return;
     }
-    await handleLoginUser(username, password);
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: username, password }),
+      });
+
+      if (!response.ok) {
+        alert('Credenciales inválidas.');
+        setLoading(false);
+        return;
+      }
+
+      const loginResponse = await response.json();
+      localStorage.setItem('token', loginResponse.token);
+      const { token, ...user } = loginResponse;
+      onLogin(user as User);
+    } catch (error) {
+      console.error('Login failed:', error);
+      alert('Error al iniciar sesión.');
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-center text-primary-600 dark:text-primary-400 mb-2">
+  const renderForm = (
+    title: string,
+    subtitle: string,
+    submitHandler: (e: React.FormEvent) => Promise<void>,
+    buttonText: string
+  ) => (
+    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark font-display">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-8 m-4">
+        <h1 className="text-3xl font-black text-center text-gray-800 dark:text-gray-200 mb-2 tracking-tight">
           Nexus SalesFlow
         </h1>
-        <p className="text-center text-slate-500 dark:text-slate-400 mb-8">
-          Inicia sesión con tu usuario y contraseña
-        </p>
+        <p className="text-center text-gray-600 dark:text-gray-400 mb-8">{subtitle}</p>
 
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
+        <form onSubmit={submitHandler} className="space-y-6">
           <div>
-            <label htmlFor="loginUsername" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Usuario</label>
+            <label
+              htmlFor="loginUsername"
+              className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1"
+            >
+              Usuario
+            </label>
             <input
               id="loginUsername"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full bg-background-light dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Tu nombre de usuario"
               disabled={loading}
             />
           </div>
           <div>
-            <label htmlFor="loginPassword" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Contraseña</label>
+            <label
+              htmlFor="loginPassword"
+              className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1"
+            >
+              Contraseña
+            </label>
             <input
               id="loginPassword"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full bg-background-light dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Tu contraseña"
               disabled={loading}
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+            className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
             disabled={loading}
           >
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            {loading ? 'Cargando...' : buttonText}
           </button>
         </form>
       </div>
     </div>
   );
+
+  if (checkingUsers) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+        <p>Cargando...</p>
+      </div>
+    );
+  }
+
+  if (showCreateAdmin) {
+    return renderForm(
+      'Bienvenido',
+      'No hay usuarios registrados. Crea el primer administrador.',
+      handleCreateAdmin,
+      'Crear Administrador'
+    );
+  }
+
+  return renderForm('Iniciar Sesión', 'Inicia sesión con tu usuario y contraseña', handleLoginUser, 'Iniciar Sesión');
 };
 
 export default Login;
