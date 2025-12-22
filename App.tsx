@@ -200,10 +200,10 @@ const App: React.FC = () => {
       case 'dashboard':
         // Use comprehensive role checking
         const roleChecks = {
-          isManager: role.toLowerCase() === 'manager',
-          isAdmin: role.toLowerCase() === 'admin',
-          isDirector: role.toLowerCase() === 'director',
-          isGestor: role.toLowerCase() === 'gestor'
+          isManager: role === 'Manager' || role.toLowerCase() === 'manager',
+          isAdmin: role === 'Admin' || role.toLowerCase() === 'admin',
+          isDirector: role === 'Director' || role.toLowerCase() === 'director',
+          isGestor: role === 'Gestor' || role.toLowerCase() === 'gestor'
         };
 
         if (roleChecks.isManager) {

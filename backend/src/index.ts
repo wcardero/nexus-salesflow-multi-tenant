@@ -95,8 +95,8 @@ const validateLogin = [
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Username must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z0-9\s_]+$/)
-    .withMessage('Username can only contain letters, numbers, spaces, and underscores'),
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
   body('password')
     .isLength({ min: 6, max: 100 })
     .withMessage('Password must be between 6 and 100 characters'),
@@ -113,23 +113,15 @@ const validateLogin = [
 app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Response) => {
     const { name, password } = req.body;
     try {
-        console.log(`Login attempt for user: '${name}'`);
-        console.log(`Password received from client: '${password}'`);
         const result = await db.query('SELECT * FROM "User" WHERE name = $1', [name]);
         if (result.rows.length === 0) {
-            console.log(`User '${name}' not found in DB.`);
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
         const user = result.rows[0];
-        console.log(`Hash from DB for user '${name}': ${user.password}`);
-
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
-            console.log(`Password mismatch for user '${name}'.`);
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
-        
-        console.log(`Password match for user '${name}'.`);
 
         // Create JWT token
         const token = jwt.sign(
@@ -161,20 +153,11 @@ const validateUserCreation = [
     .withMessage('Password must be between 6 and 100 characters'),
   body('role')
     .isIn(['Admin', 'Director', 'Manager', 'Gestor'])
-    .withMessage('Role must be Admin, Director, Manager, or Gestor'),
-  body('storeId').custom((value, { req }) => {
-    const role = req.body.role;
-    if (role === 'Admin') {
-      return true;
-    }
-    if (!value) {
-      throw new Error('A store must be assigned for this role.');
-    }
-    if (typeof value !== 'string' || value.length < 1) {
-        throw new Error('Store ID must be a valid string.');
-    }
-    return true;
-  }),
+    .withMessage('Role must be Admin, Manager, or Gestor'),
+  body('storeId')
+    .optional()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Store ID must be between 1 and 100 characters if provided'),
   (req: Request, res: Response, next: any) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -276,86 +259,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
   const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"', []);
   res.json(rows);
-});
-
-const validateUserUpdate = [
-  body('name').trim().isLength({ min: 1, max: 50 }).withMessage('Name must be between 1 and 50 characters').matches(/^[a-zA-Z0-9\s_]+$/).withMessage('Name can only contain letters, numbers, spaces, and underscores'),
-  body('role').isIn(['Admin', 'Director', 'Manager', 'Gestor']).withMessage('Role must be Admin, Director, Manager, or Gestor'),
-  body('storeId').optional({ nullable: true }).isLength({ min: 1, max: 100 }).withMessage('Store ID must be between 1 and 100 characters if provided'),
-  (req: Request, res: Response, next: any) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-    }
-    next();
-  }
-];
-
-app.put('/api/users/:id', authenticateToken, validateUserUpdate, async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { name, role, storeId } = req.body;
-    const requestingUser = (req as any).user;
-
-    if (requestingUser.role !== 'Admin') {
-        return res.status(403).json({ message: 'Access denied. Only admins can update users.' });
-    }
-
-    // Admins cannot be assigned to a store.
-    if (role === 'Admin' && (storeId !== null && storeId !== undefined && storeId !== '')) {
-      return res.status(400).json({ message: 'Admin users cannot be assigned to a store.' });
-    }
-
-    if (role !== 'Admin') {
-        const userToUpdate = await db.query('SELECT role FROM "User" WHERE id = $1', [id]);
-        if (userToUpdate.rows.length > 0 && userToUpdate.rows[0].role === 'Admin') {
-            const adminCountResult = await db.query('SELECT COUNT(*) FROM "User" WHERE role = \'Admin\'');
-            const adminCount = parseInt(adminCountResult.rows[0].count, 10);
-            if (adminCount <= 1) {
-                return res.status(400).json({ message: 'Cannot change the role of the last admin.' });
-            }
-        }
-    }
-
-    try {
-        const finalStoreId = role === 'Admin' ? null : storeId;
-        const result = await db.query(
-            'UPDATE "User" SET name = $1, role = $2, "storeId" = $3 WHERE id = $4 RETURNING id, name, role, "storeId"',
-            [name, role, finalStoreId || null, id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error('User update error:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const requestingUser = (req as any).user;
-
-    if (requestingUser.role !== 'Admin') {
-        return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
-    }
-
-    if (requestingUser.id === id) {
-        return res.status(400).json({ message: 'Admin cannot delete their own account.' });
-    }
-
-    try {
-        const result = await db.query('DELETE FROM "User" WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-        res.status(200).json({ message: 'User deleted successfully.' });
-    } catch (error) {
-        console.error('User deletion error:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
 });
 
 app.get('/api/stores', authenticateToken, async (req: Request, res: Response) => {
@@ -1027,9 +930,9 @@ async function initializeDatabase() {
     console.log('Checking database tables...');
 
     // Just check if a key table exists instead of dropping everything
-    const tableCheck = await db.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user')");
-
-    if (tableCheck.rows[0].exists) {
+    const tableCheck = await db.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'User'");
+    
+    if (tableCheck.rows.length > 0) {
       console.log('Database already initialized.');
       return;
     }
@@ -1038,18 +941,14 @@ async function initializeDatabase() {
 
     // Check if main tables exist, if not create them
     const dbSchema = `-- SQL for Nexus SalesFlow Database
-DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRate", "User", "Store", "_ClosingToSale", "_StoreToUser", "ProductStock", "AssignedInventory", "AuditLog" CASCADE;
-DROP TYPE IF EXISTS "InventoryStatus";
-DROP TYPE IF EXISTS "ClosingStatus";
-
-CREATE TYPE "InventoryStatus" AS ENUM ('Available', 'Sold');
-CREATE TYPE "ClosingStatus" AS ENUM ('PENDING', 'COMPLETED');
-
 CREATE TABLE "Store" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
-    "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10
+    "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
+    "directorId" TEXT,
+    CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -1058,6 +957,7 @@ CREATE TABLE "User" (
     "storeId" TEXT,
     CONSTRAINT "User_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
 CREATE TABLE "ExchangeRate" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "rate" DOUBLE PRECISION NOT NULL,
@@ -1066,6 +966,7 @@ CREATE TABLE "ExchangeRate" (
     "storeId" TEXT NOT NULL,
     CONSTRAINT "ExchangeRate_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 CREATE TABLE "Product" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -1074,6 +975,7 @@ CREATE TABLE "Product" (
     "storeId" TEXT NOT NULL,
     CONSTRAINT "Product_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 CREATE TABLE "InventoryItem" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1083,6 +985,7 @@ CREATE TABLE "InventoryItem" (
     CONSTRAINT "InventoryItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "InventoryItem_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 -- Table for tracking product quantities per store (for initial stock)
 CREATE TABLE "ProductStock" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -1092,6 +995,7 @@ CREATE TABLE "ProductStock" (
     CONSTRAINT "ProductStock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "ProductStock_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 -- Table for tracking assigned quantities to gestors
 CREATE TABLE "AssignedInventory" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -1102,6 +1006,7 @@ CREATE TABLE "AssignedInventory" (
     CONSTRAINT "AssignedInventory_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "AssignedInventory_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 -- Table for audit trail
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -1116,6 +1021,7 @@ CREATE TABLE "AuditLog" (
     CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "AuditLog_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
 CREATE TABLE "Sale" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "soldAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1131,6 +1037,7 @@ CREATE TABLE "Sale" (
     CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 CREATE TABLE "Closing" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "initiatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1142,6 +1049,7 @@ CREATE TABLE "Closing" (
     "gestorId" TEXT NOT NULL,
     CONSTRAINT "Closing_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
 -- Many-to-many relation for Sales in a Closing
 CREATE TABLE "_ClosingToSale" (
     "A" TEXT NOT NULL,
@@ -1149,6 +1057,7 @@ CREATE TABLE "_ClosingToSale" (
     CONSTRAINT "_ClosingToSale_A_fkey" FOREIGN KEY ("A") REFERENCES "Closing"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "_ClosingToSale_B_fkey" FOREIGN KEY ("B") REFERENCES "Sale"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 -- Many-to-many relation for Stores and Managers
 CREATE TABLE "_StoreToUser" (
     "A" TEXT NOT NULL,
@@ -1156,8 +1065,10 @@ CREATE TABLE "_StoreToUser" (
     CONSTRAINT "_StoreToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "_StoreToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 CREATE UNIQUE INDEX "_ClosingToSale_AB_unique" ON "_ClosingToSale"("A", "B");
 CREATE INDEX "_ClosingToSale_B_index" ON "_ClosingToSale"("B");
+
 CREATE UNIQUE INDEX "_StoreToUser_AB_unique" ON "_StoreToUser"("A", "B");
 CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
 `;
