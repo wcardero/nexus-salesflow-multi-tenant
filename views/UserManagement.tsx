@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MockDB, User, Role } from '../types';
 
 interface UserManagementProps {
@@ -20,10 +20,24 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordChangeUser, setPasswordChangeUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+
+  const loggedInUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }, []);
 
   const handleCreateUser = async () => {
     if (!newUser.name.trim() || !newUser.password.trim()) {
       alert('Por favor, complete todos los campos obligatorios.');
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
@@ -44,6 +58,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.errors) {
+          console.error('Validation errors:', errorData.errors);
+          const errorDetails = errorData.errors.map((e: any) => e.msg).join(', ');
+          throw new Error(`${errorData.message}: ${errorDetails}`);
+        }
         throw new Error(errorData.message || 'Error creando el usuario');
       }
 
@@ -99,16 +118,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    // Prevent admin from deleting their own account
-    let currentUserData;
-    try {
-      currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-    } catch (e) {
-      console.error('Error parsing current user data:', e);
-      currentUserData = {};
-    }
-
-    if (userId === currentUserData.id) {
+    if (userId === loggedInUser.id) {
       alert('No puedes eliminar tu propia cuenta de administrador.');
       return;
     }
@@ -154,6 +164,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
   const openPasswordChangeModal = (user: User) => {
     setPasswordChangeUser(user);
     setNewPassword('');
+    setOldPassword('');
     setShowPasswordModal(true);
   };
 
@@ -161,12 +172,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     setShowPasswordModal(false);
     setPasswordChangeUser(null);
     setNewPassword('');
+    setOldPassword('');
   };
 
   const handleChangePassword = async () => {
     if (!passwordChangeUser || !newPassword.trim()) {
       alert('Por favor, ingrese una nueva contraseña.');
       return;
+    }
+    
+    const isChangingOwnPassword = passwordChangeUser.id === loggedInUser.id;
+
+    if (isChangingOwnPassword && !oldPassword.trim()) {
+        alert('Por favor, ingrese su contraseña antigua.');
+        return;
     }
 
     try {
@@ -177,14 +196,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          password: newPassword
+          oldPassword: oldPassword,
+          newPassword: newPassword
         })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Password change error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       closePasswordModal();
@@ -195,6 +214,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       alert(`Error al actualizar la contraseña: ${error.message}`);
     }
   };
+
+  const createUserDisabled = !newUser.name.trim() || !newUser.password.trim() || !newUser.storeId;
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-8 p-6">
@@ -263,7 +284,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
         <div className="flex justify-end">
           <button 
             onClick={handleCreateUser} 
-            className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
+            disabled={createUserDisabled}
+            className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Crear Usuario
           </button>
@@ -271,65 +293,70 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       </div>
 
       {/* Edit User Section (if editing) */}
-      {editingUser && (
-        <div className="flex flex-col gap-6 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-          <div className="flex flex-col gap-1">
-            <h3 className="text-gray-800 dark:text-gray-200 text-xl font-bold leading-tight">Editar Usuario</h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm font-normal">Modifique la información del usuario.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
-              <input 
-                type="text" 
-                placeholder="Nombre del usuario" 
-                value={editingUserName} 
-                onChange={e => setEditingUserName(e.target.value)} 
-                className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
-              />
+      {editingUser && (() => {
+        const isEditingSelfAsAdmin = editingUser.id === loggedInUser.id && editingUser.role === 'Admin';
+        return (
+          <div className="flex flex-col gap-6 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-gray-800 dark:text-gray-200 text-xl font-bold leading-tight">Editar Usuario</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-normal">Modifique la información del usuario.</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Rol</label>
-              <select
-                value={editingUserRole}
-                onChange={e => setEditingUserRole(e.target.value as Role)}
-                className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
+                <input 
+                  type="text" 
+                  placeholder="Nombre del usuario" 
+                  value={editingUserName} 
+                  onChange={e => setEditingUserName(e.target.value)} 
+                  className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Rol</label>
+                <select
+                  value={editingUserRole}
+                  onChange={e => setEditingUserRole(e.target.value as Role)}
+                  disabled={isEditingSelfAsAdmin}
+                  className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm disabled:bg-gray-200 dark:disabled:bg-gray-600"
+                >
+                  <option value={Role.DIRECTOR}>Director</option>
+                  <option value={Role.MANAGER}>Manager</option>
+                  <option value={Role.GESTOR}>Gestor</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tienda</label>
+                <select
+                  value={editingUserStoreId}
+                  onChange={e => setEditingUserStoreId(e.target.value)}
+                  disabled={isEditingSelfAsAdmin}
+                  className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm disabled:bg-gray-200 dark:disabled:bg-gray-600"
+                >
+                  <option value="">Sin tienda</option>
+                  {db.stores.map(store => (
+                    <option key={store.id} value={store.id}>{store.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button 
+                onClick={handleUpdateUser} 
+                className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
               >
-                <option value={Role.DIRECTOR}>Director</option>
-                <option value={Role.MANAGER}>Manager</option>
-                <option value={Role.GESTOR}>Gestor</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tienda</label>
-              <select
-                value={editingUserStoreId}
-                onChange={e => setEditingUserStoreId(e.target.value)}
-                className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+                Guardar Cambios
+              </button>
+              <button 
+                onClick={cancelEditing} 
+                className="bg-gray-500 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-gray-600 transition-colors"
               >
-                <option value="">Sin tienda</option>
-                {db.stores.map(store => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </select>
+                Cancelar
+              </button>
             </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <button 
-              onClick={handleUpdateUser} 
-              className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
-            >
-              Guardar Cambios
-            </button>
-            <button 
-              onClick={cancelEditing} 
-              className="bg-gray-500 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-gray-600 transition-colors"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Users List */}
       <div className="flex flex-col gap-4 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
@@ -356,24 +383,26 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{user.role}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{store?.name || 'N/A'}</td>
                     <td className="px-4 py-3 flex gap-2">
-                      <button 
+                      <button
                         onClick={() => startEditing(user)}
                         className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                       >
                         Editar
                       </button>
-                      <button 
+                      <button
                         onClick={() => openPasswordChangeModal(user)}
                         className="text-green-600 hover:text-green-800 font-medium text-sm"
                       >
                         Cambiar Contraseña
                       </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
-                      >
-                        Eliminar
-                      </button>
+                      {user.id !== loggedInUser.id ? (
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        >
+                          Eliminar
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -384,41 +413,59 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       </div>
 
       {/* Change Password Modal */}
-      {showPasswordModal && passwordChangeUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
-              Cambiar Contraseña - {passwordChangeUser.name}
-            </h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Nueva Contraseña
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
-                placeholder="Ingrese nueva contraseña"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={closePasswordModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleChangePassword}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-md"
-              >
-                Guardar Contraseña
-              </button>
+      {showPasswordModal && passwordChangeUser && (() => {
+        const isChangingOwnPassword = passwordChangeUser.id === loggedInUser.id;
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
+                Cambiar Contraseña - {passwordChangeUser.name}
+              </h3>
+              {isChangingOwnPassword && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Contraseña Antigua
+                  </label>
+                  <input
+                    type="password"
+                    value={oldPassword}
+                    onChange={e => setOldPassword(e.target.value)}
+                    className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+                    placeholder="Ingrese contraseña antigua"
+                  />
+                </div>
+              )}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Nueva Contraseña
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+                  placeholder="Ingrese nueva contraseña"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={closePasswordModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleChangePassword}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-md"
+                >
+                  Guardar Contraseña
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

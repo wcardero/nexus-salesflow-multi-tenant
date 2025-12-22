@@ -166,6 +166,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
     }
 
     try {
+      // Use the specific password change endpoint
+      // For director changing manager's password, we don't need oldPassword
       const response = await fetch(`http://localhost:3001/api/users/${passwordChangeManager.id}/password`, {
         method: 'PUT',
         headers: {
@@ -173,13 +175,46 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          password: newPassword
+          // When a director changes a manager's password, we send empty oldPassword
+          // because the backend destructures both fields from req.body
+          oldPassword: "", // empty string since director is changing manager's password
+          newPassword: newPassword
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Password change error response:', errorText);
+
+        // Try with a different approach - maybe the backend requires different fields
+        if (response.status === 500 || response.status === 400) {
+          // Alternative: try using PUT to the user endpoint with password field
+          const altResponse = await fetch(`http://localhost:3001/api/users/${passwordChangeManager.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              name: passwordChangeManager.name,
+              role: passwordChangeManager.role,
+              storeId: passwordChangeManager.storeId,
+              password: newPassword
+            })
+          });
+
+          if (!altResponse.ok) {
+            const altErrorText = await altResponse.text();
+            console.error('Alternative password change error response:', altErrorText);
+            throw new Error(`HTTP error! status: ${altResponse.status}`);
+          }
+
+          closePasswordModal();
+          await refreshDb();
+          alert('Contraseña actualizada exitosamente.');
+          return;
+        }
+
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -305,12 +340,22 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
                     >
                       Cambiar Contraseña
                     </button>
-                    <button
-                      onClick={() => handleDeleteManager(manager.id)}
-                      className="text-red-600 hover:text-red-800 font-medium text-sm"
-                    >
-                      Eliminar
-                    </button>
+                    {(() => {
+                      let currentUserData;
+                      try {
+                        currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+                      } catch (e) {
+                        currentUserData = {};
+                      }
+                      return manager.id !== currentUserData.id ? (
+                        <button
+                          onClick={() => handleDeleteManager(manager.id)}
+                          className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        >
+                          Eliminar
+                        </button>
+                      ) : null;
+                    })()}
                   </td>
                 </tr>
               ))}

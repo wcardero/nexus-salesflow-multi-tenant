@@ -8,12 +8,18 @@ interface ManagerDashboardProps {
   store: Store;
   db: MockDB;
   setDb: React.Dispatch<React.SetStateAction<MockDB>>;
+  view?: 'inventory' | 'closings' | 'dashboard'; // Optional view to control which tab to show initially
 }
 
 type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit';
 
-const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb }) => {
-  const [activeTab, setActiveTab] = useState<Tabs>('closings');
+const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, view }) => {
+  // Set the initial active tab based on the view prop, defaulting to 'closings'
+  const [activeTab, setActiveTab] = useState<Tabs>(() => {
+    if (view === 'inventory') return 'inventory';
+    if (view === 'closings') return 'closings';
+    return 'closings'; // Default tab
+  });
 
   // Handlers
   const handleValidateClosing = (closingId: string) => {

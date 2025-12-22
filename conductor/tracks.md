@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Fix Manager View Loading and Admin Access Bug
+## [~] Track: Fix Manager View Loading and Admin Access Bug
 *Link: [./conductor/tracks/fix_auth_bug_20251222/](./conductor/tracks/fix_auth_bug_20251222/)*
