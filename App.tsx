@@ -16,6 +16,30 @@ const App: React.FC = () => {
   const [checkingAuth, setCheckingAuth] = useState(true); // New state to track auth check
   const [currentView, setCurrentView] = useState('dashboard');
 
+  const normalizeRole = (role?: string): string => {
+    if (!role) return '';
+    // Remove leading/trailing whitespace and normalize the role
+    let normalizedRole = role.trim();
+
+    // Remove any potential invisible characters or zero-width spaces
+    normalizedRole = normalizedRole.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+    // Remove any other common invisible characters
+    normalizedRole = normalizedRole.replace(/[\u00A0\u1680\u2000-\u200B\u2028\u2029\u202F\u205F\u3000]/g, '');
+
+    // Check if the role matches any of our known roles exactly (case-insensitive)
+    const lowercasedRole = normalizedRole.toLowerCase();
+    if (lowercasedRole === 'admin') return 'Admin';
+    if (lowercasedRole === 'director') return 'Director';
+    if (lowercasedRole === 'manager') return 'Manager';
+    if (lowercasedRole === 'gestor') return 'Gestor';
+
+    // If it doesn't match any known role, return the normalized version
+    return normalizedRole;
+  };
+  
+  const role = normalizeRole(currentUser?.role);
+
   const handleNavigate = (view: string) => {
     setCurrentView(view);
   };
@@ -173,48 +197,17 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    // Normalize the role string by trimming whitespace and handling special characters
-    const normalizeRole = (role: string): string => {
-      // Remove leading/trailing whitespace and normalize the role
-      let normalizedRole = role.trim();
-
-      // Remove any potential invisible characters or zero-width spaces
-      normalizedRole = normalizedRole.replace(/[\u200B-\u200D\uFEFF]/g, '');
-
-      // Remove any other common invisible characters
-      normalizedRole = normalizedRole.replace(/[\u00A0\u1680\u2000-\u200B\u2028\u2029\u202F\u205F\u3000]/g, '');
-
-      // Check if the role matches any of our known roles exactly (case-insensitive)
-      if (normalizedRole.toLowerCase() === 'admin') return 'Admin';
-      if (normalizedRole.toLowerCase() === 'director') return 'Director';
-      if (normalizedRole.toLowerCase() === 'manager') return 'Manager';
-      if (normalizedRole.toLowerCase() === 'gestor') return 'Gestor';
-
-      // If it doesn't match any known role, return the normalized version
-      return normalizedRole;
-    };
-
-    const role = normalizeRole(currentUser.role);
-
     switch (currentView) {
       case 'dashboard':
-        // Use comprehensive role checking
-        const roleChecks = {
-          isManager: role.toLowerCase() === 'manager',
-          isAdmin: role.toLowerCase() === 'admin',
-          isDirector: role.toLowerCase() === 'director',
-          isGestor: role.toLowerCase() === 'gestor'
-        };
-
-        if (roleChecks.isManager) {
+        if (role === 'Manager') {
           if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
           return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
-        } else if (roleChecks.isAdmin) {
+        } else if (role === 'Admin') {
           return <AdminDashboard db={db} refreshDb={refreshDb} />;
-        } else if (roleChecks.isDirector) {
+        } else if (role === 'Director') {
           if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
           return <DirectorDashboard />;
-        } else if (roleChecks.isGestor) {
+        } else if (role === 'Gestor') {
           if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
           return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
         } else {
