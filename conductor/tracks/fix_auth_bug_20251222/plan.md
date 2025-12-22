@@ -2,7 +2,7 @@
 
 This plan is structured to diagnose, fix, and verify the resolution of the critical authentication and view loading bug.
 
-## Phase 1: Replicate and Diagnose
+## Phase 1: Replicate and Diagnose [checkpoint: 78d0d09]
 
 - [x] Task: **Analyze Backend Authentication Logic:** Review the Express.js backend code, focusing on `src/index.ts`. Examine how JWTs are issued, verified, and how user roles are handled during login and subsequent API requests. Pay close attention to any logic that might be shared or improperly stateful between requests.
 - [x] Task: **Analyze Frontend Routing and Data Fetching:** Review the React frontend code, particularly `App.tsx` (routing) and `views/ManagerDashboard.tsx` (view component). Investigate how user data and roles are retrieved after login and used to render the correct dashboard. Check for errors in data fetching or state management.
