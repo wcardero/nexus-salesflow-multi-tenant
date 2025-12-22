@@ -199,44 +199,44 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        if (role === 'Manager') {
+        if (role.toLowerCase() === 'manager') {
           if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
           return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
-        } else if (role === 'Admin') {
+        } else if (role.toLowerCase() === 'admin') {
           return <AdminDashboard db={db} refreshDb={refreshDb} />;
-        } else if (role === 'Director') {
+        } else if (role.toLowerCase() === 'director') {
           if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
           return <DirectorDashboard />;
-        } else if (role === 'Gestor') {
+        } else if (role.toLowerCase() === 'gestor') {
           if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
           return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
         } else {
           return <div className="p-4">Acceso denegado. Rol no reconocido. Original: '${currentUser.role}', Normalized: '${role}'</div>;
         }
       case 'stores':
-        if (role === 'Admin') {
+        if (role.toLowerCase() === 'admin') {
           return <StoreManagement db={db} refreshDb={refreshDb} />;
         } else {
           return <div className="p-4">Acceso denegado. Rol no reconocido. Original: '{currentUser.role}', Normalized: '{role}'</div>;
         }
       case 'users':
-        if (role === 'Admin') {
+        if (role.toLowerCase() === 'admin') {
           return <UserManagement db={db} refreshDb={refreshDb} />;
         } else {
           return <div className="p-4">Acceso denegado. Rol no reconocido. Original: '{currentUser.role}', Normalized: '{role}'</div>;
         }
       case 'managers':
-        if (role === 'Director') {
+        if (role.toLowerCase() === 'director') {
           return <DirectorDashboard db={db} refreshDb={refreshDb} />;
         } else {
           return <div className="p-4">Acceso denegado. Rol no reconocido. Original: '{currentUser.role}', Normalized: '{role}'</div>;
         }
       case 'inventory':
         // Managers and Directors can access inventory
-        if (role === 'Manager' || role === 'Director') {
+        if (role.toLowerCase() === 'manager' || role.toLowerCase() === 'director') {
           if (!activeStore) return <div>Error: Usuario sin tienda asignada.</div>;
           return <ManagerDashboard user={currentUser} store={activeStore} db={db} refreshDb={refreshDb} />;
-        } else if (role === 'Gestor') {
+        } else if (role.toLowerCase() === 'gestor') {
           if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
           return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
         } else {
@@ -244,9 +244,9 @@ const App: React.FC = () => {
         }
       case 'closings':
         // All roles except Admin can access closings
-        if (role === 'Director' || role === 'Manager' || role === 'Gestor') {
+        if (role.toLowerCase() === 'director' || role.toLowerCase() === 'manager' || role.toLowerCase() === 'gestor') {
           if (!activeStore) return <div>Error: Usuario sin tienda asignada.</div>;
-          if (role === 'Gestor') {
+          if (role.toLowerCase() === 'gestor') {
             return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
           } else {
             // For Director/Manager, show the manager dashboard for closure management
