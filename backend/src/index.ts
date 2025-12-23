@@ -18,18 +18,22 @@ const PORT = process.env.PORT || 3001;
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req: Request, res: any) => {
+    res.status(429).json({ message: 'Too many requests from this IP, please try again later.' });
+  }
 });
 
 // Login rate limiting (more restrictive)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 login requests per windowMs
-  message: 'Too many login attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req: Request, res: any) => {
+    res.status(429).json({ message: 'Too many login attempts, please try again later.' });
+  }
 });
 
 // Middleware
@@ -100,6 +104,14 @@ const validateLogin = [
   body('password')
     .isLength({ min: 6, max: 100 })
     .withMessage('Password must be between 6 and 100 characters'),
+  body('storeId')
+    .custom((value) => {
+      if (value === undefined || value === null || value === '') {
+        return true;
+      }
+      return value.length >= 1 && value.length <= 100;
+    })
+    .withMessage('Store ID must be between 1 and 100 characters if provided'),
   (req: Request, res: Response, next: any) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -111,7 +123,7 @@ const validateLogin = [
 
 // --- AUTH Endpoints ---
 app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Response) => {
-    const { name, password } = req.body;
+    const { name, password, storeId } = req.body;
     try {
         const result = await db.query('SELECT * FROM "User" WHERE name = $1', [name]);
         if (result.rows.length === 0) {
@@ -121,6 +133,16 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        // For non-admin users, validate store selection
+        if (user.role !== 'Admin') {
+            if (!storeId || storeId === '') {
+                return res.status(400).json({ message: 'Debes seleccionar una tienda.' });
+            }
+            if (user.storeId !== storeId) {
+                return res.status(401).json({ message: 'El usuario no pertenece a esta tienda.' });
+            }
         }
 
         // Create JWT token
@@ -136,6 +158,17 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
         res.json({ ...user, token });
     } catch (error) {
         console.error('Login error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Public endpoint to fetch all stores
+app.get('/api/stores/public', async (req: Request, res: Response) => {
+    try {
+        const result = await db.query('SELECT id, name FROM "Store" ORDER BY name');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Fetch stores error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -187,6 +220,7 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
 }, validateUserCreation, async (req: Request, res: Response) => {
     const { name, password, role, storeId } = req.body;
     let finalStoreId = storeId;
+    let requestingUser: any = null;
 
     // Check if any users exist to see if this is the first one
     const checkResult = await db.query('SELECT COUNT(*) FROM "User"');
@@ -194,7 +228,7 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
 
     // If not the first user, check if the requesting user has admin role
     if (!isFirstUser) {
-        const requestingUser = (req as any).user;
+        requestingUser = (req as any).user;
 
         // Admins can create Directors and Managers
         if (requestingUser.role === 'Admin') {
@@ -229,8 +263,7 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
             if (role !== 'Gestor') {
                 return res.status(403).json({ message: 'Managers can only create Gestors.' });
             }
-            // Gestors are automatically assigned to Manager's store
-            const finalStoreId = requestingUser.storeId || null;
+            finalStoreId = requestingUser.storeId || null;
             if (!finalStoreId) {
                 return res.status(400).json({ message: 'You must be assigned to a store to create Gestors.' });
             }
@@ -239,6 +272,29 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
         else {
             return res.status(403).json({ message: 'Access denied.' });
         }
+    }
+
+    // Check if user with same name already exists
+    let nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1';
+    let nameCheckParams = [name];
+
+    // For Managers and Directors, check within their store only
+    if (requestingUser && (requestingUser.role === 'Manager' || requestingUser.role === 'Director')) {
+        nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1 AND "storeId" = $2';
+        nameCheckParams = [name, requestingUser.storeId];
+    }
+
+    // For non-authenticated first user (Admin creation), check within storeId if provided
+    if (!requestingUser && storeId) {
+        nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1 AND "storeId" = $2';
+        nameCheckParams = [name, storeId];
+    }
+
+    const nameCheckResult = await db.query(nameCheckQuery, nameCheckParams);
+    const nameCount = parseInt(nameCheckResult.rows[0].count);
+
+    if (nameCount > 0) {
+        return res.status(400).json({ message: 'Ya existe un usuario con ese nombre en esta tienda.' });
     }
 
     try {
@@ -396,7 +452,24 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
   // Only admins can see all users
   if (requestingUser.role !== 'Admin') {
-    return res.status(403).json({ message: 'Access denied. Only admins can view all users.' });
+    // Directors can see managers from their store
+    if (requestingUser.role === 'Director') {
+      const { rows } = await db.query(
+        'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
+        ['Manager', requestingUser.storeId]
+      );
+      return res.json(rows);
+    }
+    // Managers can see gestors from their store
+    if (requestingUser.role === 'Manager') {
+      const { rows } = await db.query(
+        'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
+        ['Gestor', requestingUser.storeId]
+      );
+      return res.json(rows);
+    }
+    // Gestors cannot see other users
+    return res.status(403).json({ message: 'Access denied.' });
   }
 
   const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"', []);
@@ -488,6 +561,15 @@ app.post('/api/stores', authenticateToken, validateStoreCreation, async (req: Re
 
     try {
         const newStoreId = `store-${Date.now()}`;
+
+        // Check if store name already exists
+        const nameCheckResult = await db.query('SELECT COUNT(*) FROM "Store" WHERE name = $1', [name]);
+        const nameCount = parseInt(nameCheckResult.rows[0].count);
+
+        if (nameCount > 0) {
+            return res.status(400).json({ message: 'Ya existe una tienda con ese nombre.' });
+        }
+
         const result = await db.query(
             'INSERT INTO "Store" (id, name, "defaultCommissionRate") VALUES ($1, $2, $3) RETURNING *',
             [newStoreId, name, defaultCommissionRate || 0.10]

@@ -8,6 +8,8 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [storeId, setStoreId] = useState('');
+  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkingUsers, setCheckingUsers] = useState(true);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
@@ -26,6 +28,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     };
     checkUsersExist();
+  }, []);
+
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/stores/public');
+        const data = await response.json();
+        setStores(data);
+      } catch (error) {
+        console.error('Error fetching stores:', error);
+      }
+    };
+    fetchStores();
   }, []);
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -76,11 +91,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const response = await fetch('http://localhost:3001/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: username, password }),
+        body: JSON.stringify({ name: username, password, storeId: storeId || null }),
       });
 
       if (!response.ok) {
-        alert('Credenciales inválidas.');
+        const errorData = await response.json();
+        alert(errorData.message || 'Credenciales inválidas.');
         setLoading(false);
         return;
       }
@@ -100,7 +116,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     title: string,
     subtitle: string,
     submitHandler: (e: React.FormEvent) => Promise<void>,
-    buttonText: string
+    buttonText: string,
+    includeStoreSelect: boolean = false
   ) => (
     <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark font-display">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-8 m-4">
@@ -144,6 +161,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               disabled={loading}
             />
           </div>
+          {includeStoreSelect && (
+            <div>
+              <label
+                htmlFor="loginStore"
+                className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1"
+              >
+                Tienda
+              </label>
+              <select
+                id="loginStore"
+                value={storeId}
+                onChange={(e) => setStoreId(e.target.value)}
+                className="mt-1 block w-full bg-background-light dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={loading}
+              >
+                <option value="">Seleccione su tienda</option>
+                {stores.map(store => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             type="submit"
             className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -169,11 +208,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       'Bienvenido',
       'No hay usuarios registrados. Crea el primer administrador.',
       handleCreateAdmin,
-      'Crear Administrador'
+      'Crear Administrador',
+      false
     );
   }
 
-  return renderForm('Iniciar Sesión', 'Inicia sesión con tu usuario y contraseña', handleLoginUser, 'Iniciar Sesión');
+  return renderForm('Iniciar Sesión', 'Inicia sesión con tu usuario y contraseña', handleLoginUser, 'Iniciar Sesión', true);
 };
 
 export default Login;
