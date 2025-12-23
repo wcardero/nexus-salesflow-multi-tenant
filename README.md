@@ -102,15 +102,66 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 
 ## FLUJO DE CIERRE DETALLADO
 1. **Gestor ejecuta cierre** → sistema muestra resumen con:
-   - Listado de artículos vendidos
-   - Total recaudado (mn_final)
-   - Comisión calculada (10% configurable)
-   - Monto a entregar al manager (mn_base)
+    - Listado de artículos vendidos
+    - Total recaudado (mn_final)
+    - Comisión calculada (10% configurable)
+    - Monto a entregar al manager (mn_base)
 2. **Gestor verifica y confirma** → cierre se ejecuta y se actualizan:
-   - Datos del manager (existencia de productos)
-   - Estado del cierre (pendiente)
+    - Datos del manager (existencia de productos)
+    - Estado del cierre (pendiente)
 3. **Manager ve cierre pendiente** → conoce monto a recibir
 4. **Gestor entrega dinero físico** → manager marca cierre como "recibido"
+
+## PERMISOS DE USUARIOS
+
+### Creación de Usuarios
+| Rol que crea | Admin | Director | Manager | Gestor | Requisitos |
+|---------------|--------|-----------|----------|---------|-------------|
+| **Admin** | ❌ (solo primero) | ✅ | ✅ | ❌ | Manager/Director deben tener tienda asignada |
+| **Director** | ❌ | ❌ | ✅ (su tienda) | ❌ | Manager se asigna automáticamente a tienda del Director |
+| **Manager** | ❌ | ❌ | ❌ | ✅ (su tienda) | Gestor se asigna automáticamente a tienda del Manager |
+| **Gestor** | ❌ | ❌ | ❌ | ❌ | No puede crear usuarios |
+
+### Edición de Usuarios
+| Rol | Puede editar | Restricciones |
+|------|--------------|----------------|
+| **Admin** | Nombre, Rol (otros), Tienda (otros) | No puede cambiar su propio rol |
+| **Admin** | | No puede asignarse tienda |
+| **Director** | Nombre | No puede cambiar rol ni tienda |
+| **Manager** | Nombre | No puede cambiar rol ni tienda |
+| **Gestor** | Nombre | No puede cambiar rol ni tienda |
+
+### Gestión de Contraseñas
+- **Admin**: Puede cambiar contraseña de cualquier usuario
+- **Director**: Puede cambiar contraseña de Managers de su tienda
+- **Manager**: Asigna contraseña al crear Gestores
+- **Usuarios**: Pueden cambiar su propia contraseña requiriendo la actual
+
+### Eliminación de Usuarios
+- **Admin**: Puede eliminar cualquier usuario excepto a sí mismo
+- **Director**: Puede eliminar Managers de su tienda
+- **Manager**: Puede eliminar Gestores de su tienda
+- **Gestor**: No puede eliminar usuarios
+- El botón de "Eliminar" está oculto para el admin que se edita a sí mismo
+
+## INFRAESTRURA DEL PROYECTO
+
+### Tecnologías
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Backend**: Express + TypeScript + PostgreSQL
+- **Autenticación**: JWT (JSON Web Tokens)
+- **Base de datos**: PostgreSQL
+
+### Componentes Principales
+- `hooks/useApi.ts`: Hook centralizado para llamadas a la API
+- `views/UserManagement.tsx`: Gestión de usuarios (Admin)
+- `views/ManagerDashboard.tsx`: Panel del Manager
+- `views/DirectorDashboard.tsx`: Panel del Director
+- `views/GestorDashboard.tsx`: Panel del Gestor
+
+### Variables de Entorno
+- `API_URL`: URL de la API backend (por defecto: `http://localhost:3001`)
+- Configurado en `vite.config.ts` y `.env`
 
 ## ENTREGABLES REQUERIDOS
 
@@ -136,3 +187,49 @@ Producto: compra_usd = $10, margen = 30%, X = 300 MN/USD
 - Precio MN base: $13 × 300 = 3,900 MN
 - Comisión: 3,900 × 0.10 = 390 MN
 - Precio final: 3,900 + 390 = 4,290 MN
+
+---
+
+## OPTIMIZACIONES RECIENTES (Commit: dc1a185)
+
+### Limpieza de Proyecto
+- Eliminado directorio `coverage/` (~150MB de reportes de tests)
+- Eliminado directorio `Prototype de disenno/` (~5-10MB de prototipos)
+- Actualizado `.gitignore` para prevenir inclusión futura de estos archivos
+
+### Backend - Seguridad y Permisos
+- **Endpoint `PUT /api/users/:id`**: Crear y editar usuarios con validaciones:
+  - Solo admins pueden actualizar usuarios
+  - El admin no puede cambiar su propio rol ni asignarse tienda
+  - Protección contra creación múltiple de admins
+- **Endpoint `PUT /api/users/:id/password`**: Corregido para permitir cambio sin `oldPassword`:
+  - Admins pueden cambiar contraseña de cualquier usuario
+  - Usuarios deben proporcionar su contraseña actual para cambiarla
+  - Acepta tanto `password` como `newPassword` en el body
+- **Permisos de creación**:
+  - Admin: Puede crear Directores y Managers (requieren tienda)
+  - Director: Puede crear Managers (asignados a su tienda)
+  - Manager: Puede crear Gestores (asignados a su tienda)
+  - Gestor: No puede crear usuarios
+- **Validaciones**:
+  - Manager debe tener tienda asignada para crear Gestores
+  - Director debe tener tienda asignada para crear Managers
+  - Mensajes de error claros en español
+
+### Frontend - Mejoras de UX
+- **Ocultar campos sensibles**:
+  - Campo "Rol" oculto cuando admin se edita a sí mismo
+  - Campo "Tienda" oculto cuando admin se edita a sí mismo
+  - Botón "Eliminar" oculto para el admin que se edita a sí mismo
+- **Clarificación de etiquetas**: "Nombre" → "Nombre de usuario"
+- **Actualización de caché**: El usuario actual se actualiza con datos frescos del servidor en cada `refreshDb()`
+- **ManagerDashboard**: Gestores se crean vía API con contraseña asignada
+
+### Infraestructura
+- **Hook `useApi.ts`**: Centraliza todas las llamadas a la API (GET, POST, PUT, DELETE)
+- **Variables de entorno**: URL de API configurada en `vite.config.ts` con valor de `.env`
+
+### Estado del Proyecto
+- **Tamaño reducido**: De ~205MB a ~150MB después de limpiar archivos innecesarios
+- **TypeScript**: Sin errores en frontend ni backend
+- **Build**: Exitoso en ambos proyectos
