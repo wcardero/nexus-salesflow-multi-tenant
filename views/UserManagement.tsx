@@ -283,10 +283,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre de usuario</label>
               <input 
                 type="text" 
-                placeholder="Nombre del usuario" 
+                placeholder="Nombre de usuario" 
                 value={editingUserName} 
                 onChange={e => setEditingUserName(e.target.value)} 
                 className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
@@ -354,7 +354,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-600 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-700">
               <tr>
-                <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre</th>
+                <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre de usuario</th>
                 <th className="px-4 py-3" scope="col">Rol</th>
                 <th className="px-4 py-3" scope="col">Tienda</th>
                 <th className="px-4 py-3 rounded-r-lg" scope="col">Acciones</th>

@@ -30,7 +30,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
 
   const handleCreateManager = async () => {
     if (!newManagerName.trim() || !newManagerPassword.trim()) {
-      alert('Por favor, ingrese un nombre y contraseña para el manager.');
+      alert('Por favor, ingrese un nombre de usuario y contraseña para el manager.');
       return;
     }
 
@@ -72,7 +72,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
 
   const handleUpdateManager = async () => {
     if (!editingManager || !editingManagerName.trim()) {
-      alert('Por favor, ingrese un nombre para el manager.');
+      alert('Por favor, ingrese un nombre de usuario para el manager.');
       return;
     }
 
@@ -211,12 +211,12 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
-            <input 
-              type="text" 
-              placeholder="Nombre del manager" 
-              value={newManagerName} 
-              onChange={e => setNewManagerName(e.target.value)} 
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre de usuario</label>
+            <input
+              type="text"
+              placeholder="Nombre de usuario del manager"
+              value={newManagerName}
+              onChange={e => setNewManagerName(e.target.value)}
               className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
             />
           </div>
@@ -249,9 +249,9 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
             <p className="text-gray-600 dark:text-gray-400 text-sm font-normal">Modifique la información del manager.</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="Nombre del manager" 
+            <input
+              type="text"
+              placeholder="Nombre de usuario del manager"
               value={editingManagerName} 
               onChange={e => setEditingManagerName(e.target.value)} 
               className="flex-1 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
@@ -284,7 +284,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-600 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-700">
               <tr>
-                <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre</th>
+                <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre de usuario</th>
                 <th className="px-4 py-3 rounded-r-lg" scope="col">Acciones</th>
               </tr>
             </thead>

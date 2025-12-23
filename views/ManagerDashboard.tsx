@@ -335,7 +335,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
         <input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Nombre del nuevo gestor"
+          placeholder="Nombre de usuario del nuevo gestor"
           className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
         />
         <input
