@@ -114,6 +114,10 @@ const App: React.FC = () => {
   const activeStore = useMemo(() => {
     if (currentUser?.storeId && db) {
       return db.stores.find(s => s.id === currentUser.storeId);
+    } else if (currentUser?.role?.trim().toLowerCase() === 'manager' && db) {
+      // For Managers, find the store through their assignments
+      // Look for stores where this manager is assigned via the managerIds field
+      return db.stores.find(store => store.managerIds?.includes(currentUser.id));
     }
     return undefined;
   }, [currentUser, db]);
@@ -153,49 +157,41 @@ const App: React.FC = () => {
     );
   }
 
+  const normalizeRole = (role?: string): string => {
+    if (!role) return '';
+    return role.trim();
+  };
+  
+  const role = normalizeRole(currentUser?.role);
+
   const renderContent = () => {
-    switch (currentView) {
-      case 'dashboard':
-        switch (currentUser.role) {
-          case Role.ADMIN:
-            return <AdminDashboard db={db} refreshDb={refreshDb} />;
-          case Role.DIRECTOR:
-            if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
-            return <DirectorDashboard />;
-          case Role.MANAGER:
-            if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-            return <ManagerDashboard user={currentUser} store={activeStore} db={db} refreshDb={refreshDb} />;
-          case Role.GESTOR:
-            if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
-            return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
-          default:
-            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
-        }
-      case 'stores':
-        switch (currentUser.role) {
-          case Role.ADMIN:
-            return <StoreManagement db={db} refreshDb={refreshDb} />;
-          default:
-            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
-        }
-      case 'users':
-        switch (currentUser.role) {
-          case Role.ADMIN:
-            return <UserManagement db={db} refreshDb={refreshDb} />;
-          default:
-            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
-        }
-      case 'managers':
-        switch (currentUser.role) {
-          case Role.DIRECTOR:
-            return <DirectorDashboard db={db} refreshDb={refreshDb} />;
-          default:
-            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
-        }
-      // Add other cases for other views here
-      default:
-        return <div>Vista no encontrada</div>;
+    const checkRole = role.toLowerCase();
+
+    if (currentView === 'dashboard') {
+      if (checkRole === 'admin') {
+        return <AdminDashboard db={db} refreshDb={refreshDb} />;
+      } else if (checkRole === 'director') {
+        if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
+        return <DirectorDashboard />;
+      } else if (checkRole === 'manager') {
+        if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
+        return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
+      } else if (checkRole === 'gestor') {
+        if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
+        return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
+      } else {
+        return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+      }
+    } else if (currentView === 'stores' && checkRole === 'admin') {
+      return <StoreManagement db={db} refreshDb={refreshDb} />;
+    } else if (currentView === 'users' && checkRole === 'admin') {
+      return <UserManagement db={db} refreshDb={refreshDb} />;
+    } else if (currentView === 'managers' && checkRole === 'director') {
+      return <DirectorDashboard db={db} refreshDb={refreshDb} />;
     }
+    
+    // Fallback for other views or unauthorized access
+    return <div>Vista no encontrada o acceso denegado.</div>;
   };
 
   return (
