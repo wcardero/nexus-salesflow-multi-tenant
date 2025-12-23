@@ -9,6 +9,17 @@ import DirectorDashboard from './views/DirectorDashboard';
 import StoreManagement from './views/StoreManagement';
 import UserManagement from './views/UserManagement';
 
+const normalizeRole = (role: Role | string): Role => {
+  if (typeof role === 'string') {
+    const roleLower = role.trim().toLowerCase();
+    if (roleLower.includes('admin')) return Role.ADMIN;
+    if (roleLower.includes('director')) return Role.DIRECTOR;
+    if (roleLower.includes('manager')) return Role.MANAGER;
+    if (roleLower.includes('gestor')) return Role.GESTOR;
+  }
+  return role as Role;
+};
+
 const App: React.FC = () => {
   const [db, setDb] = useState<MockDB | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -92,8 +103,8 @@ const App: React.FC = () => {
 
       // Dates are transmitted as strings, so we need to convert them back to Date objects
       data.stores.forEach(s => s.exchangeRates.forEach(xr => {
-          xr.startDate = new Date(xr.startDate);
-          if(xr.endDate) xr.endDate = new Date(xr.endDate);
+        xr.startDate = new Date(xr.startDate);
+        if(xr.endDate) xr.endDate = new Date(xr.endDate);
       }));
       data.inventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
       data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
@@ -103,6 +114,17 @@ const App: React.FC = () => {
           if(c.completedAt) c.completedAt = new Date(c.completedAt);
       });
       data.auditLogs.forEach(log => log.timestamp = new Date(log.timestamp));
+
+      // Update current user from fresh database data to avoid stale cache issues
+      const storedUserJson = localStorage.getItem('user');
+      if (storedUserJson) {
+        const storedUser: User = JSON.parse(storedUserJson);
+        const freshUser = data.users.find(u => u.id === storedUser.id);
+        if (freshUser) {
+          setCurrentUser(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        }
+      }
 
       setDb(data);
       console.log('refreshDb: data loaded successfully');
@@ -191,56 +213,46 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    const roleString = (currentUser.role as any)?.toString?.() || '';
-    const raw = roleString.trim().toLowerCase();
-    const normalizedRole = raw.includes('admin')
-      ? 'admin'
-      : raw.includes('director')
-      ? 'director'
-      : raw.includes('manager')
-      ? 'manager'
-      : raw.includes('gestor')
-      ? 'gestor'
-      : raw;
+    const role = normalizeRole(currentUser.role);
 
     switch (currentView) {
       case 'dashboard':
-        switch (normalizedRole) {
-          case 'admin':
+        switch (role) {
+          case Role.ADMIN:
             return <AdminDashboard db={db} refreshDb={refreshDb} />;
-          case 'director':
+          case Role.DIRECTOR:
             if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
             return <DirectorDashboard />;
-          case 'manager':
+          case Role.MANAGER:
             if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
             return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
-          case 'gestor':
+          case Role.GESTOR:
             if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
             return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
           default:
             return (
               <div className="p-4">
-                Acceso denegado. Rol no reconocido. Rol actual: {roleString || 'desconocido'}
+                Acceso denegado. Rol no reconocido. Rol actual: {currentUser.role}
               </div>
             );
         }
       case 'stores':
-        switch (normalizedRole) {
-          case 'admin':
+        switch (role) {
+          case Role.ADMIN:
             return <StoreManagement db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }
       case 'users':
-        switch (normalizedRole) {
-          case 'admin':
+        switch (role) {
+          case Role.ADMIN:
             return <UserManagement db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }
       case 'managers':
-        switch (normalizedRole) {
-          case 'director':
+        switch (role) {
+          case Role.DIRECTOR:
             return <DirectorDashboard db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;

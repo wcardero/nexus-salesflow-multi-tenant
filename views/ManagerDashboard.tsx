@@ -278,25 +278,74 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
 // --- GESTORES VIEW ---
 const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    const newGestor: User = { id: `user-g-${Date.now()}`, name, role: Role.GESTOR, storeId: store.id };
-    setDb(prev => {
-      if (!prev) return prev;
-      return { ...prev, users: [...prev.users, newGestor] };
-    });
-    setName('');
+    if (!name.trim() || !password.trim()) {
+      alert('Por favor, complete todos los campos.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          password: password,
+          role: Role.GESTOR
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error creando el gestor');
+      }
+
+      await fetch('http://localhost:3001/api/users');
+      const usersRes = await fetch('http://localhost:3001/api/users', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const usersData = await usersRes.json();
+      setDb(prev => {
+        if (!prev) return prev;
+        return { ...prev, users: usersData };
+      });
+
+      setName('');
+      setPassword('');
+      alert('Gestor creado exitosamente.');
+    } catch (error: any) {
+      console.error('Error creating gestor:', error);
+      alert(`Error al crear el gestor: ${error.message}`);
+    }
   };
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Gestionar Gestores</h3>
       {/* Add form */}
-      <form onSubmit={handleAdd} className="flex gap-2 mb-6">
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del nuevo gestor" className="flex-grow bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"/>
-        <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
+      <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        <input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Nombre del nuevo gestor"
+          className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Contraseña"
+          className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
+        />
+        <button type="submit" className="md:col-span-2 bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
       </form>
       {/* List */}
       <ul className="space-y-2">

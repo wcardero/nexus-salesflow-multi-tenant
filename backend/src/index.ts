@@ -153,7 +153,7 @@ const validateUserCreation = [
     .withMessage('Password must be between 6 and 100 characters'),
   body('role')
     .isIn(['Admin', 'Director', 'Manager', 'Gestor'])
-    .withMessage('Role must be Admin, Manager, or Gestor'),
+    .withMessage('Role must be Admin, Director, Manager, or Gestor'),
   body('storeId')
     .optional()
     .isLength({ min: 1, max: 100 })
@@ -186,6 +186,7 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
     }
 }, validateUserCreation, async (req: Request, res: Response) => {
     const { name, password, role, storeId } = req.body;
+    let finalStoreId = storeId;
 
     // Check if any users exist to see if this is the first one
     const checkResult = await db.query('SELECT COUNT(*) FROM "User"');
@@ -194,17 +195,60 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
     // If not the first user, check if the requesting user has admin role
     if (!isFirstUser) {
         const requestingUser = (req as any).user;
-        if (!requestingUser || requestingUser.role !== 'Admin') {
-            return res.status(403).json({ message: 'Only admins can create users.' });
+
+        // Admins can create Directors and Managers
+        if (requestingUser.role === 'Admin') {
+            // Prevent creating additional Admins after the first one
+            if (role === 'Admin') {
+                return res.status(403).json({ message: 'Only the first user can be an Admin. Cannot create additional Admins.' });
+            }
+
+            // Managers must be assigned to a store
+            if (role === 'Manager' && !storeId) {
+                return res.status(400).json({ message: 'No puedes agregar un manager sin antes asociarle una tienda.' });
+            }
+
+            // Directors must be assigned to a store
+            if (role === 'Director' && !storeId) {
+                return res.status(400).json({ message: 'No puedes agregar un director sin antes asociarle una tienda.' });
+            }
+        }
+        // Directors can create Managers for their own store
+        else if (requestingUser.role === 'Director') {
+            if (role !== 'Manager') {
+                return res.status(403).json({ message: 'Directors can only create Managers.' });
+            }
+            // Managers are automatically assigned to Director's store
+            finalStoreId = requestingUser.storeId || null;
+            if (!finalStoreId) {
+                return res.status(400).json({ message: 'You must be assigned to a store to create Managers.' });
+            }
+        }
+        // Managers can only create Gestors for their own store
+        else if (requestingUser.role === 'Manager') {
+            if (role !== 'Gestor') {
+                return res.status(403).json({ message: 'Managers can only create Gestors.' });
+            }
+            // Gestors are automatically assigned to Manager's store
+            const finalStoreId = requestingUser.storeId || null;
+            if (!finalStoreId) {
+                return res.status(400).json({ message: 'You must be assigned to a store to create Gestors.' });
+            }
+        }
+        // No other roles can create users
+        else {
+            return res.status(403).json({ message: 'Access denied.' });
         }
     }
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUserId = `user-${Date.now()}`; // Generate a unique ID
+        const newUserId = `user-${Date.now()}`;
+        // For Manager creating Gestor, use Manager's storeId
+        const storeIdToUse = finalStoreId !== undefined ? finalStoreId : (storeId || null);
         const result = await db.query(
             'INSERT INTO "User" (id, name, password, role, "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, role, "storeId"',
-            [newUserId, name, hashedPassword, role, storeId || null]
+            [newUserId, name, hashedPassword, role, storeIdToUse]
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -215,12 +259,19 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
 
 app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { oldPassword, newPassword } = req.body;
+    const { oldPassword, password, newPassword } = req.body;
     const requestingUser = (req as any).user;
 
     // Only allow users to change their own password or admins to change any password
     if (requestingUser.id !== id && requestingUser.role !== 'Admin') {
         return res.status(403).json({ message: 'Access denied. You can only change your own password.' });
+    }
+
+    // Accept both 'password' and 'newPassword' field names for compatibility
+    const targetPassword = newPassword || password;
+
+    if (!targetPassword) {
+        return res.status(400).json({ message: 'New password is required.' });
     }
 
     try {
@@ -230,15 +281,19 @@ app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: 
         }
         const user = result.rows[0];
 
-        // For admin changing other user's password, skip old password check
+        // For user changing their own password, verify old password
         if (requestingUser.id === id) {
+            if (!oldPassword) {
+                return res.status(400).json({ message: 'Old password is required when changing your own password.' });
+            }
             const passwordMatch = await bcrypt.compare(oldPassword, user.password);
             if (!passwordMatch) {
                 return res.status(400).json({ message: 'Invalid old password.' });
             }
         }
+        // For admin changing other user's password, no old password check needed
 
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        const hashedNewPassword = await bcrypt.hash(targetPassword, 10);
         await db.query('UPDATE "User" SET password = $1 WHERE id = $2', [hashedNewPassword, id]);
         res.status(200).json({ message: 'Password updated successfully.' });
     } catch (error) {
@@ -247,6 +302,93 @@ app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: 
     }
 });
 
+// Update user endpoint
+app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { name, role, storeId } = req.body;
+    const requestingUser = (req as any).user;
+
+    // Only admins can update users
+    if (requestingUser.role !== 'Admin') {
+        return res.status(403).json({ message: 'Access denied. Only admins can update users.' });
+    }
+
+    // Prevent admin from changing their own role
+    if (id === requestingUser.id && role && role !== requestingUser.role) {
+        return res.status(403).json({ message: 'You cannot change your own role.' });
+    }
+
+    // Prevent admin from assigning themselves a store
+    if (id === requestingUser.id && storeId && storeId !== requestingUser.storeId) {
+        return res.status(403).json({ message: 'You cannot assign yourself to a store.' });
+    }
+
+    try {
+        // Get current user for comparison and audit logging
+        const currentUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
+        if (currentUser.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        const existingUser = currentUser.rows[0];
+
+        // Prevent creating additional admins
+        if (role && role === 'Admin' && existingUser.role !== 'Admin') {
+            const adminCount = await db.query('SELECT COUNT(*) FROM "User" WHERE role = $1', ['Admin']);
+            const count = parseInt(adminCount.rows[0].count);
+            if (count > 0) {
+                return res.status(403).json({ message: 'Cannot promote additional users to Admin.' });
+            }
+        }
+
+        // Build update query dynamically based on provided fields
+        const updates: string[] = [];
+        const values: any[] = [];
+        let paramIndex = 1;
+
+        if (name !== undefined) {
+            updates.push(`name = $${paramIndex}`);
+            values.push(name);
+            paramIndex++;
+        }
+
+        if (role !== undefined) {
+            updates.push(`role = $${paramIndex}`);
+            values.push(role);
+            paramIndex++;
+        }
+
+        if (storeId !== undefined) {
+            updates.push(`"storeId" = $${paramIndex}`);
+            values.push(storeId || null);
+            paramIndex++;
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ message: 'No fields to update.' });
+        }
+
+        values.push(id);
+        const query = `UPDATE "User" SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, name, role, "storeId"`;
+
+        const result = await db.query(query, values);
+
+        // Create audit log
+        await createAuditLog(
+            requestingUser.id,
+            'UPDATE_USER',
+            'User',
+            id,
+            { ...existingUser, password: '[REDACTED]' },
+            { ...result.rows[0], password: '[REDACTED]' },
+            existingUser.storeId
+        );
+
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('User update error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
 // --- GET Endpoints ---
 app.get('/api/users', authenticateToken, async (req, res) => {
@@ -489,6 +631,79 @@ app.delete('/api/stores/:storeId/remove-manager/:userId', authenticateToken, asy
     console.error('Remove manager from store error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
+});
+
+app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const requestingUser = (req as any).user;
+
+    // Only admins can delete users
+    if (requestingUser.role !== 'Admin') {
+        return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
+    }
+
+    // Prevent admin from deleting themselves
+    if (id === requestingUser.id) {
+        return res.status(400).json({ message: 'Cannot delete your own account.' });
+    }
+
+    try {
+        const result = await db.query('DELETE FROM "User" WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Create audit log for user deletion
+        await createAuditLog(
+          requestingUser.id,
+          'DELETE_USER',
+          'User',
+          id,
+          { id },
+          null,
+          undefined
+        );
+
+        res.status(200).json({ message: 'User deleted successfully.' });
+    } catch (error) {
+        console.error('User deletion error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.delete('/api/stores/:id', authenticateToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const requestingUser = (req as any).user;
+    // Only admins can delete stores
+    if (requestingUser.role !== 'Admin') {
+        return res.status(403).json({ message: 'Access denied. Only admins can delete stores.' });
+    }
+
+    try {
+        // Get store for audit logging
+        const storeResult = await db.query('SELECT * FROM "Store" WHERE id = $1', [id]);
+        if (storeResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Store not found.' });
+        }
+
+        await db.query('DELETE FROM "Store" WHERE id = $1', [id]);
+
+        // Create audit log for store deletion
+        await createAuditLog(
+          requestingUser.id,
+          'DELETE_STORE',
+          'Store',
+          id,
+          storeResult.rows[0],
+          null,
+          id
+        );
+
+        res.status(200).json({ message: 'Store deleted successfully.' });
+    } catch (error) {
+        console.error('Store deletion error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 // Endpoint to get product stock

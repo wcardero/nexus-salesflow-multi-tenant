@@ -20,6 +20,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordChangeUser, setPasswordChangeUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const currentUserId = JSON.parse(localStorage.getItem('user') || '{}').id;
 
   const handleCreateUser = async () => {
     if (!newUser.name.trim() || !newUser.password.trim()) {
@@ -69,18 +70,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
+      const requestBody: any = {
+        name: editingUserName.trim()
+      };
+
+      if (editingUser.id !== currentUserId) {
+        requestBody.role = editingUserRole;
+        requestBody.storeId = editingUserStoreId || null;
+      }
+
       const response = await fetch(`http://localhost:3001/api/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          ...editingUser,
-          name: editingUserName.trim(),
-          role: editingUserRole,
-          storeId: editingUserStoreId || null
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -177,7 +182,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          password: newPassword
+          newPassword: newPassword
         })
       });
 
@@ -215,12 +220,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
-            <input 
-              type="text" 
-              placeholder="Nombre del usuario" 
-              value={newUser.name} 
-              onChange={e => setNewUser({...newUser, name: e.target.value})} 
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre de usuario</label>
+            <input
+              type="text"
+              placeholder="Nombre de usuario"
+              value={newUser.name}
+              onChange={e => setNewUser({...newUser, name: e.target.value})}
               className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
             />
           </div>
@@ -233,7 +238,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
             >
               <option value={Role.DIRECTOR}>Director</option>
               <option value={Role.MANAGER}>Manager</option>
-              <option value={Role.GESTOR}>Gestor</option>
             </select>
           </div>
           <div>
@@ -288,31 +292,40 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
                 className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Rol</label>
-              <select
-                value={editingUserRole}
-                onChange={e => setEditingUserRole(e.target.value as Role)}
-                className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
-              >
-                <option value={Role.DIRECTOR}>Director</option>
-                <option value={Role.MANAGER}>Manager</option>
-                <option value={Role.GESTOR}>Gestor</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tienda</label>
-              <select
-                value={editingUserStoreId}
-                onChange={e => setEditingUserStoreId(e.target.value)}
-                className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
-              >
-                <option value="">Sin tienda</option>
-                {db.stores.map(store => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </select>
-            </div>
+            {editingUser.id !== currentUserId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Rol</label>
+                <select
+                  value={editingUserRole}
+                  onChange={e => setEditingUserRole(e.target.value as Role)}
+                  className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+                >
+                  <option value={Role.DIRECTOR}>Director</option>
+                  <option value={Role.MANAGER}>Manager</option>
+                  <option value={Role.GESTOR}>Gestor</option>
+                </select>
+              </div>
+            )}
+            {editingUser.id !== currentUserId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tienda</label>
+                <select
+                  value={editingUserStoreId}
+                  onChange={e => setEditingUserStoreId(e.target.value)}
+                  className="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
+                >
+                  <option value="">Sin tienda</option>
+                  {db.stores.map(store => (
+                    <option key={store.id} value={store.id}>{store.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {editingUser.id === currentUserId && (
+              <p className="col-span-2 text-sm text-amber-600 dark:text-amber-400">
+                No puedes cambiar tu propio rol o asignación de tienda.
+              </p>
+            )}
           </div>
           <div className="flex gap-2 justify-end">
             <button 
@@ -362,18 +375,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
                       >
                         Editar
                       </button>
-                      <button 
+                      <button
                         onClick={() => openPasswordChangeModal(user)}
                         className="text-green-600 hover:text-green-800 font-medium text-sm"
                       >
                         Cambiar Contraseña
                       </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
-                      >
-                        Eliminar
-                      </button>
+                      {user.id !== currentUserId && (
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        >
+                          Eliminar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

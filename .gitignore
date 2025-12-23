@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Coverage
+coverage/
+
+# Prototypes and design files
+Prototype de disenno/
+prototypes/
+
+# Backup and duplicate folders
+*-backup
+*-copy
+*-old
