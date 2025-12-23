@@ -7,7 +7,7 @@ interface GestorDashboardProps {
   user: User;
   store: Store;
   db: MockDB;
-  setDb: React.Dispatch<React.SetStateAction<MockDB>>;
+  setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
 }
 
 type Tabs = 'sales' | 'reports';
@@ -113,6 +113,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
     };
 
     setDb(prevDb => {
+      if (!prevDb) return prevDb;
       const updatedInventory = prevDb.inventory.map(item => 
         item.id === inventoryItem.id ? { ...item, status: 'Sold', saleId: newSale.id } : item
       );
@@ -157,10 +158,13 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
     `;
 
     if (window.confirm(summary)) {
-      setDb(prevDb => ({
-        ...prevDb,
-        closings: [...prevDb.closings, newClosing],
-      }));
+      setDb(prevDb => {
+        if (!prevDb) return prevDb;
+        return {
+          ...prevDb,
+          closings: [...prevDb.closings, newClosing],
+        };
+      });
       alert('Cierre ejecutado. El manager ha sido notificado.');
     }
   };

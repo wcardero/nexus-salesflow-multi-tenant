@@ -20,40 +20,75 @@ const App: React.FC = () => {
     setCurrentView(view);
   };
 
-  const refreshDb = async () => {
+  const refreshDb = async (roleOverride?: Role) => {
     try {
       // Get the token from localStorage or wherever it's stored
       const token = localStorage.getItem('token');
+      console.log('refreshDb: token =', token ? 'EXISTS' : 'NULL');
 
       if (!token) {
         // If there's no token, don't show an error, just return
         // The user will be redirected to login via the rendering logic
+        console.log('refreshDb: No token found, returning early');
         return;
       }
 
-      const resources = ['users', 'stores', 'products', 'inventory', 'product-stock', 'assigned-inventory', 'sales', 'closings', 'audit-logs'];
-      const promises = resources.map(resource =>
-        fetch(`http://localhost:3001/api/${resource}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }).then(res => {
-          if (!res.ok) {
-            if (res.status === 401 || res.status === 403) {
-              // Token might be expired, redirect to login
-              localStorage.removeItem('token');
-              window.location.href = '/';
-            }
-            throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
-          }
-          return res.json();
-        })
-      );
+      const effectiveRole = roleOverride ?? currentUser?.role ?? null;
 
-      const [users, stores, products, inventory, productStock, assignedInventory, sales, closings, auditLogs] = await Promise.all(promises);
+      const baseResources = [
+        'stores',
+        'products',
+        'inventory',
+        'product-stock',
+        'assigned-inventory',
+        'sales',
+        'closings',
+        'audit-logs',
+      ];
+
+      const resources =
+        effectiveRole === Role.ADMIN
+          ? ['users', ...baseResources]
+          : baseResources;
+
+      console.log('refreshDb: fetching resources:', resources);
+      const results: [string, any][] = [];
+      for (const resource of resources) {
+        console.log(`refreshDb: fetching ${resource}...`);
+        const res = await fetch(`http://localhost:3001/api/${resource}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) {
+          console.error(`refreshDb: Error fetching ${resource}:`, res.status, res.statusText);
+          if (res.status === 401) {
+            // Token expired or invalid, redirect to login
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+          }
+          throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
+        }
+        const data = await res.json();
+        results.push([resource, data] as const);
+        console.log(`refreshDb: ${resource} fetched successfully`);
+      }
+
+      const dataMap = Object.fromEntries(results as any) as Record<string, any>;
 
       // Assemble the database object
-      const data: MockDB = { users, stores, products, inventory, productStock, assignedInventory, sales, closings, auditLogs };
+      const data: MockDB = {
+        users: dataMap['users'] ?? [],
+        stores: dataMap['stores'] ?? [],
+        products: dataMap['products'] ?? [],
+        inventory: dataMap['inventory'] ?? [],
+        productStock: dataMap['product-stock'] ?? [],
+        assignedInventory: dataMap['assigned-inventory'] ?? [],
+        sales: dataMap['sales'] ?? [],
+        closings: dataMap['closings'] ?? [],
+        auditLogs: dataMap['audit-logs'] ?? [],
+      };
 
       // Dates are transmitted as strings, so we need to convert them back to Date objects
       data.stores.forEach(s => s.exchangeRates.forEach(xr => {
@@ -70,7 +105,9 @@ const App: React.FC = () => {
       data.auditLogs.forEach(log => log.timestamp = new Date(log.timestamp));
 
       setDb(data);
+      console.log('refreshDb: data loaded successfully');
     } catch (err: any) {
+      console.error('refreshDb: error:', err);
       setError(`Failed to fetch data: ${err.message}`);
       console.error(err);
     }
@@ -84,18 +121,18 @@ const App: React.FC = () => {
       if (token && userJson) {
         // If there's a token, try to load the database
         try {
-          const user = JSON.parse(userJson);
+          const user: User = JSON.parse(userJson);
           setCurrentUser(user);
-          // Verify token is still valid by making a simple request
-          const response = await fetch('http://localhost:3001/api/users', {
+          // Verify token is still valid by making a simple request that all roles can access
+          const response = await fetch('http://localhost:3001/api/stores', {
             headers: {
-              'Authorization': `Bearer ${token}`
-            }
+              'Authorization': `Bearer ${token}`,
+            },
           });
 
           if (response.ok) {
             // Token is valid, load the full database
-            await refreshDb();
+            await refreshDb(user.role);
           } else {
             // Token is invalid/expired, remove it and show login
             handleLogout();
@@ -121,7 +158,7 @@ const App: React.FC = () => {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('user', JSON.stringify(user));
-    refreshDb(); // Refresh data after login, especially if a new user was created
+    refreshDb(user.role); // Refresh data after login, especially if a new user was created
   };
 
   const handleLogout = () => {
@@ -154,40 +191,56 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
+    const roleString = (currentUser.role as any)?.toString?.() || '';
+    const raw = roleString.trim().toLowerCase();
+    const normalizedRole = raw.includes('admin')
+      ? 'admin'
+      : raw.includes('director')
+      ? 'director'
+      : raw.includes('manager')
+      ? 'manager'
+      : raw.includes('gestor')
+      ? 'gestor'
+      : raw;
+
     switch (currentView) {
       case 'dashboard':
-        switch (currentUser.role) {
-          case Role.ADMIN:
+        switch (normalizedRole) {
+          case 'admin':
             return <AdminDashboard db={db} refreshDb={refreshDb} />;
-          case Role.DIRECTOR:
+          case 'director':
             if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
             return <DirectorDashboard />;
-          case Role.MANAGER:
+          case 'manager':
             if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-            return <ManagerDashboard user={currentUser} store={activeStore} db={db} refreshDb={refreshDb} />;
-          case Role.GESTOR:
+            return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
+          case 'gestor':
             if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
-            return <GestorDashboard user={currentUser} store={activeStore} db={db} />;
+            return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
           default:
-            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+            return (
+              <div className="p-4">
+                Acceso denegado. Rol no reconocido. Rol actual: {roleString || 'desconocido'}
+              </div>
+            );
         }
       case 'stores':
-        switch (currentUser.role) {
-          case Role.ADMIN:
+        switch (normalizedRole) {
+          case 'admin':
             return <StoreManagement db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }
       case 'users':
-        switch (currentUser.role) {
-          case Role.ADMIN:
+        switch (normalizedRole) {
+          case 'admin':
             return <UserManagement db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }
       case 'managers':
-        switch (currentUser.role) {
-          case Role.DIRECTOR:
+        switch (normalizedRole) {
+          case 'director':
             return <DirectorDashboard db={db} refreshDb={refreshDb} />;
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;

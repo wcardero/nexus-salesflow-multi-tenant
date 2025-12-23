@@ -7,7 +7,7 @@ interface ManagerDashboardProps {
   user: User;
   store: Store;
   db: MockDB;
-  setDb: React.Dispatch<React.SetStateAction<MockDB>>;
+  setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
 }
 
 type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit';
@@ -18,17 +18,21 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   // Handlers
   const handleValidateClosing = (closingId: string) => {
     if (window.confirm('¿Confirmas que has recibido el dinero de este cierre? Esta acción no se puede deshacer.')) {
-      setDb(prevDb => ({
-        ...prevDb,
-        closings: prevDb.closings.map(c => 
-          c.id === closingId ? { ...c, status: ClosingStatus.COMPLETED, completedAt: new Date() } : c
-        ),
-      }));
+      setDb(prevDb => {
+        if (!prevDb) return prevDb;
+        return {
+          ...prevDb,
+          closings: prevDb.closings.map(c =>
+            c.id === closingId ? { ...c, status: ClosingStatus.COMPLETED, completedAt: new Date() } : c
+          ),
+        };
+      });
     }
   };
 
   const handleSetExchangeRate = (newRate: number, startDate: Date) => {
     setDb(prevDb => {
+      if (!prevDb) return prevDb;
       const updatedStores = prevDb.stores.map(s => {
         if (s.id === store.id) {
           // Marca el tipo de cambio actual como histórico
@@ -280,7 +284,10 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     e.preventDefault();
     if (!name.trim()) return;
     const newGestor: User = { id: `user-g-${Date.now()}`, name, role: Role.GESTOR, storeId: store.id };
-    setDb(prev => ({ ...prev, users: [...prev.users, newGestor] }));
+    setDb(prev => {
+      if (!prev) return prev;
+      return { ...prev, users: [...prev.users, newGestor] };
+    });
     setName('');
   };
   return (
@@ -310,7 +317,10 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     e.preventDefault();
     if (!name.trim() || !cost || !margin) return;
     const newProduct: Product = { id: `prod-${Date.now()}`, name, costUSD: parseFloat(cost), margin: parseFloat(margin) / 100, storeId: store.id };
-    setDb(prev => ({ ...prev, products: [...prev.products, newProduct] }));
+    setDb(prev => {
+      if (!prev) return prev;
+      return { ...prev, products: [...prev.products, newProduct] };
+    });
     setName(''); setCost(''); setMargin('');
   };
   return (

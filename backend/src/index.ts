@@ -269,12 +269,22 @@ app.get('/api/stores', authenticateToken, async (req: Request, res: Response) =>
   const params: any[] = [];
 
   if (requestingUser.role === 'Manager') {
-    storeCondition = `WHERE s.id IN (
-      SELECT stum."A" FROM "_StoreToUser" stum
-      JOIN "User" u ON stum."B" = u.id
-      WHERE u.id = $1
-    )`;
-    params.push(requestingUser.id);
+    if (requestingUser.storeId) {
+      // Return the manager's primary store AND stores assigned via _StoreToUser
+      storeCondition = `WHERE s.id = $1 OR s.id IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        WHERE stum."B" = $2
+      )`;
+      params.push(requestingUser.storeId, requestingUser.id);
+    } else {
+      // Fallback to the many-to-many relation if needed
+      storeCondition = `WHERE s.id IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        JOIN "User" u ON stum."B" = u.id
+        WHERE u.id = $1
+      )`;
+      params.push(requestingUser.id);
+    }
   } else if (requestingUser.role === 'Gestor') {
     // Gestors can only see their store
     if (requestingUser.storeId) {
