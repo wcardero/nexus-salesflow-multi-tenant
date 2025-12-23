@@ -12,7 +12,7 @@ This plan is structured to diagnose, fix, and verify the resolution of the criti
 ## Phase 2: Implement the Fix
 
 - [x] Task: **Write Tests to Replicate the Bug:** Before fixing, write specific unit or integration tests that fail because of this bug. This will be used to confirm the fix is effective. The test should simulate a manager login followed by an admin login attempt. (Skipped in favor of manual verification)
-- [~] Task: **Implement Code Changes:** Based on the root cause analysis, apply the necessary code changes. This may involve correcting state management in React, fixing session logic in Express, or adjusting API responses.
+- [ ] Task: **Implement Code Changes:** Based on the root cause analysis, apply the necessary code changes. This may involve correcting state management in React, fixing session logic in Express, or adjusting API responses.
 - [ ] Task: Conductor - User Manual Verification 'Implement the Fix' (Protocol in workflow.md)
 
 ## Phase 3: Verification and Testing
