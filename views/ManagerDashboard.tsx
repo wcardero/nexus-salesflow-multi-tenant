@@ -361,8 +361,18 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [cost, setCost] = useState('');
   const [margin, setMargin] = useState('');
   const [commission, setCommission] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingCost, setEditingCost] = useState('');
+  const [editingMargin, setEditingMargin] = useState('');
+  const [editingCommission, setEditingCommission] = useState('');
+
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const currentExchangeRate = getCurrentExchangeRate(store);
+
+  const isProductAssignedToGestor = (productId: string): boolean => {
+    return db.assignedInventory.some(ai => ai.productId === productId);
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -387,6 +397,80 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     });
     setName(''); setCost(''); setMargin(''); setCommission('');
   };
+
+  const handleEdit = (product: Product) => {
+    if (isProductAssignedToGestor(product.id)) {
+      alert('El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.');
+      return;
+    }
+    setEditingProduct(product);
+    setEditingName(product.name);
+    setEditingCost(product.costUSD.toString());
+    setEditingMargin((product.margin * 100).toString());
+    setEditingCommission(product.commissionRate !== undefined ? (product.commissionRate * 100).toString() : '');
+  };
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct || !editingName.trim() || !editingCost || !editingMargin) return;
+
+    setDb(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        products: prev.products.map(p =>
+          p.id === editingProduct!.id
+            ? {
+                ...p,
+                name: editingName.trim(),
+                costUSD: parseFloat(editingCost),
+                margin: parseFloat(editingMargin) / 100,
+                commissionRate: editingCommission.trim() ? parseFloat(editingCommission) / 100 : undefined,
+              }
+            : p
+        ),
+      };
+    });
+    setEditingProduct(null);
+    setEditingName('');
+    setEditingCost('');
+    setEditingMargin('');
+    setEditingCommission('');
+    alert('Producto actualizado exitosamente.');
+  };
+
+  const handleDelete = (productId: string) => {
+    if (isProductAssignedToGestor(productId)) {
+      alert('El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.');
+      return;
+    }
+
+    if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+      return;
+    }
+
+    setDb(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        products: prev.products.filter(p => p.id !== productId),
+      };
+    });
+    alert('Producto eliminado exitosamente.');
+  };
+
+  const cancelEdit = () => {
+    setEditingProduct(null);
+    setEditingName('');
+    setEditingCost('');
+    setEditingMargin('');
+    setEditingCommission('');
+  };
+
+  const isAssigned = (productId: string): boolean => {
+    return db.assignedInventory.some(ai => ai.productId === productId);
+  };
+
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Gestionar Productos</h3>
@@ -397,6 +481,67 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           </p>
         </div>
       )}
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Producto</h3>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
+                <input
+                  value={editingName}
+                  onChange={e => setEditingName(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Costo (USD)</label>
+                <input
+                  value={editingCost}
+                  onChange={e => setEditingCost(e.target.value)}
+                  type="number"
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Margen (%)</label>
+                <input
+                  value={editingMargin}
+                  onChange={e => setEditingMargin(e.target.value)}
+                  type="number"
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Comisión % (def: {(store.defaultCommissionRate * 100).toFixed(0)}%)
+                </label>
+                <input
+                  value={editingCommission}
+                  onChange={e => setEditingCommission(e.target.value)}
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="Dejar vacío para usar por defecto"
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 items-end">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
@@ -418,11 +563,18 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           const productCommissionRate = getCommissionRateForProduct(p, store);
           const prices = calculateProductPrices(p, currentExchangeRate, productCommissionRate);
           const commissionLabel = p.commissionRate !== undefined ? `${(p.commissionRate * 100).toFixed(1)}% (específica)` : `${(store.defaultCommissionRate * 100).toFixed(1)}% (por defecto)`;
+          const assigned = isAssigned(p.id);
+
           return (
             <li key={p.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md flex flex-col gap-1">
               <div className="flex justify-between items-start">
                 <div>
                   <span className="font-medium text-slate-900 dark:text-slate-200">{p.name}</span>
+                  {assigned && (
+                    <span className="ml-2 text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
+                      Asignado a gestor
+                    </span>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}% | Comisión: {commissionLabel}</div>
@@ -431,6 +583,22 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                       Precio: {formatCurrency(prices.finalMN)}
                     </div>
                   )}
+                  <div className="flex gap-2 justify-end mt-2">
+                    <button
+                      onClick={() => handleEdit(p)}
+                      disabled={assigned}
+                      className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      disabled={assigned}
+                      className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </div>
             </li>
