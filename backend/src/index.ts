@@ -854,14 +854,18 @@ app.post('/api/product-stock', authenticateToken, validateProductStock, async (r
     return res.status(403).json({ message: 'Access denied. Only managers can set product stock.' });
   }
 
-  // Check if the manager has access to this store
+  // Check if manager has access to this store
+  console.log('[product-stock] requestingUser:', requestingUser.id, 'storeId:', storeId, 'user.role:', requestingUser.role);
   const storeAccess = await db.query(
     'SELECT * FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
     [storeId, requestingUser.id]
   );
+  console.log('[product-stock] storeAccess result:', storeAccess.rows);
   if (storeAccess.rows.length === 0) {
+    console.error('[product-stock] Access denied - user:', requestingUser.id, 'store:', storeId);
     return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
   }
+
 
   try {
     // Check if stock record already exists
