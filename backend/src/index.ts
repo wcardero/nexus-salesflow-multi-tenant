@@ -76,6 +76,7 @@ app.get('/api/users/exists', async (req: Request, res: Response) => {
 });
 
 // Authentication middleware
+// Middleware to authenticate and attach user from JWT token
 const authenticateToken = (req: Request, res: Response, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -84,13 +85,13 @@ const authenticateToken = (req: Request, res: Response, next: any) => {
     return res.status(401).json({ message: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
-    (req as any).user = user;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; name: string; role: string; storeId: string };
+    (req as any).user = decoded;
     next();
-  });
+  } catch (err) {
+    return res.status(403).json({ message: 'Invalid or expired token' });
+  }
 };
 
 // Validation middleware for login
