@@ -303,17 +303,26 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
         const newUserId = `user-${Date.now()}`;
         // For Manager creating Gestor, use Manager's storeId
         const storeIdToUse = finalStoreId !== undefined ? finalStoreId : (storeId || null);
+        
+        console.log('[create-user] Creating user:', { name, role, storeId, finalStoreId, storeIdToUse });
+        
         const result = await db.query(
             'INSERT INTO "User" (id, name, password, role, "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, role, "storeId"',
             [newUserId, name, hashedPassword, role, storeIdToUse]
         );
 
+        console.log('[create-user] User created:', result.rows[0]);
+
         // If user has a storeId, insert into _StoreToUser relation
         if (storeIdToUse) {
+            console.log('[create-user] Inserting into _StoreToUser:', { storeId: storeIdToUse, userId: newUserId });
             await db.query(
                 'INSERT INTO "_StoreToUser" ("A", "B") VALUES ($1, $2)',
                 [storeIdToUse, newUserId]
             );
+            console.log('[create-user] Inserted into _StoreToUser successfully');
+        } else {
+            console.log('[create-user] Skipping _StoreToUser insertion (no storeId)');
         }
 
         res.status(201).json(result.rows[0]);
