@@ -622,7 +622,10 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>>
     try {
       const response = await fetch('http://localhost:3001/api/product-stock', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
           productId,
           storeId: store.id,
