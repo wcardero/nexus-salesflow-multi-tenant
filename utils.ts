@@ -17,6 +17,21 @@ export const getCurrentExchangeRate = (store: Store): ExchangeRate | undefined =
 };
 
 /**
+ * Obtiene la tasa de comisión a aplicar para un producto.
+ * Si el producto tiene una comisión específica, la usa.
+ * Si no, usa la comisión por defecto de la tienda.
+ * @param product El producto.
+ * @param store La tienda.
+ * @returns La tasa de comisión a aplicar.
+ */
+export const getCommissionRateForProduct = (product: Product, store: Store): number => {
+  if (product.commissionRate !== undefined && product.commissionRate !== null) {
+    return product.commissionRate;
+  }
+  return store.defaultCommissionRate;
+};
+
+/**
  * Calcula los precios de un producto basándose en el tipo de cambio actual.
  * @param product El producto a calcular.
  * @param exchangeRate El tipo de cambio a utilizar.

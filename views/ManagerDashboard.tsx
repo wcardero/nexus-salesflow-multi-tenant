@@ -1,7 +1,7 @@
 // views/ManagerDashboard.tsx
 import React, { useState } from 'react';
 import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus } from '../types';
-import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '../utils';
+import { formatCurrency, getCurrentExchangeRate, calculateProductPrices, getCommissionRateForProduct } from '../utils';
 
 interface ManagerDashboardProps {
   user: User;
@@ -360,6 +360,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [name, setName] = useState('');
   const [cost, setCost] = useState('');
   const [margin, setMargin] = useState('');
+  const [commission, setCommission] = useState('');
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const currentExchangeRate = getCurrentExchangeRate(store);
 
@@ -372,12 +373,19 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
-    const newProduct: Product = { id: `prod-${Date.now()}`, name, costUSD: parseFloat(cost), margin: parseFloat(margin) / 100, storeId: store.id };
+    const newProduct: Product = {
+      id: `prod-${Date.now()}`,
+      name,
+      costUSD: parseFloat(cost),
+      margin: parseFloat(margin) / 100,
+      commissionRate: commission.trim() ? parseFloat(commission) / 100 : undefined,
+      storeId: store.id
+    };
     setDb(prev => {
       if (!prev) return prev;
       return { ...prev, products: [...prev.products, newProduct] };
     });
-    setName(''); setCost(''); setMargin('');
+    setName(''); setCost(''); setMargin(''); setCommission('');
   };
   return (
     <div>
@@ -389,15 +397,27 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           </p>
         </div>
       )}
-       <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 items-end">
+       <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 items-end">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          <input
+            value={commission}
+            onChange={e => setCommission(e.target.value)}
+            placeholder={`Comisión % (def: ${(store.defaultCommissionRate * 100).toFixed(0)}%)`}
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+          />
           <button type="submit" disabled={!currentExchangeRate} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
       </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
-          const prices = calculateProductPrices(p, currentExchangeRate, store.defaultCommissionRate);
+          const productCommissionRate = getCommissionRateForProduct(p, store);
+          const prices = calculateProductPrices(p, currentExchangeRate, productCommissionRate);
+          const commissionLabel = p.commissionRate !== undefined ? `${(p.commissionRate * 100).toFixed(1)}% (específica)` : `${(store.defaultCommissionRate * 100).toFixed(1)}% (por defecto)`;
           return (
             <li key={p.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md flex flex-col gap-1">
               <div className="flex justify-between items-start">
@@ -405,7 +425,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   <span className="font-medium text-slate-900 dark:text-slate-200">{p.name}</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}%</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}% | Comisión: {commissionLabel}</div>
                   {currentExchangeRate && (
                     <div className="text-base font-bold text-sky-600 dark:text-sky-400">
                       Precio: {formatCurrency(prices.finalMN)}
