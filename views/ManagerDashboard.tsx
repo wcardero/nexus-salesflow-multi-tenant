@@ -385,19 +385,36 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     }
 
     const newProduct: Product = {
-      id: `prod-${Date.now()}`,
       name,
       costUSD: parseFloat(cost),
       margin: parseFloat(margin) / 100,
       commissionRate: commission.trim() ? parseFloat(commission) / 100 : undefined,
       storeId: store.id
     };
-    setDb(prev => {
-      if (!prev) return prev;
-      return { ...prev, products: [...prev.products, newProduct] };
-    });
-    setName(''); setCost(''); setMargin(''); setCommission('');
-    await refreshDb();
+
+    try {
+      const response = await fetch('http://localhost:3001/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newProduct),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error creando el producto');
+      }
+
+      const createdProduct = await response.json();
+      alert('Producto creado exitosamente.');
+      setName(''); setCost(''); setMargin(''); setCommission('');
+      await refreshDb();
+    } catch (error: any) {
+      console.error('Error creating product:', error);
+      alert(`Error: ${error.message}`);
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -451,12 +468,26 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
-    setDb(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        products: prev.products.filter(p => p.id !== productId),
-      };
+    try {
+      const response = await fetch(`http://localhost:3001/api/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error eliminando el producto');
+      }
+
+      alert('Producto eliminado exitosamente.');
+      await refreshDb();
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
     });
     await refreshDb();
     alert('Producto eliminado exitosamente.');
