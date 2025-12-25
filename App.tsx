@@ -225,7 +225,7 @@ const App: React.FC = () => {
             return <DirectorDashboard />;
           case Role.MANAGER:
             if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-            return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
+            return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} />;
           case Role.GESTOR:
             if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
             return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;

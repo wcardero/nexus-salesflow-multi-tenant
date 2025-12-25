@@ -8,11 +8,12 @@ interface ManagerDashboardProps {
   store: Store;
   db: MockDB;
   setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
+  refreshDb: () => Promise<void>;
 }
 
 type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit';
 
-const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb }) => {
+const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
 
   // Handlers
@@ -374,7 +375,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     return db.assignedInventory.some(ai => ai.productId === productId);
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !cost || !margin) return;
 
@@ -396,6 +397,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return { ...prev, products: [...prev.products, newProduct] };
     });
     setName(''); setCost(''); setMargin(''); setCommission('');
+    await refreshDb();
   };
 
   const handleEdit = (product: Product) => {
@@ -410,7 +412,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     setEditingCommission(product.commissionRate !== undefined ? (product.commissionRate * 100).toString() : '');
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct || !editingName.trim() || !editingCost || !editingMargin) return;
 
@@ -638,7 +640,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>>
         throw new Error(errorData.message || 'Error setting product stock');
       }
 
-      await (db as any).refreshDb(); // This would trigger a refresh in the actual app
+      await refreshDb();
       alert('Stock actualizado exitosamente.');
       setQuantity(0);
     } catch (error: any) {
