@@ -1,7 +1,7 @@
 // views/ManagerDashboard.tsx
 import React, { useState } from 'react';
 import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '../utils';
 
 interface ManagerDashboardProps {
   user: User;
@@ -361,10 +361,17 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [cost, setCost] = useState('');
   const [margin, setMargin] = useState('');
   const storeProducts = db.products.filter(p => p.storeId === store.id);
+  const currentExchangeRate = getCurrentExchangeRate(store);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !cost || !margin) return;
+
+    if (!currentExchangeRate) {
+      alert('No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos.');
+      return;
+    }
+
     const newProduct: Product = { id: `prod-${Date.now()}`, name, costUSD: parseFloat(cost), margin: parseFloat(margin) / 100, storeId: store.id };
     setDb(prev => {
       if (!prev) return prev;
@@ -375,14 +382,40 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Gestionar Productos</h3>
+       {!currentExchangeRate && (
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+          <p className="text-amber-800 dark:text-amber-200 text-sm font-medium">
+            ⚠️ No hay un tipo de cambio vigente. Configure uno en la pestaña "Tipo de Cambio".
+          </p>
+        </div>
+      )}
        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 items-end">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
-          <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
+          <button type="submit" disabled={!currentExchangeRate} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
       </form>
       <ul className="space-y-2">
-        {storeProducts.map(p => <li key={p.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">{p.name} - Costo: ${p.costUSD} - Margen: {p.margin*100}%</li>)}
+        {storeProducts.map(p => {
+          const prices = calculateProductPrices(p, currentExchangeRate, store.defaultCommissionRate);
+          return (
+            <li key={p.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md flex flex-col gap-1">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="font-medium text-slate-900 dark:text-slate-200">{p.name}</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}%</div>
+                  {currentExchangeRate && (
+                    <div className="text-base font-bold text-sky-600 dark:text-sky-400">
+                      Precio: {formatCurrency(prices.finalMN)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   )

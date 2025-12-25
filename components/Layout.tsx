@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { User, Role } from '../types';
+import { User, Role, Store } from '../types';
 import { useTheme } from '../ThemeContext';
+import { getCurrentExchangeRate } from '../utils';
 
 interface LayoutProps {
   children: React.ReactNode;
   currentUser: User;
   onLogout: () => void;
   storeName?: string;
+  store?: Store;
   onNavigate: (view: string) => void;
   currentView: string;
 }
@@ -32,9 +34,11 @@ const NavLink: React.FC<{
   </a>
 );
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, storeName, onNavigate, currentView }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, storeName, store, onNavigate, currentView }) => {
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const currentExchangeRate = store ? getCurrentExchangeRate(store) : null;
 
   const getNavigationItems = (role: Role) => {
     switch (role) {
@@ -94,6 +98,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
               <p className="text-gray-500 dark:text-gray-400 text-xs font-normal leading-normal">
                 {storeName || 'Sistema Multi-inquilino'}
               </p>
+              {currentExchangeRate && (
+                <div className="mt-1 px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-md inline-flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">currency_exchange</span>
+                  <span>TC: {currentExchangeRate.rate}</span>
+                </div>
+              )}
             </div>
           </div>
           <nav className="flex flex-col gap-2">

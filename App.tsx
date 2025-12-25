@@ -264,10 +264,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout 
-      currentUser={currentUser} 
+    <Layout
+      currentUser={currentUser}
       onLogout={handleLogout}
       storeName={activeStore?.name}
+      store={activeStore}
       onNavigate={handleNavigate}
       currentView={currentView}
     >
