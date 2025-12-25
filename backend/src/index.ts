@@ -307,6 +307,15 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
             'INSERT INTO "User" (id, name, password, role, "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, role, "storeId"',
             [newUserId, name, hashedPassword, role, storeIdToUse]
         );
+
+        // If user has a storeId, insert into _StoreToUser relation
+        if (storeIdToUse) {
+            await db.query(
+                'INSERT INTO "_StoreToUser" ("A", "B") VALUES ($1, $2)',
+                [storeIdToUse, newUserId]
+            );
+        }
+
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('User creation error:', error);
