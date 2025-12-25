@@ -1,5 +1,5 @@
 // views/ManagerDashboard.tsx
-import React, { useState } from 'react';
+import React, { useState, Pick } from 'react';
 import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus } from '../types';
 import { formatCurrency, getCurrentExchangeRate, calculateProductPrices, getCommissionRateForProduct } from '../utils';
 
@@ -357,7 +357,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
 };
 
 // --- PRODUCTS VIEW ---
-const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
+const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' | 'refreshDb'>> = ({ db, setDb, store, refreshDb }) => {
   const [name, setName] = useState('');
   const [cost, setCost] = useState('');
   const [margin, setMargin] = useState('');
@@ -613,7 +613,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
 };
 
 // --- STOCK VIEW ---
-const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
+const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' | 'refreshDb'>> = ({ db, setDb, store, refreshDb }) => {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState(0);
   const storeProducts = db.products.filter(p => p.storeId === store.id);
@@ -714,7 +714,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>>
 };
 
 // --- INVENTORY VIEW ---
-const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
+const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' | 'refreshDb'>> = ({ db, setDb, store, refreshDb }) => {
   const [productId, setProductId] = useState('');
   const [gestorId, setGestorId] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -741,7 +741,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
         throw new Error(errorData.message || 'Error assigning inventory');
       }
 
-      await (db as any).refreshDb(); // This would trigger a refresh in the actual app
+      await refreshDb();
       alert(`${quantity} unidad(es) asignadas.`);
       setQuantity(1);
     } catch (error: any) {
