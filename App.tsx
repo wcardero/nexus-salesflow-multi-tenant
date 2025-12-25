@@ -186,7 +186,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setDb(null);
-    // Clear the token from localStorage
+    setCurrentView('dashboard');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   };
