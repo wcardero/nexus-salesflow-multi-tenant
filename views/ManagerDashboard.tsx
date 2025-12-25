@@ -441,7 +441,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     alert('Producto actualizado exitosamente.');
   };
 
-  const handleDelete = (productId: string) => {
+  const handleDelete = async (productId: string) => {
     if (isProductAssignedToGestor(productId)) {
       alert('El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.');
       return;
@@ -458,6 +458,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
         products: prev.products.filter(p => p.id !== productId),
       };
     });
+    await refreshDb();
     alert('Producto eliminado exitosamente.');
   };
 
