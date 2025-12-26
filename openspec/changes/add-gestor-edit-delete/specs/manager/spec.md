@@ -50,3 +50,16 @@ Managers need to edit and delete gestores to correct mistakes or remove inactive
 - **AND** GET /api/users returns gestores with correct storeId
 - **AND** All gestores for that store are listed in GestoresView
 - **AND** Manager can see both existing and newly created gestores
+
+#### Scenario: Admin can delete users with audit records
+- **WHEN** Admin tries to delete a user with audit log records
+- **THEN** System deletes related records in order: AuditLog → InventoryItem → _StoreToUser → User
+- **AND** Foreign key constraints are satisfied
+- **AND** User is successfully removed from database
+- **AND** Audit log entry is created for the deletion
+
+#### Scenario: Manager can assign inventory to gestors
+- **WHEN** Manager assigns inventory to a gestor
+- **THEN** Request includes Authorization header with token
+- **AND** Backend validates the request and creates inventory assignment
+- **AND** Success message is displayed

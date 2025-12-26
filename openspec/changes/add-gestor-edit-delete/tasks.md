@@ -11,6 +11,10 @@
 - [x] 1.10 Validate all inventory assignment fields (product, gestor, quantity)
 - [x] 1.11 Fix GET /api/users to get storeId from _StoreToUser if not in User table
 - [x] 1.12 Fix POST /api/login to check _StoreToUser when user.storeId doesn't match selected store
+- [x] 1.13 Fix App.tsx refreshDb to include 'users' for Managers and Directors
+- [x] 1.14 Fix DELETE /api/users/:id to delete AuditLog and InventoryItem records first
+- [x] 1.15 Update PUT /api/users/:id to allow Managers to update gestor names
+- [x] 1.16 Fix InventoryView to include Authorization header in inventory assignment
 
 ## 2. Testing
 - [x] 2.1 Verify edit button works for gestores without inventory
@@ -22,5 +26,6 @@
 - [x] 2.7 Verify modal allows password change (optional)
 - [x] 2.8 Test editing gestor name updates correctly
 - [x] 2.9 Test deleting gestor removes from database
-- [ ] 2.10 Verify gestores are listed correctly after Manager logs in
-- [ ] 2.11 Verify duplicate name validation works correctly
+- [x] 2.10 Verify gestores are listed correctly after Manager logs in
+- [x] 2.11 Verify duplicate name validation works correctly
+- [x] 2.12 Verify inventory assignment sends Authorization header correctly

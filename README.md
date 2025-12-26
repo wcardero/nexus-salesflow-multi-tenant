@@ -274,3 +274,31 @@ Producto: compra_usd = $10, margen = 30%, X = 300 MN/USD
 - **Tamaño reducido**: De ~205MB a ~150MB después de limpiar archivos innecesarios
 - **TypeScript**: Sin errores en frontend ni backend
 - **Build**: Exitoso en ambos proyectos
+
+## PROBLEMAS CONOCIDOS RECIENTES
+
+### Gestores no se listan para Managers
+- **Problema**: Los Managers no podían ver sus gestores después de crear uno
+- **Causa 1**: El storeId estaba nulo en User table (asignados vía _StoreToUser)
+- **Causa 2**: `refreshDb()` no incluía 'users' para Managers/Directors
+- **Solución 1**: Backend verifica _StoreToUser cuando storeId es nulo
+- **Solución 2**: `App.tsx` ahora incluye 'users' para Managers y Directors
+- **Endpoints afectados**: POST /api/login, GET /api/users
+
+### Error "Access token required" al asignar inventario
+- **Problema**: Al asignar inventario a gestores, el navegador mostraba error de token
+- **Causa**: El frontend no enviaba header Authorization en POST /api/assigned-inventory
+- **Solución**: Agregar header Authorization con el token
+- **Archivo**: views/ManagerDashboard.tsx, función handleAssign en InventoryView
+
+### Foreign Key Constraint al eliminar usuarios
+- **Problema**: Los Admins no podían eliminar Managers con registros de auditoría
+- **Causa**: AuditLog tiene foreign key a User que impide eliminación directa
+- **Solución**: DELETE /api/users/:id elimina registros en orden: AuditLog → InventoryItem → _StoreToUser → User
+- **Endpoint**: backend/src/index.ts, línea 792
+
+### Managers no pueden editar gestores
+- **Problema**: PUT /api/users/:id solo permitía a Admins actualizar usuarios
+- **Causa**: Falta de lógica para permitir a Managers editar sus gestores
+- **Solución**: PUT /api/users/:id permite a Managers actualizar solo el nombre (no role ni storeId)
+- **Validación**: Gestor debe pertenecer a la tienda del Manager
