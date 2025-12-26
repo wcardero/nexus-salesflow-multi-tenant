@@ -290,7 +290,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     return db.assignedInventory.some(ai => ai.gestorId === gestorId);
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleAddGestor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !password.trim()) {
       alert('Por favor, complete todos los campos.');
@@ -447,7 +447,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       )}
 
       {/* Add form */}
-      <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+      <form onSubmit={handleAddGestor} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
         <input
           value={name}
           onChange={e => setName(e.target.value)}
@@ -586,68 +586,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     }
   };
 
-   const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !cost || !margin) return;
 
-    if (currency === 'MN' && !currentExchangeRate) {
-      alert('No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en MN.');
-      return;
-    }
-
-    const parsedMargin = parseFloat(margin) / 100;
-    let priceMN: number;
-    let gestorCommissionMN: number;
-
-    if (currency === 'MN') {
-      const costMN = parseFloat(cost);
-      const baseMN = costMN * (1 + parsedMargin);
-      priceMN = baseMN;
-      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
-    } else {
-      const costUSD = parseFloat(cost);
-      const saleUSD = costUSD * (1 + parsedMargin);
-      const baseMN = saleUSD * currentExchangeRate.rate;
-      priceMN = baseMN;
-      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
-    }
-
-    const newProduct: Omit<Product, 'id'> = {
-      name,
-      costUSD: currency === 'USD' ? parseFloat(cost) : undefined,
-      costMN: currency === 'MN' ? parseFloat(cost) : undefined,
-      margin: parsedMargin,
-      commissionRate: commission.trim() ? parseFloat(commission) / 100 : undefined,
-      storeId: store.id,
-      currency,
-      priceMN,
-      gestorCommissionMN
-    };
-
-    try {
-      const response = await fetch('http://localhost:3001/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(newProduct),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error creando el producto');
-      }
-
-      const createdProduct = await response.json();
-      alert('Producto creado exitosamente.');
-      setName(''); setCost(''); setMargin(''); setCommission('');
-      await refreshDb();
-    } catch (error: any) {
-      console.error('Error creating product:', error);
-      alert(`Error al crear el producto: ${error.message}`);
-    }
-  };
 
   const handleEdit = (product: Product) => {
     if (isProductAssignedToGestor(product.id)) {
