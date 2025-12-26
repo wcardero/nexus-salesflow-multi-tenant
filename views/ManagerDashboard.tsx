@@ -644,6 +644,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
 const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' | 'refreshDb'>> = ({ db, setDb, store, refreshDb }) => {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState(0);
+  const [editingStock, setEditingStock] = useState<any | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState(0);
   const storeProducts = db.products.filter(p => p.storeId === store.id);
 
   const handleSetStock = async (e: React.FormEvent) => {
@@ -678,12 +680,126 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     }
   };
 
+  const handleEditStock = (stock: any) => {
+    setEditingStock(stock);
+    setEditingQuantity(stock.quantity);
+  };
+
+  const handleUpdateStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStock || editingQuantity < 0) return;
+
+    try {
+      const response = await fetch('http://localhost:3001/api/product-stock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          productId: editingStock.productId,
+          storeId: store.id,
+          quantity: editingQuantity
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error actualizando stock');
+      }
+
+      await refreshDb();
+      setEditingStock(null);
+      setEditingQuantity(0);
+      alert('Stock actualizado exitosamente.');
+    } catch (error: any) {
+      console.error('Error updating stock:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDeleteStock = async (stockId: string, productId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este registro de stock?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/product-stock/${stockId}?productId=${productId}&storeId=${store.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error eliminando stock');
+      }
+
+      await refreshDb();
+      alert('Stock eliminado exitosamente.');
+    } catch (error: any) {
+      console.error('Error deleting stock:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const cancelEditStock = () => {
+    setEditingStock(null);
+    setEditingQuantity(0);
+  };
+
+  const isStockAssignedToGestor = (stockId: string): boolean => {
+    const stock = db.productStock.find(s => s.id === stockId);
+    if (!stock) return false;
+
+    return db.assignedInventory.some(ai => ai.productId === stock.productId);
+  };
+
   // Get current stock for this store
   const storeStock = db.productStock.filter(stock => stock.storeId === store.id);
 
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Gestión de Stock Inicial</h3>
+
+      {/* Edit Stock Modal */}
+      {editingStock && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Stock</h3>
+            <form onSubmit={handleUpdateStock} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Producto</label>
+                <input
+                  value={db.products.find(p => p.id === editingStock.productId)?.name || ''}
+                  disabled
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600 opacity-60"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Cantidad</label>
+                <input
+                  value={editingQuantity}
+                  onChange={e => setEditingQuantity(parseInt(e.target.value) || 0)}
+                  type="number"
+                  min="0"
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={cancelEditStock} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSetStock} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 items-end">
         <select
           value={productId}
@@ -714,24 +830,51 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad Disponible</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {storeStock.length > 0 ? storeStock.map(stock => {
               const product = db.products.find(p => p.id === stock.productId);
+              const isAssigned = isStockAssignedToGestor(stock.id);
               return (
                 <tr key={stock.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                    {product?.name || 'Producto desconocido'}
+                    <div className="flex items-center gap-2">
+                      <span>{product?.name || 'Producto desconocido'}</span>
+                      {isAssigned && (
+                        <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
+                          Asignado a gestor
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                     {stock.quantity}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditStock(stock)}
+                        disabled={isAssigned}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStock(stock.id, stock.productId)}
+                        disabled={isAssigned}
+                        className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
             }) : (
               <tr>
-                <td colSpan={2} className="px-6 py-4 text-center text-sm text-slate-500">No hay stock registrado.</td>
+                <td colSpan={3} className="px-6 py-4 text-center text-sm text-slate-500">No hay stock registrado.</td>
               </tr>
             )}
           </tbody>

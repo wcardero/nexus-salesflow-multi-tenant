@@ -863,6 +863,68 @@ const validateProductStock = [
   }
 ];
 
+// Endpoint to delete product stock
+app.delete('/api/product-stock/:stockId', authenticateToken, async (req: Request, res: Response) => {
+  const { stockId } = req.params;
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Director') {
+    return res.status(403).json({ message: 'Access denied. Only managers can delete product stock.' });
+  }
+
+  try {
+    // Check if stock exists and get product info
+    const stockResult = await db.query(
+      'SELECT * FROM "ProductStock" WHERE id = $1',
+      [stockId]
+    );
+
+    if (stockResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Stock record not found.' });
+    }
+
+    const stock = stockResult.rows[0];
+
+    // Check if manager has access to this store
+    const storeAccess = await db.query(
+      'SELECT * FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
+      [stock.storeId, requestingUser.id]
+    );
+    if (storeAccess.rows.length === 0) {
+      return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
+    }
+
+    // Check if product is assigned to any gestor
+    const assignedCheck = await db.query(
+      'SELECT COUNT(*) FROM "AssignedInventory" WHERE "productId" = $1',
+      [stock.productId]
+    );
+    const isAssigned = parseInt(assignedCheck.rows[0].count) > 0;
+
+    if (isAssigned) {
+      return res.status(400).json({ message: 'El producto no puede ser eliminado del stock porque se encuentra asignado a un gestor.' });
+    }
+
+    await db.query('DELETE FROM "ProductStock" WHERE id = $1', [stockId]);
+
+    // Create audit log for stock deletion
+    await createAuditLog(
+      requestingUser.id,
+      'DELETE_STOCK',
+      'ProductStock',
+      stockId,
+      stock,
+      null,
+      stock.storeId
+    );
+
+    res.status(200).json({ message: 'Stock deleted successfully.' });
+  } catch (error) {
+    console.error('Product stock deletion error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Endpoint to set product stock
 app.post('/api/product-stock', authenticateToken, validateProductStock, async (req: Request, res: Response) => {
   const { productId, storeId, quantity } = req.body;

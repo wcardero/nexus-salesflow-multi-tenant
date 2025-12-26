@@ -116,6 +116,15 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - **Mensaje de error**: "El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor."
 - **Indicador visual**: Badge "Asignado a gestor" en productos que tienen asignación activa
 
+### 9. Edición y eliminación de stock inicial
+- **Corrección de errores**: Permite editar el stock inicial si se cometió un error (ej: 100 jabones en vez de 90 jamones)
+- **Validación por asignación**: El stock de un producto solo puede editarse/eliminarse si el producto NO está asignado a ningún gestor
+- **Endpoint DELETE**: `DELETE /api/product-stock/:stockId` permite eliminar registros de stock
+- **Indicador visual**: Badge "Asignado a gestor" en registros de stock que tienen asignación activa
+- **Validación en frontend**: Botones de Editar/Eliminar deshabilitados para stock de productos asignados
+- **Validación en backend**: Endpoint DELETE verifica `AssignedInventory` antes de permitir eliminación
+- **Modal de edición**: Permite cambiar la cantidad de stock directamente desde la tabla
+
 ## FLUJO DE CIERRE DETALLADO
 1. **Gestor ejecuta cierre** → sistema muestra resumen con:
     - Listado de artículos vendidos

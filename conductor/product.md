@@ -51,3 +51,16 @@ The platform is designed to address several key challenges in sales management:
 *   **Authorization:** Only Managers and Directors can set exchange rates for their assigned stores.
 *   **Audit Trail:** All exchange rate changes are logged in audit log with action `SET_EXCHANGE_RATE`.
 *   **Validation:** Exchange rates must be positive numbers and include a valid start date and store ID.
+
+### 6.3 Initial Stock Management
+*   **Edit Capability:** Managers can edit initial stock records to correct errors (e.g., changing 100 items to 90 items).
+*   **Delete Capability:** Managers can delete initial stock records if they were added by mistake.
+*   **Assignment Validation:** Stock records can only be edited or deleted when the product is NOT assigned to any gestor (via `AssignedInventory`).
+    *   **Validation Source:** System checks `AssignedInventory` table for assignments (not `ProductStock`).
+    *   **Frontend Validation:** Edit and delete buttons are disabled for stock of assigned products.
+    *   **Backend Validation:** `DELETE /api/product-stock/:stockId` endpoint checks `AssignedInventory` before allowing deletion.
+*   **Visual Indicators:** "Asignado a gestor" badge is shown on stock records for products that have active assignments.
+*   **Error Message:** "El producto no puede ser eliminado del stock porque se encuentra asignado a un gestor."
+*   **Edit Modal:** Provides a simple modal to edit stock quantity directly from the table.
+*   **Confirmation Dialog:** Delete action requires confirmation before executing.
+*   **Audit Trail:** Stock edits are logged with action `UPDATE_STOCK` and deletions with `DELETE_STOCK`.
