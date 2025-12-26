@@ -264,7 +264,7 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
             <p className="text-3xl font-bold text-sky-600 dark:text-sky-400">{totalSalesCount}</p>
           </div>
           <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Comisión Total Acumulada</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Mi Comisión Total Acumulada</p>
             <p className="text-3xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalCommissionEarned)}</p>
           </div>
         </div>
@@ -280,7 +280,7 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Recaudado</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Entregado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Mi Comisión</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">

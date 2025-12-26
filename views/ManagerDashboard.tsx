@@ -31,31 +31,32 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
     }
   };
 
-  const handleSetExchangeRate = (newRate: number, startDate: Date) => {
-    setDb(prevDb => {
-      if (!prevDb) return prevDb;
-      const updatedStores = prevDb.stores.map(s => {
-        if (s.id === store.id) {
-          // Marca el tipo de cambio actual como histórico
-          const updatedExchangeRates = s.exchangeRates.map(xr => {
-            if (!xr.endDate) { // Es el tipo de cambio vigente
-              return { ...xr, endDate: startDate }; // Termina la vigencia del anterior
-            }
-            return xr;
-          });
-          // Agrega el nuevo tipo de cambio como vigente
-          const newExchangeRate = {
-            id: `xr-${Date.now()}`,
-            rate: newRate,
-            startDate: startDate,
-          };
-          return { ...s, exchangeRates: [...updatedExchangeRates, newExchangeRate] };
-        }
-        return s;
+  const handleSetExchangeRate = async (newRate: number, startDate: Date) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/exchange-rates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          rate: newRate,
+          startDate: startDate.toISOString(),
+          storeId: store.id
+        }),
       });
-      return { ...prevDb, stores: updatedStores };
-    });
-    alert(`Tipo de cambio actualizado a ${newRate} desde ${startDate.toLocaleDateString()}.`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error actualizando el tipo de cambio');
+      }
+
+      await refreshDb();
+      alert(`Tipo de cambio actualizado a ${newRate} desde ${startDate.toLocaleDateString()}.`);
+    } catch (error: any) {
+      console.error('Error setting exchange rate:', error);
+      alert(`Error: ${error.message}`);
+    }
   };
   
   // Data filtered for the manager's store
@@ -69,9 +70,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
       case 'closings':
         return <ClosingsView closings={storeClosings} users={db.users} onValidate={handleValidateClosing} />;
       case 'inventory':
-        return <InventoryView db={db} setDb={setDb} store={store} />;
+        return <InventoryView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'products':
-        return <ProductsView db={db} setDb={setDb} store={store} />;
+        return <ProductsView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'gestores':
         return <GestoresView db={db} setDb={setDb} store={store} />;
       case 'rate':
@@ -79,7 +80,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
       case 'reports':
         return <ReportsView sales={storeSales} gestores={storeGestores} />;
       case 'stock':
-        return <StockView db={db} setDb={setDb} store={store} />;
+        return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'audit':
         return <AuditLogsView db={db} store={store} />;
       default:
@@ -156,7 +157,7 @@ const ReportsView: React.FC<{sales: MockDB['sales'], gestores: User[]}> = ({ sal
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Vendido</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Base a Pagar</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión Gestor</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
@@ -384,7 +385,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
-    const newProduct: Product = {
+    const newProduct: Omit<Product, 'id'> = {
       name,
       costUSD: parseFloat(cost),
       margin: parseFloat(margin) / 100,
@@ -488,10 +489,6 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       alert(`Error: ${error.message}`);
     }
   };
-    });
-    await refreshDb();
-    alert('Producto eliminado exitosamente.');
-  };
 
   const cancelEdit = () => {
     setEditingProduct(null);
@@ -550,7 +547,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  Comisión % (def: {(store.defaultCommissionRate * 100).toFixed(0)}%)
+                  Comisión gestor % (def: {(store.defaultCommissionRate * 100).toFixed(0)}%)
                 </label>
                 <input
                   value={editingCommission}
@@ -583,7 +580,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           <input
             value={commission}
             onChange={e => setCommission(e.target.value)}
-            placeholder={`Comisión % (def: ${(store.defaultCommissionRate * 100).toFixed(0)}%)`}
+            placeholder={`Comisión gestor % (def: ${(store.defaultCommissionRate * 100).toFixed(0)}%)`}
             type="number"
             min="0"
             max="100"
@@ -611,7 +608,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}% | Comisión: {commissionLabel}</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}% | Comisión gestor: {commissionLabel}</div>
                   {currentExchangeRate && (
                     <div className="text-base font-bold text-sky-600 dark:text-sky-400">
                       Precio: {formatCurrency(prices.finalMN)}

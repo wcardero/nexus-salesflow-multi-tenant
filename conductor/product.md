@@ -28,3 +28,13 @@ The platform is designed to address several key challenges in sales management:
 *   **Automated Financial Calculations:** Automatic calculation of final prices, commissions, and base amounts using configurable margins and exchange rates.
 *   **Comprehensive Auditing:** A system-wide audit trail that logs all significant operations for security and accountability.
 *   **Secure Authentication:** JWT-based authentication and role-based authorization to protect all API endpoints.
+
+## 6. Business Rules
+
+### 6.1 Product Management
+*   **Unique Product Name per Manager:** Each manager (and director) can only have one product with a given name. This prevents accidental duplicates within a manager's product catalog while allowing different managers to create products with the same name (as they may sell similar items independently).
+    *   When creating a product, the system checks if the same manager already has a product with that name.
+    *   When editing a product, the system checks if the new name would conflict with another product from the same manager.
+    *   The `createdBy` field on the `Product` table tracks which user created each product.
+*   **Product Edit/Delete Restrictions:** Products can only be edited or deleted when they are not assigned to any gestor to maintain data integrity.
+*   **Product Commission Rates:** Products can have a store-specific commission rate or an individual commission rate that overrides the store default.

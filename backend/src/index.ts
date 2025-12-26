@@ -1338,6 +1338,62 @@ app.post('/api/audit-logs', authenticateToken, async (req: Request, res: Respons
   }
 });
 
+// Endpoint to create/update exchange rate
+app.post('/api/exchange-rates', authenticateToken, async (req: Request, res: Response) => {
+  const { rate, startDate, storeId } = req.body;
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Director') {
+    return res.status(403).json({ message: 'Only Managers and Directors can set exchange rates.' });
+  }
+
+  if (!rate || !startDate || !storeId) {
+    return res.status(400).json({ message: 'Rate, start date, and store ID are required.' });
+  }
+
+  const parsedRate = parseFloat(rate);
+  if (isNaN(parsedRate) || parsedRate <= 0) {
+    return res.status(400).json({ message: 'Rate must be a positive number.' });
+  }
+
+  try {
+    const parsedStartDate = new Date(startDate);
+
+    const currentRateResult = await db.query(
+      'SELECT * FROM "ExchangeRate" WHERE "storeId" = $1 AND "endDate" IS NULL',
+      [storeId]
+    );
+
+    if (currentRateResult.rows.length > 0) {
+      await db.query(
+        'UPDATE "ExchangeRate" SET "endDate" = $1 WHERE id = $2',
+        [parsedStartDate, currentRateResult.rows[0].id]
+      );
+    }
+
+    const newExchangeRateId = `xr-${Date.now()}`;
+    const result = await db.query(
+      'INSERT INTO "ExchangeRate" (id, rate, "startDate", "storeId") VALUES ($1, $2, $3, $4) RETURNING *',
+      [newExchangeRateId, parsedRate, parsedStartDate, storeId]
+    );
+
+    await createAuditLog(
+      requestingUser.id,
+      'SET_EXCHANGE_RATE',
+      'ExchangeRate',
+      newExchangeRateId,
+      currentRateResult.rows[0] || null,
+      result.rows[0],
+      storeId
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Exchange rate creation error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Endpoint to get audit logs
 app.get('/api/audit-logs', authenticateToken, async (req, res) => {
   const { storeId, userId, entityType, action, limit = 50, offset = 0 } = req.query;
@@ -1604,10 +1660,19 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
   }
 
   try {
+    const existingProduct = await db.query(
+      'SELECT id FROM "Product" WHERE name = $1 AND "createdBy" = $2',
+      [name, requestingUser.id]
+    );
+
+    if (existingProduct.rows.length > 0) {
+      return res.status(409).json({ message: 'Ya tienes un producto con ese nombre. No puedes crear dos productos con el mismo nombre.' });
+    }
+
     const productId = 'prod-' + Date.now();
     const result = await db.query(
-      'INSERT INTO "Product" (id, name, "costUSD", margin, "commissionRate", "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [productId, name, parseFloat(costUSD), parseFloat(margin), commissionRate ? parseFloat(commissionRate) : null, finalStoreId]
+      'INSERT INTO "Product" (id, name, "costUSD", margin, "commissionRate", "storeId", "createdBy") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [productId, name, parseFloat(costUSD), parseFloat(margin), commissionRate ? parseFloat(commissionRate) : null, finalStoreId, requestingUser.id]
     );
 
     console.log('[create-product] Product created:', result.rows[0]);
@@ -1649,6 +1714,16 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
 
     if (isAssigned) {
       return res.status(400).json({ message: 'El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.' });
+    }
+
+    if (name !== undefined && name !== product.name) {
+      const duplicateCheck = await db.query(
+        'SELECT id FROM "Product" WHERE name = $1 AND "createdBy" = $2 AND id != $3',
+        [name, requestingUser.id, id]
+      );
+      if (duplicateCheck.rows.length > 0) {
+        return res.status(409).json({ message: 'Ya tienes un producto con ese nombre.' });
+      }
     }
 
     const updateFields = [];
@@ -1716,5 +1791,11 @@ app.delete('/api/products/:id', authenticateToken, async (req: Request, res: Res
 });
 
 app.get('/api/inventory', authenticateToken, async (req: Request, res: Response, next: any) => {
-
-.*res.json(.*deletedProduct.rows[0]);/a	a res.json(deletedProduct.rows[0]);a
+  try {
+    const result = await db.query('SELECT * FROM "Product"');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Inventory fetch error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});

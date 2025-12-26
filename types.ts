@@ -52,6 +52,7 @@ export interface Product {
   costUSD: number; // compra_usd
   margin: number; // margen_pct (e.g., 0.30 for 30%)
   commissionRate?: number; // Comisión específica para este producto (opcional). Si no se especifica, se usa la comisión por defecto de la tienda.
+  createdBy?: string; // ID del usuario que creó el producto
 }
 
 /**
