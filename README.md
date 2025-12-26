@@ -107,6 +107,15 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - **Auditoría**: Todos los cambios de tipo de cambio se registran en el log de auditoría
 - **Validación**: Solo Managers y Directores pueden cambiar tipos de cambio para sus tiendas
 
+### 8. Restricciones de edición/eliminación de productos
+- **Validación por asignación**: Los productos solo pueden editarse o eliminarse si NO están asignados a ningún gestor
+- **Stock inicial NO cuenta**: Productos en `ProductStock` pueden editarse/eliminarse (no están asignados)
+- **Asignación a gestor**: Solo `AssignedInventory` bloquea edición/eliminación
+- **Validación en frontend**: Botones de editar/eliminar deshabilitados para productos asignados
+- **Validación en backend**: Endpoints `PUT /api/products/:id` y `DELETE /api/products/:id` validan asignación
+- **Mensaje de error**: "El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor."
+- **Indicador visual**: Badge "Asignado a gestor" en productos que tienen asignación activa
+
 ## FLUJO DE CIERRE DETALLADO
 1. **Gestor ejecuta cierre** → sistema muestra resumen con:
     - Listado de artículos vendidos

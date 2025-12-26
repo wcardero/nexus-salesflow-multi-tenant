@@ -37,6 +37,11 @@ The platform is designed to address several key challenges in sales management:
     *   When editing a product, system checks if new name would conflict with another product from same manager.
     *   The `createdBy` field on `Product` table tracks which user created each product.
 *   **Product Edit/Delete Restrictions:** Products can only be edited or deleted when they are not assigned to any gestor to maintain data integrity.
+    *   **Validation Source:** System checks `InventoryItem` table for assignments (not `ProductStock`).
+    *   **Stock Initial Exception:** Products in `ProductStock` only (stock initial) remain editable/deletable since they haven't been distributed to gestors.
+    *   **Frontend Validation:** Edit and delete buttons are disabled for assigned products, displaying "Asignado a gestor" badge.
+    *   **Backend Validation:** `PUT /api/products/:id` and `DELETE /api/products/:id` endpoints check `InventoryItem` table before allowing modifications.
+    *   **Error Message:** "El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor."
 *   **Product Commission Rates:** Products can have a store-specific commission rate or an individual commission rate that overrides the store default.
 
 ### 6.2 Exchange Rate Management
@@ -44,5 +49,5 @@ The platform is designed to address several key challenges in sales management:
 *   **Historical Tracking:** The system maintains a complete history of exchange rates per store. When a new rate is set, the previous rate is marked as no longer active by setting its `endDate`.
 *   **Rate Validity:** Only exchange rates without an `endDate` are considered current and active for pricing calculations.
 *   **Authorization:** Only Managers and Directors can set exchange rates for their assigned stores.
-*   **Audit Trail:** All exchange rate changes are logged in the audit log with action `SET_EXCHANGE_RATE`.
+*   **Audit Trail:** All exchange rate changes are logged in audit log with action `SET_EXCHANGE_RATE`.
 *   **Validation:** Exchange rates must be positive numbers and include a valid start date and store ID.
