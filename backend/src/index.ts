@@ -1824,10 +1824,26 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     return res.status(403).json({ message: 'Only Managers and Directors can create products.' });
   }
 
-  const { name, costUSD, margin, commissionRate, storeId } = req.body;
+  const { name, costUSD, costMN, margin, commissionRate, storeId, currency } = req.body;
 
-  if (!name || !costUSD || margin === undefined) {
-    return res.status(400).json({ message: 'Name, cost, and margin are required' });
+  if (!name || margin === undefined) {
+    return res.status(400).json({ message: 'Name and margin are required.' });
+  }
+
+  if (!costUSD && !costMN) {
+    return res.status(400).json({ message: 'Cost (USD or MN) is required.' });
+  }
+
+  if (costUSD && costMN) {
+    return res.status(400).json({ message: 'Please specify cost in either USD or MN, not both.' });
+  }
+
+  if (costMN && !currency) {
+    return res.status(400).json({ message: 'Currency is required when cost is in MN.' });
+  }
+
+  if (currency && currency !== 'USD' && currency !== 'MN') {
+    return res.status(400).json({ message: 'Currency must be either USD or MN.' });
   }
 
   const finalStoreId = storeId || requestingUser.storeId;
@@ -1837,22 +1853,67 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
   }
 
   try {
-    const existingProduct = await db.query(
-      'SELECT id FROM "Product" WHERE name = $1 AND "createdBy" = $2',
-      [name, requestingUser.id]
-    );
+    // Get store for exchange rate
+    const storeResult = await db.query('SELECT * FROM "Store" WHERE id = $1', [finalStoreId]);
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Store not found.' });
+    }
+    const store = storeResult.rows[0];
+    const exchangeRate = store.exchangeRates.find(xr => !xr.endDate);
 
-    if (existingProduct.rows.length > 0) {
-      return res.status(409).json({ message: 'Ya tienes un producto con ese nombre. No puedes crear dos productos con el mismo nombre.' });
+    if (!exchangeRate && currency === 'USD') {
+      return res.status(400).json({ message: 'No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en USD.' });
+    }
+
+    const parsedMargin = parseFloat(margin) / 100;
+    let priceMN: number;
+    let gestorCommissionMN: number;
+
+    // Calculate prices based on currency
+    if (currency === 'MN') {
+      // Cost is in MN, no exchange rate needed
+      const baseMN = costMN * (1 + parsedMargin);
+      priceMN = baseMN;
+      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+    } else {
+      // Cost is in USD, use exchange rate
+      const costUSDNum = parseFloat(costUSD);
+      const saleUSD = costUSDNum * (1 + parsedMargin);
+      const baseMN = saleUSD * exchangeRate.rate;
+      priceMN = baseMN;
+      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+    }
+
+    const parsedCommissionRate = commissionRate ? parseFloat(commissionRate) : store.defaultCommissionRate;
+
+    // Check for duplicate product name within manager's store
+    const nameCheckQuery = 'SELECT COUNT(*) FROM "Product" WHERE name = $1 AND "createdBy" = $2 AND id != $3';
+    const nameCheckParams = [name, requestingUser.id, 'ignore'];
+    const nameCheckResult = await db.query(nameCheckQuery, nameCheckParams);
+    const nameCount = parseInt(nameCheckResult.rows[0].count);
+
+    if (nameCount > 0) {
+      return res.status(409).json({ message: 'Ya tienes un producto con ese nombre.' });
     }
 
     const productId = 'prod-' + Date.now();
     const result = await db.query(
-      'INSERT INTO "Product" (id, name, "costUSD", margin, "commissionRate", "storeId", "createdBy") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [productId, name, parseFloat(costUSD), parseFloat(margin), commissionRate ? parseFloat(commissionRate) : null, finalStoreId, requestingUser.id]
+      'INSERT INTO "Product" (id, name, "costUSD", margin, "commissionRate", "storeId", "createdBy", currency, "priceMN", "gestorCommissionMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+      [productId, name, costUSD || null, parsedMargin, commissionRate ? parsedCommissionRate : null, finalStoreId, requestingUser.id, currency || 'USD', priceMN, gestorCommissionMN]
     );
 
     console.log('[create-product] Product created:', result.rows[0]);
+
+    // Create audit log
+    await createAuditLog(
+      requestingUser.id,
+      'CREATE_PRODUCT',
+      'Product',
+      productId,
+      null,
+      result.rows[0],
+      finalStoreId
+    );
 
     res.status(201).json(result.rows[0]);
   } catch (error) {

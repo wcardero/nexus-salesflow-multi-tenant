@@ -507,6 +507,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [cost, setCost] = useState('');
   const [margin, setMargin] = useState('');
   const [commission, setCommission] = useState('');
+  const [currency, setCurrency] = useState<'USD' | 'MN'>('USD');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingCost, setEditingCost] = useState('');
@@ -520,21 +521,44 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     return db.assignedInventory.some(ai => ai.productId === productId);
   };
 
+  const hasProductsInUSD = storeProducts.some(p => p.currency === 'USD');
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !cost || !margin) return;
 
-    if (!currentExchangeRate) {
-      alert('No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos.');
+    if (currency === 'MN' && !currentExchangeRate) {
+      alert('No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en USD.');
       return;
+    }
+
+    const parsedMargin = parseFloat(margin) / 100;
+    let priceMN: number;
+    let gestorCommissionMN: number;
+
+    if (currency === 'MN') {
+      const costMN = parseFloat(cost);
+      const baseMN = costMN * (1 + parsedMargin);
+      priceMN = baseMN;
+      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+    } else {
+      const costUSD = parseFloat(cost);
+      const saleUSD = costUSD * (1 + parsedMargin);
+      const baseMN = saleUSD * currentExchangeRate.rate;
+      priceMN = baseMN;
+      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
     }
 
     const newProduct: Omit<Product, 'id'> = {
       name,
-      costUSD: parseFloat(cost),
-      margin: parseFloat(margin) / 100,
+      costUSD: currency === 'USD' ? parseFloat(cost) : undefined,
+      costMN: currency === 'MN' ? parseFloat(cost) : undefined,
+      margin: parsedMargin,
       commissionRate: commission.trim() ? parseFloat(commission) / 100 : undefined,
-      storeId: store.id
+      storeId: store.id,
+      currency,
+      priceMN,
+      gestorCommissionMN
     };
 
     try {
@@ -558,7 +582,70 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       await refreshDb();
     } catch (error: any) {
       console.error('Error creating product:', error);
-      alert(`Error: ${error.message}`);
+      alert(`Error al crear el producto: ${error.message}`);
+    }
+  };
+
+   const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !cost || !margin) return;
+
+    if (currency === 'MN' && !currentExchangeRate) {
+      alert('No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en MN.');
+      return;
+    }
+
+    const parsedMargin = parseFloat(margin) / 100;
+    let priceMN: number;
+    let gestorCommissionMN: number;
+
+    if (currency === 'MN') {
+      const costMN = parseFloat(cost);
+      const baseMN = costMN * (1 + parsedMargin);
+      priceMN = baseMN;
+      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+    } else {
+      const costUSD = parseFloat(cost);
+      const saleUSD = costUSD * (1 + parsedMargin);
+      const baseMN = saleUSD * currentExchangeRate.rate;
+      priceMN = baseMN;
+      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+    }
+
+    const newProduct: Omit<Product, 'id'> = {
+      name,
+      costUSD: currency === 'USD' ? parseFloat(cost) : undefined,
+      costMN: currency === 'MN' ? parseFloat(cost) : undefined,
+      margin: parsedMargin,
+      commissionRate: commission.trim() ? parseFloat(commission) / 100 : undefined,
+      storeId: store.id,
+      currency,
+      priceMN,
+      gestorCommissionMN
+    };
+
+    try {
+      const response = await fetch('http://localhost:3001/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newProduct),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error creando el producto');
+      }
+
+      const createdProduct = await response.json();
+      alert('Producto creado exitosamente.');
+      setName(''); setCost(''); setMargin(''); setCommission('');
+      await refreshDb();
+    } catch (error: any) {
+      console.error('Error creating product:', error);
+      alert(`Error al crear el producto: ${error.message}`);
     }
   };
 
@@ -717,9 +804,17 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
         </div>
       )}
 
-       <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 items-end">
+        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6 items-end">
+          <select value={currency} onChange={e => setCurrency(e.target.value as 'USD' | 'MN')} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600">
+            <option value="USD">USD</option>
+            <option value="MN">MN</option>
+          </select>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
-          <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          {currency === 'USD' ? (
+            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          ) : (
+            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (MN)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          )}
           <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input
             value={commission}
@@ -731,8 +826,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={!currentExchangeRate} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
-      </form>
+          <button type="submit" disabled={!currentExchangeRate || (currency === 'USD' && !hasProductsInUSD) || (currency === 'MN' && !currentExchangeRate)} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
+        </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
           const productCommissionRate = getCommissionRateForProduct(p, store);

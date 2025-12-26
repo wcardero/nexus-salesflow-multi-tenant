@@ -32,31 +32,52 @@ export const getCommissionRateForProduct = (product: Product, store: Store): num
 };
 
 /**
- * Calcula los precios de un producto basándose en el tipo de cambio actual.
+ * Calcula los precios de un producto basándose en el tipo de cambio actual y la moneda del costo.
  * @param product El producto a calcular.
- * @param exchangeRate El tipo de cambio a utilizar.
+ * @param exchangeRate El tipo de cambio a utilizar (solo para productos en USD).
  * @param commissionRate La tasa de comisión a aplicar.
  * @returns Un objeto con todos los precios calculados.
  */
 export const calculateProductPrices = (
-  product: Product, 
-  exchangeRate: ExchangeRate | undefined, 
+  product: Product,
+  exchangeRate: ExchangeRate | undefined,
   commissionRate: number
 ) => {
-  if (!exchangeRate) {
-    return { saleUSD: 0, baseMN: 0, commission: 0, finalMN: 0 };
+  if (product.currency === 'MN') {
+    const costMN = product.costMN || 0;
+    const baseMN = costMN * (1 + product.margin);
+    const commission = baseMN * commissionRate;
+    const finalMN = baseMN + commission;
+    const gestorCommissionMN = finalMN * commissionRate;
+
+    return {
+      saleUSD: 0,
+      baseMN,
+      commission,
+      finalMN,
+      priceMN: finalMN,
+      gestorCommissionMN,
+    };
   }
 
-  const saleUSD = product.costUSD * (1 + product.margin);
+  if (!exchangeRate) {
+    return { saleUSD: 0, baseMN: 0, commission: 0, finalMN: 0, priceMN: 0, gestorCommissionMN: 0 };
+  }
+
+  const costUSD = product.costUSD || 0;
+  const saleUSD = costUSD * (1 + product.margin);
   const baseMN = saleUSD * exchangeRate.rate;
   const commission = baseMN * commissionRate;
   const finalMN = baseMN + commission;
+  const gestorCommissionMN = finalMN * commissionRate;
 
   return {
     saleUSD,
     baseMN,
     commission,
     finalMN,
+    priceMN: finalMN,
+    gestorCommissionMN,
   };
 };
 
