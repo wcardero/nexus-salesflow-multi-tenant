@@ -60,7 +60,9 @@ const App: React.FC = () => {
       const resources =
         effectiveRole === Role.ADMIN
           ? ['users', ...baseResources]
-          : baseResources;
+          : effectiveRole === Role.MANAGER || effectiveRole === Role.DIRECTOR
+            ? ['users', ...baseResources]
+            : baseResources;
 
       console.log('refreshDb: fetching resources:', resources);
       const results: [string, any][] = [];
