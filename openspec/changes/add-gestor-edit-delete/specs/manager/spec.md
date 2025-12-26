@@ -43,3 +43,10 @@ Managers need to edit and delete gestores to correct mistakes or remove inactive
 - **THEN** "Tiene inventario asignado" badge is shown next to gestor name
 - **AND** Edit button is disabled
 - **AND** Delete button is disabled
+
+#### Scenario: Manager can see gestores after logging in
+- **WHEN** Manager logs in with correct credentials and store selection
+- **THEN** System validates store access via User table or _StoreToUser table
+- **AND** GET /api/users returns gestores with correct storeId
+- **AND** All gestores for that store are listed in GestoresView
+- **AND** Manager can see both existing and newly created gestores

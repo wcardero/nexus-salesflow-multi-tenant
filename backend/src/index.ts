@@ -131,6 +131,7 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
         let user = result.rows[0];
+        console.log('[login] User found:', { id: user.id, name: user.name, role: user.role, userStoreId: user.storeId, selectedStoreId: storeId });
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
@@ -147,11 +148,13 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
                     'SELECT "A" FROM "_StoreToUser" WHERE "B" = $1 AND "A" = $2',
                     [storeId, user.id]
                 );
+                console.log('[login] StoreToUser check:', { storeId, userId: user.id, found: storeToUserResult.rows.length > 0 });
                 if (storeToUserResult.rows.length === 0) {
                     return res.status(401).json({ message: 'El usuario no pertenece a esta tienda.' });
                 }
                 // User is assigned to store via _StoreToUser, update user object
                 user = { ...user, storeId };
+                console.log('[login] Updated user with storeId from _StoreToUser:', { userId: user.id, newStoreId: user.storeId });
             }
         }
 
@@ -161,6 +164,7 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
             JWT_SECRET,
             { expiresIn: '24h' }
         );
+        console.log('[login] JWT created with storeId:', user.storeId);
 
         // Don't send password back to client
         delete user.password;
@@ -288,10 +292,25 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
     let nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1';
     let nameCheckParams = [name];
 
-    // For Managers and Directors, check within their store only
+    // For Managers and Directors, check within their store only AND same role
     if (requestingUser && (requestingUser.role === 'Manager' || requestingUser.role === 'Director')) {
-        nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1 AND "storeId" = $2';
-        nameCheckParams = [name, requestingUser.storeId];
+        // For Managers creating Gestors, check if a Gestor with same name exists in that store
+        if (role === 'Gestor' && requestingUser.role === 'Manager') {
+            nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1 AND "storeId" = $2 AND role = $3';
+            nameCheckParams = [name, finalStoreId, 'Gestor'];
+            console.log('[create-user] Checking duplicate Gestor:', { name, storeId: finalStoreId, query: nameCheckQuery, params: nameCheckParams });
+        }
+        // For Directors creating Managers, check if a Manager with same name exists in that store
+        else if (role === 'Manager' && requestingUser.role === 'Director') {
+            nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1 AND "storeId" = $2 AND role = $3';
+            nameCheckParams = [name, requestingUser.storeId, 'Manager'];
+            console.log('[create-user] Checking duplicate Manager:', { name, storeId: requestingUser.storeId, query: nameCheckQuery, params: nameCheckParams });
+        }
+        // For other cases, check within store
+        else {
+            nameCheckQuery = 'SELECT COUNT(*) FROM "User" WHERE name = $1 AND "storeId" = $2';
+            nameCheckParams = [name, requestingUser.storeId];
+        }
     }
 
     // For non-authenticated first user (Admin creation), check within storeId if provided
@@ -477,18 +496,22 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
 // --- GET Endpoints ---
 app.get('/api/users', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
+  console.log('[get-users] Request:', { userId: requestingUser.id, role: requestingUser.role, storeId: requestingUser.storeId });
 
   // Only admins can see all users
   if (requestingUser.role !== 'Admin') {
     // For Directors and Managers, get their store ID from _StoreToUser if not in User
     let storeIdToUse = requestingUser.storeId;
+    console.log('[get-users] Initial storeId:', storeIdToUse);
     if (!storeIdToUse) {
       const storeResult = await db.query(
         'SELECT "A" as storeId FROM "_StoreToUser" WHERE "B" = $1 LIMIT 1',
         [requestingUser.id]
       );
+      console.log('[get-users] _StoreToUser query result:', storeResult.rows);
       if (storeResult.rows.length > 0) {
         storeIdToUse = storeResult.rows[0].storeId;
+        console.log('[get-users] Got storeId from _StoreToUser:', storeIdToUse);
       }
     }
 
@@ -501,6 +524,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
         'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
         ['Manager', storeIdToUse]
       );
+      console.log('[get-users] Returning Managers for store:', { storeId: storeIdToUse, count: rows.length });
       return res.json(rows);
     }
     // Managers can see gestors from their store
@@ -512,6 +536,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
         'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
         ['Gestor', storeIdToUse]
       );
+      console.log('[get-users] Returning Gestores for store:', { storeId: storeIdToUse, count: rows.length });
       return res.json(rows);
     }
     // Gestors cannot see other users

@@ -3,6 +3,8 @@
 ## Why
 Managers can create gestores but cannot edit or delete them. If a manager makes a mistake (e.g., wrong name), they cannot correct it. Gestores can only be edited or deleted when they don't have assigned inventory to prevent data integrity issues.
 
+Also, gestores were not being listed correctly when Managers logged in because the storeId was being retrieved from the User table (which might be null for Managers assigned via _StoreToUser). This prevented managers from seeing their gestores after logging in.
+
 ## What Changes
 - Add edit gestor functionality (opens modal with current name)
 - Add delete gestor functionality (with validation)
@@ -12,9 +14,13 @@ Managers can create gestores but cannot edit or delete them. If a manager makes 
 - Disable edit/delete buttons for gestores with assigned inventory
 - Display error message: "El gestor no puede ser editado ni eliminado porque tiene inventario asignado."
 - Improve inventory assignment validation with detailed error messages for all fields
+- Fix POST /api/login to check _StoreToUser when user.storeId doesn't match selected store
+- Fix GET /api/users to get storeId from _StoreToUser if not in User table
+- This ensures Managers can see their gestores correctly after logging in
 
 ## Impact
 - Affected specs: manager, inventory
 - Affected code:
+  - backend/src/index.ts - POST /api/login and GET /api/users
   - views/ManagerDashboard.tsx - GestoresView with edit/delete buttons and modal
   - views/ManagerDashboard.tsx - InventoryView with enhanced field validation
