@@ -74,7 +74,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
       case 'products':
         return <ProductsView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'gestores':
-        return <GestoresView db={db} setDb={setDb} store={store} />;
+        return <GestoresView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'rate':
         return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
       case 'reports':
@@ -278,10 +278,17 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
 };
 
 // --- GESTORES VIEW ---
-const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store'>> = ({ db, setDb, store }) => {
+const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' | 'refreshDb'>> = ({ db, setDb, store, refreshDb }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [editingGestor, setEditingGestor] = useState<User | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingPassword, setEditingPassword] = useState('');
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
+
+  const isGestorHasInventory = (gestorId: string): boolean => {
+    return db.assignedInventory.some(ai => ai.gestorId === gestorId);
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -309,18 +316,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
         throw new Error(errorData.message || 'Error creando el gestor');
       }
 
-      await fetch('http://localhost:3001/api/users');
-      const usersRes = await fetch('http://localhost:3001/api/users', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const usersData = await usersRes.json();
-      setDb(prev => {
-        if (!prev) return prev;
-        return { ...prev, users: usersData };
-      });
-
+      await refreshDb();
       setName('');
       setPassword('');
       alert('Gestor creado exitosamente.');
@@ -329,9 +325,127 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       alert(`Error al crear el gestor: ${error.message}`);
     }
   };
+
+  const handleEdit = (gestor: User) => {
+    if (isGestorHasInventory(gestor.id)) {
+      alert('El gestor no puede ser editado ni eliminado porque tiene inventario asignado.');
+      return;
+    }
+    setEditingGestor(gestor);
+    setEditingName(gestor.name);
+    setEditingPassword('');
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGestor || !editingName.trim()) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/${editingGestor.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: editingName.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error actualizando el gestor');
+      }
+
+      await refreshDb();
+      setEditingGestor(null);
+      setEditingName('');
+      setEditingPassword('');
+      alert('Gestor actualizado exitosamente.');
+    } catch (error: any) {
+      console.error('Error updating gestor:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDelete = async (gestorId: string) => {
+    if (isGestorHasInventory(gestorId)) {
+      alert('El gestor no puede ser editado ni eliminado porque tiene inventario asignado.');
+      return;
+    }
+
+    if (!confirm('¿Estás seguro de que deseas eliminar este gestor?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/${gestorId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error eliminando el gestor');
+      }
+
+      await refreshDb();
+      alert('Gestor eliminado exitosamente.');
+    } catch (error: any) {
+      console.error('Error deleting gestor:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingGestor(null);
+    setEditingName('');
+    setEditingPassword('');
+  };
+
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Gestionar Gestores</h3>
+
+      {/* Edit Gestor Modal */}
+      {editingGestor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Gestor</h3>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre de usuario</label>
+                <input
+                  value={editingName}
+                  onChange={e => setEditingName(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nueva contraseña (opcional)</label>
+                <input
+                  type="password"
+                  value={editingPassword}
+                  onChange={e => setEditingPassword(e.target.value)}
+                  placeholder="Dejar vacío para no cambiar"
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add form */}
       <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
         <input
@@ -350,9 +464,39 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
         <button type="submit" className="md:col-span-2 bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
       </form>
       {/* List */}
-      <ul className="space-y-2">
-        {storeGestores.map(g => <li key={g.id} className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-md">{g.name}</li>)}
-      </ul>
+      <div className="space-y-2">
+        {storeGestores.map(g => {
+          const hasInventory = isGestorHasInventory(g.id);
+          return (
+            <li key={g.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md flex justify-between items-center">
+              <div>
+                <span className="font-medium text-slate-900 dark:text-slate-200">{g.name}</span>
+                {hasInventory && (
+                  <span className="ml-2 text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
+                    Tiene inventario asignado
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(g)}
+                  disabled={hasInventory}
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(g.id)}
+                  disabled={hasInventory}
+                  className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </div>
     </div>
   )
 };
@@ -894,7 +1038,22 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !gestorId || quantity < 1) return;
+
+    const errors = [];
+    if (!productId) {
+      errors.push('Debe seleccionar un producto');
+    }
+    if (!gestorId) {
+      errors.push('Debe seleccionar un gestor');
+    }
+    if (!quantity || quantity < 1) {
+      errors.push('La cantidad debe ser mayor a 0');
+    }
+
+    if (errors.length > 0) {
+      alert('Por favor, complete todos los campos correctamente:\n- ' + errors.join('\n- '));
+      return;
+    }
 
     try {
       const response = await fetch('http://localhost:3001/api/assigned-inventory', {

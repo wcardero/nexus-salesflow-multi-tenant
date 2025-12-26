@@ -55,7 +55,7 @@ The platform is designed to address several key challenges in sales management:
 ### 6.3 Initial Stock Management
 *   **Edit Capability:** Managers can edit initial stock records to correct errors (e.g., changing 100 items to 90 items).
 *   **Delete Capability:** Managers can delete initial stock records if they were added by mistake.
-*   **Assignment Validation:** Stock records can only be edited or deleted when the product is NOT assigned to any gestor (via `AssignedInventory`).
+*   **Assignment Validation:** Stock records can only be edited or deleted when product is NOT assigned to any gestor (via `AssignedInventory`).
     *   **Validation Source:** System checks `AssignedInventory` table for assignments (not `ProductStock`).
     *   **Frontend Validation:** Edit and delete buttons are disabled for stock of assigned products.
     *   **Backend Validation:** `DELETE /api/product-stock/:stockId` endpoint checks `AssignedInventory` before allowing deletion.
@@ -64,3 +64,27 @@ The platform is designed to address several key challenges in sales management:
 *   **Edit Modal:** Provides a simple modal to edit stock quantity directly from the table.
 *   **Confirmation Dialog:** Delete action requires confirmation before executing.
 *   **Audit Trail:** Stock edits are logged with action `UPDATE_STOCK` and deletions with `DELETE_STOCK`.
+
+### 6.4 Gestor Management
+*   **Edit Capability:** Managers can edit gestor names and optionally change passwords.
+*   **Delete Capability:** Managers can delete gestores who no longer work at the store.
+*   **Assignment Validation:** Gestores can only be edited or deleted when they don't have assigned inventory (via `AssignedInventory`).
+    *   **Validation Source:** System checks `AssignedInventory` table for assignments to that specific gestor.
+    *   **Frontend Validation:** Edit and delete buttons are disabled for gestores with assigned inventory.
+    *   **Backend Validation:** `PUT /api/users/:id` and `DELETE /api/users/:id` endpoints check `AssignedInventory` before allowing modifications.
+*   **Visual Indicators:** "Tiene inventario asignado" badge is shown on gestores who have active inventory assignments.
+*   **Error Message:** "El gestor no puede ser editado ni eliminado porque tiene inventario asignado."
+*   **Edit Modal:** Provides a modal to change gestor name and optionally update password.
+*   **Password Change:** Password field in edit modal is optional - leaving it empty keeps the current password.
+*   **Confirmation Dialog:** Delete action requires confirmation before executing.
+*   **Audit Trail:** Gestor edits are logged with action `UPDATE_USER` and deletions with `DELETE_USER`.
+
+### 6.5 Inventory Assignment Validation
+*   **Complete Field Validation:** All inventory assignment fields must be completed correctly before submission.
+*   **Required Fields:** Product, Gestor, and Quantity are all required.
+*   **Validation Messages:**
+    *   "Debe seleccionar un producto" - when no product is selected
+    *   "Debe seleccionar un gestor" - when no gestor is selected
+    *   "La cantidad debe ser mayor a 0" - when quantity is less than 1
+*   **Error Display:** Multiple validation errors are displayed together, each on a separate line for clarity.
+*   **Minimum Quantity:** Quantity must be at least 1 (positive integer).

@@ -125,6 +125,22 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - **Validación en backend**: Endpoint DELETE verifica `AssignedInventory` antes de permitir eliminación
 - **Modal de edición**: Permite cambiar la cantidad de stock directamente desde la tabla
 
+### 10. Edición y eliminación de gestores
+- **Corrección de errores**: Permite editar el nombre de un gestor o cambiar su contraseña
+- **Validación por asignación**: Los gestores solo pueden editarse/eliminarse si NO tienen inventario asignado
+- **Eliminación**: Permite eliminar gestores que ya no trabajan en la tienda
+- **Indicador visual**: Badge "Tiene inventario asignado" en gestores que tienen asignación activa
+- **Validación en frontend**: Botones de Editar/Eliminar deshabilitados para gestores con inventario
+- **Modal de edición**: Permite cambiar el nombre y opcionalmente la contraseña
+- **Mensaje de error**: "El gestor no puede ser editado ni eliminado porque tiene inventario asignado."
+
+### 11. Validación de asignación de inventario
+- **Validación completa**: Todos los campos deben estar llenos antes de asignar inventario
+- **Producto requerido**: Mensaje de error si no se selecciona un producto
+- **Gestor requerido**: Mensaje de error si no se selecciona un gestor
+- **Cantidad válida**: Mensaje de error si la cantidad es menor a 1
+- **Mensajes detallados**: Cada campo con error se muestra en una línea separada
+
 ## FLUJO DE CIERRE DETALLADO
 1. **Gestor ejecuta cierre** → sistema muestra resumen con:
     - Listado de artículos vendidos
