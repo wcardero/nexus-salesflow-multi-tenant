@@ -82,14 +82,17 @@ const authenticateToken = (req: Request, res: Response, next: any) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    console.log('[authenticateToken] No token found in request');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string; name: string; role: string; storeId: string };
+    console.log('[authenticateToken] Token decoded:', { id: decoded.id, name: decoded.name, role: decoded.role, storeId: decoded.storeId });
     (req as any).user = decoded;
     next();
   } catch (err) {
+    console.log('[authenticateToken] Token verification failed:', err);
     return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
