@@ -130,7 +130,7 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
         if (result.rows.length === 0) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
-        const user = result.rows[0];
+        let user = result.rows[0];
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
@@ -142,15 +142,24 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
                 return res.status(400).json({ message: 'Debes seleccionar una tienda.' });
             }
             if (user.storeId !== storeId) {
-                return res.status(401).json({ message: 'El usuario no pertenece a esta tienda.' });
+                // Check if user is assigned to this store via _StoreToUser
+                const storeToUserResult = await db.query(
+                    'SELECT "A" FROM "_StoreToUser" WHERE "B" = $1 AND "A" = $2',
+                    [storeId, user.id]
+                );
+                if (storeToUserResult.rows.length === 0) {
+                    return res.status(401).json({ message: 'El usuario no pertenece a esta tienda.' });
+                }
+                // User is assigned to store via _StoreToUser, update user object
+                user = { ...user, storeId };
             }
         }
 
         // Create JWT token
         const token = jwt.sign(
-          { id: user.id, name: user.name, role: user.role, storeId: user.storeId },
-          JWT_SECRET,
-          { expiresIn: '24h' }
+            { id: user.id, name: user.name, role: user.role, storeId: user.storeId },
+            JWT_SECRET,
+            { expiresIn: '24h' }
         );
 
         // Don't send password back to client
@@ -471,19 +480,37 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
   // Only admins can see all users
   if (requestingUser.role !== 'Admin') {
+    // For Directors and Managers, get their store ID from _StoreToUser if not in User
+    let storeIdToUse = requestingUser.storeId;
+    if (!storeIdToUse) {
+      const storeResult = await db.query(
+        'SELECT "A" as storeId FROM "_StoreToUser" WHERE "B" = $1 LIMIT 1',
+        [requestingUser.id]
+      );
+      if (storeResult.rows.length > 0) {
+        storeIdToUse = storeResult.rows[0].storeId;
+      }
+    }
+
     // Directors can see managers from their store
     if (requestingUser.role === 'Director') {
+      if (!storeIdToUse) {
+        return res.status(400).json({ message: 'You must be assigned to a store.' });
+      }
       const { rows } = await db.query(
         'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
-        ['Manager', requestingUser.storeId]
+        ['Manager', storeIdToUse]
       );
       return res.json(rows);
     }
     // Managers can see gestors from their store
     if (requestingUser.role === 'Manager') {
+      if (!storeIdToUse) {
+        return res.status(400).json({ message: 'You must be assigned to a store.' });
+      }
       const { rows } = await db.query(
         'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
-        ['Gestor', requestingUser.storeId]
+        ['Gestor', storeIdToUse]
       );
       return res.json(rows);
     }
