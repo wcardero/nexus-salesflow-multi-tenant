@@ -6,7 +6,7 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 
 ## REGLAS DE NEGOCIO (SIMPLIFICADAS)
 - **Moneda**: Única moneda nacional (MN)
-- **Tipo de cambio**: Factor X (USD→MN) GLOBAL por tienda, variable en el tiempo
+- **Tipo de cambio**: Factor X (USD→MN) GLOBAL por tienda, variable en el tiempo, **PERSISTENTE**
 - **Historial de ventas**: Cada venta congela el tipo de cambio X utilizado (no retroactivo)
 - **Precios**: Gestores no pueden aplicar descuentos (precio fijo)
 - **Comisión**: Configurable por Manager (10% por defecto) sobre precio MN base
@@ -99,6 +99,13 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - **Director**: Puede gestionar (crear, editar, eliminar) managers de su tienda
 - **Director**: Puede gestionar contraseñas de los managers de su tienda
 - **Menú lateral**: Navegación específica por rol (Tiendas, Usuarios para Admin; Managers para Director)
+
+### 7. Gestión de tipo de cambio persistente
+- **Persistencia en base de datos**: Los cambios de tipo de cambio se guardan en la base de datos
+- **Endpoint API**: `POST /api/exchange-rates` permite a Managers y Directores configurar tipos de cambio
+- **Historial**: Se mantiene un historial completo de tipos de cambio por tienda (con fechas de vigencia)
+- **Auditoría**: Todos los cambios de tipo de cambio se registran en el log de auditoría
+- **Validación**: Solo Managers y Directores pueden cambiar tipos de cambio para sus tiendas
 
 ## FLUJO DE CIERRE DETALLADO
 1. **Gestor ejecuta cierre** → sistema muestra resumen con:

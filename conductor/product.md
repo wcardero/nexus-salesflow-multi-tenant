@@ -32,9 +32,17 @@ The platform is designed to address several key challenges in sales management:
 ## 6. Business Rules
 
 ### 6.1 Product Management
-*   **Unique Product Name per Manager:** Each manager (and director) can only have one product with a given name. This prevents accidental duplicates within a manager's product catalog while allowing different managers to create products with the same name (as they may sell similar items independently).
-    *   When creating a product, the system checks if the same manager already has a product with that name.
-    *   When editing a product, the system checks if the new name would conflict with another product from the same manager.
-    *   The `createdBy` field on the `Product` table tracks which user created each product.
+*   **Unique Product Name per Manager:** Each manager (and director) can only have one product with a given name. This prevents accidental duplicates within a manager's product catalog while allowing different managers to create products with same name (as they may sell similar items independently).
+    *   When creating a product, system checks if same manager already has a product with that name.
+    *   When editing a product, system checks if new name would conflict with another product from same manager.
+    *   The `createdBy` field on `Product` table tracks which user created each product.
 *   **Product Edit/Delete Restrictions:** Products can only be edited or deleted when they are not assigned to any gestor to maintain data integrity.
 *   **Product Commission Rates:** Products can have a store-specific commission rate or an individual commission rate that overrides the store default.
+
+### 6.2 Exchange Rate Management
+*   **Persistent Storage:** Exchange rates are stored in database via `POST /api/exchange-rates` endpoint, ensuring they persist across sessions and page refreshes.
+*   **Historical Tracking:** The system maintains a complete history of exchange rates per store. When a new rate is set, the previous rate is marked as no longer active by setting its `endDate`.
+*   **Rate Validity:** Only exchange rates without an `endDate` are considered current and active for pricing calculations.
+*   **Authorization:** Only Managers and Directors can set exchange rates for their assigned stores.
+*   **Audit Trail:** All exchange rate changes are logged in the audit log with action `SET_EXCHANGE_RATE`.
+*   **Validation:** Exchange rates must be positive numbers and include a valid start date and store ID.
