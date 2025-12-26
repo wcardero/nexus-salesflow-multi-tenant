@@ -413,9 +413,44 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
     const { id } = req.params;
     const { name, role, storeId } = req.body;
     const requestingUser = (req as any).user;
+    console.log('[update-user] Request:', { userId: requestingUser.id, role: requestingUser.role, targetId: id, name, newRole: role, newStoreId: storeId });
 
-    // Only admins can update users
+    // Admins can update any user
     if (requestingUser.role !== 'Admin') {
+        // Managers can only update gestors (not themselves or other roles)
+        if (requestingUser.role === 'Manager') {
+            const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
+            if (targetUser.rows.length === 0) {
+                return res.status(404).json({ message: 'User not found.' });
+            }
+            const userToUpdate = targetUser.rows[0];
+
+            // Managers can only update gestors from their store
+            if (userToUpdate.role !== 'Gestor') {
+                return res.status(403).json({ message: 'Managers can only update gestors.' });
+            }
+
+            // Managers cannot change role or storeId
+            if (role || storeId) {
+                return res.status(403).json({ message: 'Managers cannot change role or storeId.' });
+            }
+
+            // Gestor must belong to manager's store
+            if (userToUpdate.storeId !== requestingUser.storeId) {
+                return res.status(403).json({ message: 'Gestor does not belong to your store.' });
+            }
+
+            // Managers can only update name
+            if (!name) {
+                return res.status(400).json({ message: 'Name is required.' });
+            }
+
+            // Update gestor name
+            await db.query('UPDATE "User" SET name = $1 WHERE id = $2', [name.trim(), id]);
+            res.status(200).json({ message: 'Gestor updated successfully.' });
+            return;
+        }
+
         return res.status(403).json({ message: 'Access denied. Only admins can update users.' });
     }
 
@@ -804,10 +839,35 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
     }
 
     try {
+        console.log('[delete-user] Deleting user:', id);
+
+        // Get user info before deletion for audit log
+        const userResult = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        const user = userResult.rows[0];
+
+        // Delete audit logs created by this user (userId foreign key)
+        console.log('[delete-user] Deleting audit logs for user...');
+        await db.query('DELETE FROM "AuditLog" WHERE "userId" = $1', [id]);
+
+        // Delete inventory items where user is the gestor
+        console.log('[delete-user] Deleting inventory items where gestorId = user...');
+        await db.query('DELETE FROM "InventoryItem" WHERE "gestorId" = $1', [id]);
+
+        // Delete _StoreToUser relations
+        console.log('[delete-user] Deleting _StoreToUser relations...');
+        await db.query('DELETE FROM "_StoreToUser" WHERE "B" = $1', [id]);
+
+        // Finally, delete the user
+        console.log('[delete-user] Deleting user...');
         const result = await db.query('DELETE FROM "User" WHERE id = $1 RETURNING id', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'User not found.' });
         }
+
+        console.log('[delete-user] User deleted successfully:', id);
 
         // Create audit log for user deletion
         await createAuditLog(
@@ -815,7 +875,7 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
           'DELETE_USER',
           'User',
           id,
-          { id },
+          user,
           null,
           undefined
         );
