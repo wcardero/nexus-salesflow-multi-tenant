@@ -93,17 +93,26 @@ For a product with `compra_usd` and `margen_pct`:
 | Role | Can Create | Can Edit | Can Delete | Special |
 |------|-----------|----------|-----------|---------|
 | Admin | Director, Manager | All users (except own role) | All users (except self) | Creates stores, audit log |
-| Director | Manager (their store) | Name only | Managers (their store) | Products, exchange rate, stock assignment |
-| Manager | Gestor (their store) | Name only | Gestors (their store) | Assign stock to gestors |
-| Gestor | None | Name only | None | Register sales, execute cierre |
+| Director | Manager (their store) | Name only | Managers (their store) | Products, exchange rate, stock assignment, resolve inventory conflicts, confirm closing payments |
+| Manager | Gestor (their store) | Name only | Gestors (their store) | Assign stock to gestors, resolve inventory conflicts, confirm closing payments |
+| Gestor | None | Name only | None (except own pending sales) | Confirm/reject inventory, register batch sales, delete pending sales, execute cierre |
 
 ## Important Constraints
-- **No returns** in phase 1
+- **No returns** in phase1
 - **Fixed pricing** - Gestors cannot apply discounts
 - **Manager stock ownership** - Managers can only manage assigned stock, not total store inventory
 - **Single admin limitation** - Only one admin can exist after initial setup
 - **Store assignment** - Directors and Managers must have a store assigned when created
 - **Cierre workflow** - Money only moves through reconciliation process, not direct transfers
+- **Inventory confirmation required** - Gestors must confirm assigned inventory before selling
+- **Pending sales can be deleted** - Gestors can delete sales that are not included in a closing
+- **Sales in closing cannot be modified** - Sales included in closings are immutable
+
+## Active Changes
+- `add-inventory-approval-flow` - Inventory confirmation, conflicts, batch sales, and closing payment confirmation
+- **Inventory confirmation required** - Gestors must confirm assigned inventory before selling
+- **Pending sales can be deleted** - Gestors can delete sales that are not included in a closing
+- **Sales in closing cannot be modified** - Sales included in closings are immutable
 
 ## External Dependencies
 - **PostgreSQL**: Primary database for users, stores, products, inventory, sales, and audit logs

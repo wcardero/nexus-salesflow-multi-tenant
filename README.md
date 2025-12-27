@@ -43,23 +43,29 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - ✅ Configuración de tipo de cambio X (histórico con vigencia)
 - ✅ Gestión de stock inicial por producto
 - ✅ Asignación de inventario cuantificado a gestores
+- ✅ Gestión de conflictos de inventario (reasignar o cancelar asignaciones rechazadas)
 - ✅ Visualización de cierres pendientes (ver cuánto dinero traerá cada gestor)
-- ✅ Validación de cierres (marcar como "recibido" cuando gestor entrega dinero físico)
+- ✅ Confirmación de pago de cierres (marcar como "recibido" cuando gestor entrega dinero físico)
 - ✅ Auditoría de operaciones en su tienda
 
 ### MANAGER (por tienda)
 - ✅ Si no hay Director en la tienda, es gestionado por el Administrador.
 - ✅ Si hay Director, es gestionado por el Director.
-- ✅ Gestión de gestores (crear/eliminar)
+- ✅ Gestión de gestores (crear/eliminar).
 - ✅ Solo puede gestionar su propio stock asignado, no el inventario total de la tienda.
 - ✅ Visualización de cierres pendientes de sus gestores.
-- ✅ Validación de cierres de sus gestores.
+- ✅ Confirmación de recepción de dinero de cierres (marcar como "recibido")
+- ✅ Gestión de conflictos de inventario (reasignar o cancelar asignaciones rechazadas)
+- ✅ Visualización de estado de asignaciones (Pending, Confirmed, Rejected)
 - ✅ Reportes de sus gestores.
 - ✅ Auditoría de operaciones de sus gestores.
 
 ### GESTOR
-- ✅ Visualizar inventario asignado y precios MN
-- ✅ Registrar ventas (reducir inventario)
+- ✅ Confirmar inventario asignado (verificar que coincide con inventario físico)
+- ✅ Rechazar inventario asignado (proporcionar razón para el rechazo)
+- ✅ Visualizar inventario asignado y precios MN (solo inventario confirmado)
+- ✅ Registrar ventas en lote (múltiples unidades de una vez)
+- ✅ Eliminar ventas pendientes (corregir errores antes del cierre)
 - ✅ Ejecutar cierre:
   - Sistema muestra resumen (artículos vendidos vs total recaudado, comisión calculada)
   - Gestor verifica y confirma ejecución
@@ -141,17 +147,60 @@ inventario asignado y proceso de cierres (consolidación de ventas).
 - **Cantidad válida**: Mensaje de error si la cantidad es menor a 1
 - **Mensajes detallados**: Cada campo con error se muestra en una línea separada
 
-## FLUJO DE CIERRE DETALLADO
-1. **Gestor ejecuta cierre** → sistema muestra resumen con:
-    - Listado de artículos vendidos
-    - Total recaudado (mn_final)
-    - Comisión calculada (10% configurable)
-    - Monto a entregar al manager (mn_base)
-2. **Gestor verifica y confirma** → cierre se ejecuta y se actualizan:
-    - Datos del manager (existencia de productos)
-    - Estado del cierre (pendiente)
-3. **Manager ve cierre pendiente** → conoce monto a recibir
-4. **Gestor entrega dinero físico** → manager marca cierre como "recibido"
+### 12. Confirmación de Inventario por Gestor
+- **Estado de aprobación**: `Pending` (pendiente), `Confirmed` (confirmado), `Rejected` (rechazado)
+- **Flujo de confirmación**: Manager asigna → Gestor revisa → Gestor acepta/rechaza
+- **Endpoint**: `POST /api/assigned-inventory/:id/confirm` para aceptar
+- **Endpoint**: `POST /api/assigned-inventory/:id/reject` para rechazar
+- **Validación**: Razón obligatoria al rechazar inventario
+- **Inventario disponible**: Solo inventario con estado `Confirmed` puede venderse
+
+### 13. Conflictos de Inventario
+- **Creación automática**: Cuando un gestor rechaza inventario, se crea un conflicto
+- **Gestión por Manager**: Revisa conflictos pendientes y decide acción
+- **Acciones disponibles**:
+  - Reasignar: Actualizar cantidad y volver a estado `Pending`
+  - Cancelar: Eliminar la asignación completamente
+- **Endpoint**: `GET /api/inventory-conflicts` para ver conflictos del manager
+- **Endpoint**: `POST /api/inventory-conflicts/:id/resolve` para resolver
+- **Notificaciones**: Conflictos aparecen en dashboard del manager
+
+### 14. Ventas en Lote
+- **Mejora de eficiencia**: Gestor puede registrar múltiples ventas de una vez
+- **Endpoint**: `POST /api/sales/batch` con productId y quantity
+- **Validación**: Inventario suficiente en `AssignedInventory` (estado `Confirmed`)
+- **Creación automática**: Se crean N registros de venta individualmente
+- **Reducción de inventario**: Cantidad se reduce automáticamente en `AssignedInventory`
+
+### 15. Edición de Ventas
+- **Corrección de errores**: Gestor puede eliminar ventas antes del cierre
+- **Restricción**: Solo ventas NO incluidas en cierres pueden eliminarse
+- **Restauración de inventario**: Al eliminar, cantidad se restaura en `AssignedInventory`
+- **Endpoint**: `DELETE /api/sales/:id` para eliminar ventas
+- **Validación**: Gestor solo puede eliminar sus propias ventas
+
+### 16. Confirmación de Pago de Cierres
+- **Confirmación explícita**: Manager marca cierre como completado cuando recibe dinero
+- **Endpoint**: `PUT /api/closings/:id/complete` para confirmar
+- **Advertencia**: Acción no reversible, requiere confirmación explícita
+- **Registro de fecha**: `completedAt` se registra al confirmar
+- **Flujo completo**: Gestor vende → Ejecuta cierre → Manager confirma pago
+
+## FLUJO DE CIERRE DETALLADO (ACTUALIZADO)
+1. **Manager asigna inventario** → estado `Pending`
+2. **Gestor revisa y confirma** → estado `Confirmed` (o rechaza → crea conflicto)
+3. **Gestor vende productos** → en lote usando `POST /api/sales/batch`
+4. **Gestor ejecuta cierre** → sistema muestra resumen con:
+     - Listado de artículos vendidos
+     - Total recaudado (mn_final)
+     - Comisión calculada (10% configurable)
+     - Monto a entregar al manager (mn_base)
+5. **Gestor verifica y confirma** → cierre se ejecuta y se actualizan:
+     - Datos del manager (existencia de productos)
+     - Estado del cierre (pendiente)
+6. **Manager ve cierre pendiente** → conoce monto a recibir
+7. **Gestor entrega dinero físico** → manager marca cierre como "recibido"
+8. **Manager confirma recepción** → cierre cambia a estado `Completed`
 
 ## PERMISOS DE USUARIOS
 

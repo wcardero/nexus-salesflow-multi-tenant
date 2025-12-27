@@ -28,17 +28,19 @@ Triggers (examples):
 - "Help me create a proposal"
 - "I want to create a spec proposal"
 - "I want to create a spec"
+- "Actualiza openspec con nuevas funcionalidades"
 
 Loose matching guidance:
-- Contains one of: `proposal`, `change`, `spec`
-- With one of: `create`, `plan`, `make`, `start`, `help`
+- Contains one of: `proposal`, `change`, `spec`, `openspec`
+- With one of: `create`, `plan`, `make`, `start`, `help`, `actualiza`
 
 Skip proposal for:
-- Bug fixes (restore intended behavior)
+- Bug fixes (restoring intended behavior)
 - Typos, formatting, comments
 - Dependency updates (non-breaking)
 - Configuration changes
 - Tests for existing behavior
+- Updating existing documentation (no spec changes needed)
 
 **Workflow**
 1. Review `openspec/project.md`, `openspec list`, and `openspec list --specs` to understand current context.
