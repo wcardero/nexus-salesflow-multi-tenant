@@ -10,14 +10,64 @@ interface GestorDashboardProps {
   setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
 }
 
-type Tabs = 'sales' | 'reports';
+type Tabs = 'inventory' | 'sales' | 'reports';
 
 const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb }) => {
-  const [activeTab, setActiveTab] = useState<Tabs>('sales');
+  const [activeTab, setActiveTab] = useState<Tabs>('inventory');
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const productsById = Object.fromEntries(db.products.map(p => [p.id, p]));
   const currentRate = getCurrentExchangeRate(store);
+
+  const pendingInventory = useMemo(() => db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Pending'), [db.assignedInventory, user.id]);
+
+  const handleConfirmInventory = async (assignedId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/assigned-inventory/${assignedId}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Inventario confirmado exitosamente.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error confirming inventory:', error);
+      alert('Error al confirmar el inventario.');
+    }
+  };
+
+  const handleRejectInventory = async (assignedId: string, reason: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/assigned-inventory/${assignedId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Inventario rechazado. El manager será notificado.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error rejecting inventory:', error);
+      alert('Error al rechazar el inventario.');
+    }
+  };
 
   // Data filtered for the current gestor from assigned inventory (Confirmed status only)
   const gestorInventory = useMemo(() => {
@@ -44,6 +94,15 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'inventory':
+        return (
+          <PendingInventoryView
+            pendingInventory={pendingInventory}
+            productsById={productsById}
+            onConfirm={handleConfirmInventory}
+            onReject={handleRejectInventory}
+          />
+        );
       case 'sales':
         return (
           <SalesView
@@ -74,6 +133,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow w-full">
       <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+          <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Inventario y Ventas" tab="sales" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Mis Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
@@ -319,6 +379,108 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
           </table>
         </div>
       </div>
+    </div>
+  );
+};
+
+// --- PENDING INVENTORY VIEW (New functionality) ---
+interface PendingInventoryViewProps {
+  pendingInventory: AssignedInventory[];
+  productsById: { [key: string]: Product };
+  onConfirm: (id: string) => void;
+  onReject: (id: string, reason: string) => void;
+}
+
+const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInventory, productsById, onConfirm, onReject }) => {
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const handleReject = (id: string) => {
+    if (!rejectionReason.trim()) {
+      alert('Por favor, ingresa una razón para rechazar.');
+      return;
+    }
+    onReject(id, rejectionReason);
+    setRejecting(null);
+    setRejectionReason('');
+  };
+
+  return (
+    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg shadow mb-8">
+      <h2 className="text-xl font-bold mb-4 text-yellow-800 dark:text-yellow-200">
+        Inventario Pendiente de Confirmación
+      </h2>
+      <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+        Por favor, verifica que los productos asignados se corresponden con lo que tienes en existencia.
+      </p>
+      {pendingInventory.length === 0 ? (
+        <p className="text-sm text-yellow-600 dark:text-yellow-400">No hay inventario pendiente de confirmación.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-yellow-200 dark:divide-yellow-700">
+            <thead>
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-yellow-900 dark:text-yellow-200 uppercase">Producto</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-yellow-900 dark:text-yellow-200 uppercase">Cantidad</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-yellow-900 dark:text-yellow-200 uppercase">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingInventory.map(ai => {
+                const product = productsById[ai.productId];
+                if (!product) return null;
+                return (
+                  <tr key={ai.id}>
+                    <td className="px-6 py-4">{product.name}</td>
+                    <td className="px-6 py-4">{ai.quantity}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => onConfirm(ai.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs mr-2"
+                      >
+                        Aceptar
+                      </button>
+                      <button
+                        onClick={() => setRejecting(ai.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-xs"
+                      >
+                        Rechazar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rejecting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Rechazar Inventario</h3>
+            <textarea
+              value={rejectionReason}
+              onChange={e => setRejectionReason(e.target.value)}
+              placeholder="Explica la razón del rechazo..."
+              className="w-full h-32 p-3 border rounded-md dark:bg-slate-700 dark:border-slate-600 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setRejecting(null); setRejectionReason(''); }}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleReject(rejecting)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+              >
+                Confirmar Rechazo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

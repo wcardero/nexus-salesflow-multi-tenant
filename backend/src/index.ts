@@ -1232,7 +1232,95 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
   }
 });
 
-app.get('/api/products', authenticateToken, async (req, res) => {
+  // Endpoint to accept assigned inventory
+  app.post('/api/assigned-inventory/:id/confirm', authenticateToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const requestingUser = (req as any).user;
+
+    if (requestingUser.role !== 'Gestor') {
+      return res.status(403).json({ message: 'Only Gestors can confirm inventory.' });
+    }
+
+    try {
+      const result = await db.query(
+        'UPDATE "AssignedInventory" SET status = $1, "confirmedAt" = $2 WHERE id = $3 AND "gestorId" = $4 RETURNING *',
+        ['Confirmed', new Date(), id, requestingUser.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Inventory not found or not assigned to you.' });
+      }
+
+      await createAuditLog(
+        requestingUser.id,
+        'CONFIRM_INVENTORY',
+        'AssignedInventory',
+        id,
+        null,
+        { status: 'Confirmed' },
+        requestingUser.storeId
+      );
+
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Confirm inventory error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Endpoint to reject assigned inventory
+  app.post('/api/assigned-inventory/:id/reject', authenticateToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const requestingUser = (req as any).user;
+
+    if (requestingUser.role !== 'Gestor') {
+      return res.status(403).json({ message: 'Only Gestors can reject inventory.' });
+    }
+
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ message: 'Rejection reason is required.' });
+    }
+
+    try {
+      const assigned = await db.query(
+        'SELECT ai.*, u."storeId" FROM "AssignedInventory" ai JOIN "User" u ON ai."gestorId" = u.id WHERE ai.id = $1',
+        [id]
+      );
+
+      if (assigned.rows.length === 0) {
+        return res.status(404).json({ message: 'Inventory not found.' });
+      }
+
+      await db.query(
+        'UPDATE "AssignedInventory" SET status = $1, "rejectionReason" = $2 WHERE id = $3 AND "gestorId" = $4 RETURNING *',
+        ['Rejected', reason.trim(), id, requestingUser.id]
+      );
+
+      const conflictId = `conflict-${Date.now()}`;
+      await db.query(
+        'INSERT INTO "InventoryConflict" (id, "assignedInventoryId", gestorId, managerId, reason) VALUES ($1, $2, $3, $4, $5)',
+        [conflictId, id, requestingUser.id, requestingUser.storeId, reason.trim()]
+      );
+
+      await createAuditLog(
+        requestingUser.id,
+        'REJECT_INVENTORY',
+        'AssignedInventory',
+        id,
+        null,
+        { status: 'Rejected', reason: reason.trim() },
+        requestingUser.storeId
+      );
+
+      res.json({ ...assigned.rows[0], status: 'Rejected', rejectionReason: reason.trim() });
+    } catch (error: any) {
+      console.error('Reject inventory error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/products', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
 
   let storeCondition = '';
