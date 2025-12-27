@@ -90,6 +90,23 @@ export interface AssignedInventory {
   gestorId: string;
   quantity: number;
   assignedAt: Date;
+  status: 'Pending' | 'Confirmed' | 'Rejected';
+  confirmedAt?: Date;
+  rejectionReason?: string;
+}
+
+/**
+ * Represents an inventory conflict when a gestor rejects inventory.
+ */
+export interface InventoryConflict {
+  id: string;
+  assignedInventoryId: string;
+  gestorId: string;
+  managerId: string;
+  reason: string;
+  status: 'Pending' | 'Resolved';
+  createdAt: Date;
+  resolvedAt?: Date;
 }
 
 /**
@@ -160,6 +177,7 @@ export interface MockDB {
   inventory: InventoryItem[];
   productStock: ProductStock[];
   assignedInventory: AssignedInventory[];
+  inventoryConflicts: InventoryConflict[];
   sales: Sale[];
   closings: Closing[];
   auditLogs: AuditLog[];

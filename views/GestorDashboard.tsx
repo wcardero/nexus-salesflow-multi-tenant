@@ -1,6 +1,6 @@
 // views/GestorDashboard.tsx
 import React, { useState, useMemo } from 'react';
-import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing } from '../types';
+import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
 
 interface GestorDashboardProps {
@@ -19,8 +19,26 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const productsById = Object.fromEntries(db.products.map(p => [p.id, p]));
   const currentRate = getCurrentExchangeRate(store);
 
-  // Data filtered for the current gestor
-  const gestorInventory = useMemo(() => db.inventory.filter(item => item.gestorId === user.id), [db.inventory, user.id]);
+  // Data filtered for the current gestor from assigned inventory (Confirmed status only)
+  const gestorInventory = useMemo(() => {
+    const assigned = db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed');
+    const items: InventoryItem[] = [];
+
+    assigned.forEach(ai => {
+      for (let i = 0; i < ai.quantity; i++) {
+        items.push({
+          id: `${ai.id}-${i}`,
+          productId: ai.productId,
+          gestorId: ai.gestorId,
+          assignedAt: ai.assignedAt,
+          status: 'Available'
+        });
+      }
+    });
+
+    return items;
+  }, [db.assignedInventory, user.id]);
+
   const gestorSales = useMemo(() => db.sales.filter(sale => sale.gestorId === user.id), [db.sales, user.id]);
   const gestorClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id), [db.closings, user.id]);
 
@@ -114,8 +132,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
 
     setDb(prevDb => {
       if (!prevDb) return prevDb;
-      const updatedInventory = prevDb.inventory.map(item => 
-        item.id === inventoryItem.id ? { ...item, status: 'Sold', saleId: newSale.id } : item
+      const updatedInventory = prevDb.inventory.map(item =>
+        item.id === inventoryItem.id ? { ...item, status: 'Sold' as 'Available' | 'Sold', saleId: newSale.id } : item
       );
       return {
         ...prevDb,
