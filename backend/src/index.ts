@@ -1279,8 +1279,8 @@ app.post('/api/products', authenticateToken, validateProduct, async (req, res) =
     return res.status(400).json({ message: 'Name, cost, and margin are required' });
   }
 
-  // Endpoint to get inventory conflicts
-  app.get('/api/inventory-conflicts', authenticateToken, async (req: Request, res: Response) => {
+// Endpoint to get inventory conflicts
+app.get('/api/inventory-conflicts', authenticateToken, async (req, res) => {
     const requestingUser = (req as any).user;
 
     if (requestingUser.role !== 'Manager') {
