@@ -52,7 +52,6 @@ const App: React.FC = () => {
         'inventory',
         'product-stock',
         'assigned-inventory',
-        'inventory-conflicts',
         'sales',
         'closings',
         'audit-logs',
@@ -105,19 +104,12 @@ const App: React.FC = () => {
         auditLogs: dataMap['audit-logs'] ?? [],
       };
 
-      // Dates are transmitted as strings, so we need to convert them back to Date objects
-      data.stores.forEach(s => s.exchangeRates.forEach(xr => {
-        xr.startDate = new Date(xr.startDate);
-        if(xr.endDate) xr.endDate = new Date(xr.endDate);
-      }));
-      data.inventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
-      data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
-      data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
-      data.closings.forEach(c => {
-          c.initiatedAt = new Date(c.initiatedAt);
-          if(c.completedAt) c.completedAt = new Date(c.completedAt);
-      });
-      data.auditLogs.forEach(log => log.timestamp = new Date(log.timestamp));
+        // Dates are transmitted as strings, so we need to convert them back to Date objects
+        data.stores.forEach(s => s.exchangeRates.forEach(xr => {
+          xr.startDate = new Date(xr.startDate);
+          if(xr.endDate) xr.endDate = new Date(xr.endDate);
+        }));
+        data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
 
       // Update current user from fresh database data to avoid stale cache issues
       const storedUserJson = localStorage.getItem('user');
