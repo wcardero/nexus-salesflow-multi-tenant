@@ -1279,6 +1279,30 @@ app.post('/api/products', authenticateToken, validateProduct, async (req, res) =
     return res.status(400).json({ message: 'Name, cost, and margin are required' });
   }
 
+  // Endpoint to get inventory conflicts
+  app.get('/api/inventory-conflicts', authenticateToken, async (req: Request, res: Response) => {
+    const requestingUser = (req as any).user;
+
+    if (requestingUser.role !== 'Manager') {
+      return res.status(403).json({ message: 'Only Managers can view conflicts.' });
+    }
+
+    try {
+      const result = await db.query(
+        `SELECT ic.*, ai."productId", ai.quantity, p.name as productName, g.name as gestorName
+         FROM "InventoryConflict" ic
+         JOIN "AssignedInventory" ai ON ic."assignedInventoryId" = ai.id
+         JOIN "Product" p ON ai."productId" = p.id
+         JOIN "User" g ON ic.gestorId = g.id
+         WHERE ic.status = 'Pending'`
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Fetch conflicts error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   const finalStoreId = storeId || requestingUser.storeId;
 
   if (requestingUser.role === 'Director' && !finalStoreId) {
