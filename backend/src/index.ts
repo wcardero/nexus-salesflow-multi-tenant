@@ -3,6 +3,8 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import * as path from 'path';
+import * as fs from 'fs';
 import { body, param, query, validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -1799,9 +1801,34 @@ try {
     // Initialize database tables on startup
     await initializeDatabase();
 
-    app.listen(PORT, () => {
-      console.log(`Server is listening on port ${PORT}`);
-    });
+// Temporary endpoint to execute migration
+app.post('/api/admin/migrate-inventory-status', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Only admins can execute migrations.' });
+  }
+
+  try {
+    const migrationPath = (path as any).join(__dirname, '../migrations/migrate_assigned_inventory_status.sql');
+    const migrationSql = (fs as any).readFileSync(migrationPath, 'utf8');
+
+    await db.query('BEGIN');
+    await db.query(migrationSql);
+    await db.query('COMMIT');
+
+    console.log('[migration] Inventory status migration executed successfully');
+    res.json({ success: true, message: 'Migration executed successfully' });
+  } catch (error: any) {
+    await db.query('ROLLBACK');
+    console.error('[migration] Error executing migration:', error);
+    res.status(500).json({ message: 'Migration failed', error: String(error) });
+  }
+});
+
+app.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+});
   });
 } catch (error) {
   console.error('Server failed to start:', error);
