@@ -16,10 +16,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'nexus_salesflow_secret';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Rate limiting middleware
+// Rate limiting middleware (increased limits)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 500, // Limit each IP to 500 requests per windowMs (increased from 100)
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: (req: Request, res: any) => {
@@ -27,10 +27,10 @@ const limiter = rateLimit({
   }
 });
 
-// Login rate limiting (more restrictive)
+// Login rate limiting (more restrictive but increased)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per windowMs
+  max: 10, // Limit each IP to 10 login requests per windowMs (increased from 5)
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: any) => {
@@ -41,7 +41,31 @@ const loginLimiter = rateLimit({
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(limiter); // Apply general rate limiting to all requests
+
+// Public endpoint to check if any users exist (for initial setup) - exempt from rate limiting
+app.get('/api/users/exists', async (req: Request, res: Response) => {
+  try {
+    const result = await db.query('SELECT COUNT(*) FROM "User"');
+    const userCount = parseInt(result.rows[0].count);
+    res.json({ exists: userCount > 0, count: userCount });
+  } catch (error) {
+    console.error('Check users exists error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Public endpoint to fetch all stores - exempt from rate limiting
+app.get('/api/stores/public', async (req: Request, res: Response) => {
+    try {
+        const result = await db.query('SELECT id, name FROM "Store" ORDER BY name');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Fetch stores error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.use(limiter); // Apply general rate limiting to all other requests
 
 // Helper function to create audit logs
 const createAuditLog = async (userId: string, action: string, entityType: string, entityId?: string, oldValues?: any, newValues?: any, storeId?: string) => {
@@ -63,18 +87,6 @@ const createAuditLog = async (userId: string, action: string, entityType: string
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Nexus SalesFlow API is running!');
-});
-
-// Public endpoint to check if any users exist (for initial setup)
-app.get('/api/users/exists', async (req: Request, res: Response) => {
-  try {
-    const result = await db.query('SELECT COUNT(*) FROM "User"');
-    const userCount = parseInt(result.rows[0].count);
-    res.json({ exists: userCount > 0, count: userCount });
-  } catch (error) {
-    console.error('Check users exists error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
 });
 
 // Authentication middleware
@@ -177,17 +189,6 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
         res.json({ ...user, token });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// Public endpoint to fetch all stores
-app.get('/api/stores/public', async (req: Request, res: Response) => {
-    try {
-        const result = await db.query('SELECT id, name FROM "Store" ORDER BY name');
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Fetch stores error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -1242,10 +1243,10 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     }
 
     try {
-      // Get the inventory to confirm and calculate price
+      // Get inventory to confirm and calculate price
       const assignedResult = await db.query(
-        'SELECT ai.*, p."costUSD", p.margin, er.rate FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id JOIN "ExchangeRate" er ON p."storeId" = er."storeId" WHERE ai.id = $1 AND er."endDate" IS NULL',
-        [id]
+        'SELECT ai.*, p."costUSD", p."costMN", p.margin, er.rate FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id JOIN "ExchangeRate" er ON p."storeId" = er."storeId" WHERE ai.id = $1 AND ai."gestorId" = $2 AND er."endDate" IS NULL',
+        [id, requestingUser.id]
       );
 
       if (assignedResult.rows.length === 0) {
@@ -1253,7 +1254,16 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       }
 
       const assigned = assignedResult.rows[0];
-      const priceMN = assigned.costUSD * (1 + assigned.margin) * assigned.rate;
+      
+      // Calculate price based on currency
+      let priceMN: number;
+      if (assigned.costMN) {
+        // Cost is in MN
+        priceMN = assigned.costMN * (1 + assigned.margin);
+      } else {
+        // Cost is in USD, use exchange rate
+        priceMN = assigned.costUSD * (1 + assigned.margin) * assigned.rate;
+      }
 
       // Check if there's already confirmed inventory for the same product and gestor with the same price
       const existingResult = await db.query(
@@ -1326,18 +1336,22 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
     try {
       const assigned = await db.query(
-        'SELECT ai.*, u."storeId" FROM "AssignedInventory" ai JOIN "User" u ON ai."gestorId" = u.id WHERE ai.id = $1',
-        [id]
+        'SELECT ai.*, u."storeId" FROM "AssignedInventory" ai JOIN "User" u ON ai."gestorId" = u.id WHERE ai.id = $1 AND ai."gestorId" = $2',
+        [id, requestingUser.id]
       );
 
       if (assigned.rows.length === 0) {
-        return res.status(404).json({ message: 'Inventory not found.' });
+        return res.status(404).json({ message: 'Inventory not found or not assigned to you.' });
       }
 
-      await db.query(
+      const updateResult = await db.query(
         'UPDATE "AssignedInventory" SET status = $1, "rejectionReason" = $2 WHERE id = $3 AND "gestorId" = $4 RETURNING *',
         ['Rejected', reason.trim(), id, requestingUser.id]
       );
+
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Inventory not found or not assigned to you.' });
+      }
 
       const conflictId = `conflict-${Date.now()}`;
       await db.query(
@@ -1355,7 +1369,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         requestingUser.storeId
       );
 
-      res.json({ ...assigned.rows[0], status: 'Rejected', rejectionReason: reason.trim() });
+      res.json(updateResult.rows[0]);
     } catch (error: any) {
       console.error('Reject inventory error:', error);
       res.status(500).json({ message: 'Internal server error' });
