@@ -580,12 +580,14 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       console.log('[get-users] Returning Gestores for store:', { storeId: storeIdToUse, count: rows.length });
       return res.json(rows);
     }
-    // Gestors cannot see other users
-    return res.status(403).json({ message: 'Access denied.' });
+    // Gestors can see only themselves (needed for user update in frontend)
+    const { rows } = await db.query(
+      'SELECT id, name, role, "storeId" FROM "User" WHERE id = $1',
+      [requestingUser.id]
+    );
+    console.log('[get-users] Returning single user for Gestor:', rows[0]);
+    res.json(rows);
   }
-
-  const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"', []);
-  res.json(rows);
 });
 
 app.get('/api/stores', authenticateToken, async (req: Request, res: Response) => {
