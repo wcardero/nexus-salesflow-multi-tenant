@@ -46,14 +46,13 @@ export const calculateProductPrices = (
   if (product.currency === 'MN') {
     const costMN = product.costMN || 0;
     const baseMN = costMN * (1 + product.margin);
-    const commission = baseMN * commissionRate;
-    const finalMN = baseMN + commission;
-    const gestorCommissionMN = finalMN * commissionRate;
+    const gestorCommissionMN = baseMN * commissionRate;
+    const finalMN = baseMN + gestorCommissionMN;
 
     return {
       saleUSD: 0,
       baseMN,
-      commission,
+      commission: gestorCommissionMN,
       finalMN,
       priceMN: finalMN,
       gestorCommissionMN,
@@ -67,14 +66,13 @@ export const calculateProductPrices = (
   const costUSD = product.costUSD || 0;
   const saleUSD = costUSD * (1 + product.margin);
   const baseMN = saleUSD * exchangeRate.rate;
-  const commission = baseMN * commissionRate;
-  const finalMN = baseMN + commission;
-  const gestorCommissionMN = finalMN * commissionRate;
+  const gestorCommissionMN = baseMN * commissionRate;
+  const finalMN = baseMN + gestorCommissionMN;
 
   return {
     saleUSD,
     baseMN,
-    commission,
+    commission: gestorCommissionMN,
     finalMN,
     priceMN: finalMN,
     gestorCommissionMN,

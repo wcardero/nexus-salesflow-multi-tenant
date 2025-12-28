@@ -536,17 +536,19 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     let priceMN: number;
     let gestorCommissionMN: number;
 
+    const commissionRate = commission.trim() ? parseFloat(commission) / 100 : store.defaultCommissionRate;
+
     if (currency === 'MN') {
       const costMN = parseFloat(cost);
       const baseMN = costMN * (1 + parsedMargin);
-      priceMN = baseMN;
-      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+      gestorCommissionMN = baseMN * commissionRate;
+      priceMN = baseMN + gestorCommissionMN;
     } else {
       const costUSD = parseFloat(cost);
       const saleUSD = costUSD * (1 + parsedMargin);
       const baseMN = saleUSD * currentExchangeRate.rate;
-      priceMN = baseMN;
-      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+      gestorCommissionMN = baseMN * commissionRate;
+      priceMN = baseMN + gestorCommissionMN;
     }
 
     const newProduct: Omit<Product, 'id'> = {
@@ -554,7 +556,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       costUSD: currency === 'USD' ? parseFloat(cost) : undefined,
       costMN: currency === 'MN' ? parseFloat(cost) : undefined,
       margin: parsedMargin,
-      commissionRate: commission.trim() ? parseFloat(commission) / 100 : undefined,
+      commissionRate: commission.trim() ? commissionRate : undefined,
       storeId: store.id,
       currency,
       priceMN,
@@ -779,6 +781,9 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
               <div className="flex justify-between items-start">
                 <div>
                   <span className="font-medium text-slate-900 dark:text-slate-200">{p.name}</span>
+                  <span className="ml-2 text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-600/30 text-slate-600 dark:text-slate-300 rounded-md">
+                    {p.currency || 'USD'}
+                  </span>
                   {assigned && (
                     <span className="ml-2 text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
                       Asignado a gestor
@@ -786,8 +791,14 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Costo: ${p.costUSD} | Margen: {(p.margin*100).toFixed(1)}% | Comisión gestor: {commissionLabel}</div>
-                  {currentExchangeRate && (
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Costo: {p.currency === 'MN' ? `${formatCurrency(p.costMN || 0)}` : `$${p.costUSD}`} | Margen: {(p.margin*100).toFixed(1)}% | Comisión gestor: {commissionLabel}
+                  </div>
+                  {p.priceMN ? (
+                    <div className="text-base font-bold text-sky-600 dark:text-sky-400">
+                      Precio: {formatCurrency(p.priceMN)}
+                    </div>
+                  ) : currentExchangeRate && (
                     <div className="text-base font-bold text-sky-600 dark:text-sky-400">
                       Precio: {formatCurrency(prices.finalMN)}
                     </div>
@@ -1122,6 +1133,32 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
     storeGestores.some(g => g.id === ai.gestorId)
   );
 
+  // Group confirmed inventory by product, gestor, and price
+  interface InventoryGroup {
+    product: Product | undefined;
+    gestor: User | undefined;
+    quantity: number;
+    priceMN?: number;
+  }
+
+  const groupedAssignedInventory = React.useMemo(() => {
+    const groups: { [key: string]: InventoryGroup } = {};
+
+    db.assignedInventory
+      .filter(ai => storeGestores.some(g => g.id === ai.gestorId) && ai.status === 'Confirmed')
+      .forEach(ai => {
+        const key = `${ai.productId}-${ai.gestorId}-${ai.priceMN || 'pending'}`;
+        if (!groups[key]) {
+          const product = db.products.find(p => p.id === ai.productId);
+          const gestor = db.users.find(u => u.id === ai.gestorId);
+          groups[key] = { product, gestor, quantity: 0, priceMN: ai.priceMN };
+        }
+        groups[key].quantity += ai.quantity;
+      });
+
+    return groups;
+  }, [db.assignedInventory, storeGestores, db.products, db.users]);
+
   return(
     <div>
       <h3 className="text-lg font-bold mb-4">Asignar Inventario a Gestores</h3>
@@ -1130,40 +1167,81 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
         <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
         <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
         <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
-      </form>
-       {/* Simple inventory list */}
-       <h4 className="font-bold mt-6 mb-2">Inventario Asignado a Gestores</h4>
-       <div className="overflow-x-auto">
+       </form>
+       {/* Pending inventory list */}
+       <h4 className="font-bold mt-6 mb-2">Inventario Pendiente de Aceptación</h4>
+       <div className="overflow-x-auto mb-6">
          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
            <thead className="bg-slate-50 dark:bg-slate-700">
              <tr>
                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
              </tr>
            </thead>
            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-             {assignedInventory.length > 0 ? assignedInventory.map(ai => {
-               const product = db.products.find(p => p.id === ai.productId);
-               const gestor = db.users.find(u => u.id === ai.gestorId);
-               return (
-                 <tr key={ai.id}>
-                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                     {product?.name || 'Producto desconocido'}
-                   </td>
-                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                     {gestor?.name || 'Gestor desconocido'}
-                   </td>
-                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                     {ai.quantity}
-                   </td>
-                 </tr>
-               );
-             }) : (
-               <tr>
-                 <td colSpan={3} className="px-6 py-4 text-center text-sm text-slate-500">No hay inventario asignado.</td>
-               </tr>
-             )}
+              {assignedInventory.filter(ai => ai.status === 'Pending').length > 0 ? assignedInventory.filter(ai => ai.status === 'Pending').map(ai => {
+                const product = db.products.find(p => p.id === ai.productId);
+                const gestor = db.users.find(u => u.id === ai.gestorId);
+                return (
+                  <tr key={ai.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                      {product?.name || 'Producto desconocido'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                      {gestor?.name || 'Gestor desconocido'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                      {ai.quantity}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-600 dark:text-amber-400">
+                      Pendiente
+                    </td>
+                  </tr>
+                );
+              }) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">No hay inventario pendiente.</td>
+                </tr>
+              )}
+           </tbody>
+         </table>
+       </div>
+
+       {/* Confirmed inventory grouped by price */}
+       <h4 className="font-bold mt-6 mb-2">Inventario Confirmado (Agrupado por Precio)</h4>
+       <div className="overflow-x-auto">
+         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+           <thead className="bg-slate-50 dark:bg-slate-700">
+             <tr>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio</th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad Total</th>
+             </tr>
+           </thead>
+           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+              {Object.keys(groupedAssignedInventory).length > 0 ? (Object.values(groupedAssignedInventory) as InventoryGroup[]).map((group, idx) => (
+                <tr key={idx}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                    {group.product?.name || 'Producto desconocido'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                    {group.gestor?.name || 'Gestor desconocido'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                    {group.priceMN ? formatCurrency(group.priceMN) : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                    {group.quantity}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">No hay inventario confirmado.</td>
+                </tr>
+              )}
            </tbody>
          </table>
        </div>

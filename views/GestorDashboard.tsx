@@ -89,6 +89,40 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
     return items;
   }, [db.assignedInventory, user.id]);
 
+  // Group inventory by product and price for display
+  interface InventoryGroup {
+    quantity: number;
+    priceMN: number;
+    assignedAt: Date;
+    items: InventoryItem[];
+  }
+
+  const groupedInventory = useMemo(() => {
+    const groups: { [key: string]: InventoryGroup } = {};
+
+    db.assignedInventory
+      .filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed')
+      .forEach(ai => {
+        const key = `${ai.productId}-${ai.priceMN}`;
+        if (!groups[key]) {
+          groups[key] = { quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, items: [] };
+        }
+        groups[key].quantity += ai.quantity;
+        
+        for (let i = 0; i < ai.quantity; i++) {
+          groups[key].items.push({
+            id: `${ai.id}-${i}`,
+            productId: ai.productId,
+            gestorId: ai.gestorId,
+            assignedAt: ai.assignedAt,
+            status: 'Available'
+          });
+        }
+      });
+
+    return groups;
+  }, [db.assignedInventory, user.id]);
+
   const gestorSales = useMemo(() => db.sales.filter(sale => sale.gestorId === user.id), [db.sales, user.id]);
   const gestorClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id), [db.closings, user.id]);
 
@@ -114,6 +148,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
             gestorSalesSinceLastClosing={gestorSales.filter(sale => !gestorClosings.some(c => c.sales.some(s => s.id === sale.id)))}
             productsById={productsById}
             currentRate={currentRate}
+            groupedInventory={groupedInventory}
           />
         );
       case 'reports':
@@ -168,9 +203,10 @@ interface SalesViewProps extends GestorDashboardProps {
   gestorSalesSinceLastClosing: Sale[];
   productsById: { [key: string]: Product };
   currentRate: ReturnType<typeof getCurrentExchangeRate>;
+  groupedInventory: { [key: string]: any };
 }
 
-const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInventory, gestorSalesSinceLastClosing, productsById, currentRate }) => {
+const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInventory, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
   const handleSellItem = (inventoryItem: InventoryItem) => {
     if (!currentRate) {
       alert('Error: No hay un tipo de cambio activo para esta tienda.');
@@ -258,32 +294,36 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio de Venta</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-              {gestorInventory.map(item => {
-                const product = productsById[item.productId];
-                if (!product || !currentRate) return null;
-                const prices = calculateProductPrices(product, currentRate, store.defaultCommissionRate);
+              {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
+                const productId = key.split('-')[0];
+                const product = productsById[productId];
+                if (!product) return null;
                 return (
-                  <tr key={item.id}>
+                  <tr key={key}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(prices.finalMN)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleSellItem(item)}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
-                      >
-                        Vender
-                      </button>
+                      {group.items.length > 0 && (
+                        <button
+                          onClick={() => handleSellItem(group.items[0])}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
+                        >
+                          Vender
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
               })}
-              {gestorInventory.length === 0 && (
+              {Object.keys(groupedInventory).length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
                 </tr>
               )}
             </tbody>

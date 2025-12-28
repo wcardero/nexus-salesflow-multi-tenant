@@ -1242,26 +1242,68 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     }
 
     try {
-      const result = await db.query(
-        'UPDATE "AssignedInventory" SET status = $1, "confirmedAt" = $2 WHERE id = $3 AND "gestorId" = $4 RETURNING *',
-        ['Confirmed', new Date(), id, requestingUser.id]
+      // Get the inventory to confirm and calculate price
+      const assignedResult = await db.query(
+        'SELECT ai.*, p."costUSD", p.margin, er.rate FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id JOIN "ExchangeRate" er ON p."storeId" = er."storeId" WHERE ai.id = $1 AND er."endDate" IS NULL',
+        [id]
       );
 
-      if (result.rows.length === 0) {
+      if (assignedResult.rows.length === 0) {
         return res.status(404).json({ message: 'Inventory not found or not assigned to you.' });
       }
 
-      await createAuditLog(
-        requestingUser.id,
-        'CONFIRM_INVENTORY',
-        'AssignedInventory',
-        id,
-        null,
-        { status: 'Confirmed' },
-        requestingUser.storeId
+      const assigned = assignedResult.rows[0];
+      const priceMN = assigned.costUSD * (1 + assigned.margin) * assigned.rate;
+
+      // Check if there's already confirmed inventory for the same product and gestor with the same price
+      const existingResult = await db.query(
+        'SELECT * FROM "AssignedInventory" WHERE "productId" = $1 AND "gestorId" = $2 AND status = $3 AND "priceMN" = $4 AND id != $5',
+        [assigned.productId, requestingUser.id, 'Confirmed', priceMN, id]
       );
 
-      res.json(result.rows[0]);
+      if (existingResult.rows.length > 0) {
+        // Update existing confirmed inventory by adding quantity
+        const existing = existingResult.rows[0];
+        const updatedQuantity = existing.quantity + assigned.quantity;
+
+        await db.query(
+          'UPDATE "AssignedInventory" SET quantity = $1 WHERE id = $2',
+          [updatedQuantity, existing.id]
+        );
+
+        // Delete the new pending inventory record
+        await db.query('DELETE FROM "AssignedInventory" WHERE id = $1', [id]);
+
+        await createAuditLog(
+          requestingUser.id,
+          'CONFIRM_AND_MERGE_INVENTORY',
+          'AssignedInventory',
+          existing.id,
+          { oldQuantity: existing.quantity, oldPriceMN: existing.priceMN },
+          { newQuantity: updatedQuantity, newPriceMN: priceMN, mergedFrom: id },
+          requestingUser.storeId
+        );
+
+        return res.json({ ...existing, quantity: updatedQuantity });
+      } else {
+        // No existing inventory with same price, just confirm and set price
+        const result = await db.query(
+          'UPDATE "AssignedInventory" SET status = $1, "confirmedAt" = $2, "priceMN" = $3 WHERE id = $4 AND "gestorId" = $5 RETURNING *',
+          ['Confirmed', new Date(), priceMN, id, requestingUser.id]
+        );
+
+        await createAuditLog(
+          requestingUser.id,
+          'CONFIRM_INVENTORY',
+          'AssignedInventory',
+          id,
+          null,
+          { status: 'Confirmed', priceMN },
+          requestingUser.storeId
+        );
+
+        return res.json(result.rows[0]);
+      }
     } catch (error: any) {
       console.error('Confirm inventory error:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -1320,7 +1362,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     }
   });
 
-  app.get('/api/products', authenticateToken, async (req, res) => {
+   app.get('/api/products', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
 
   let storeCondition = '';
@@ -1345,180 +1387,6 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
 app.get('/api/inventory', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
-// Validation middleware for product creation/update
-const validateProduct = [
-  body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Product name must be between 1 and 100 characters'),
-  body('costUSD').isFloat({ min: 0.01 }).withMessage('Cost must be a positive number'),
-  body('margin').isFloat({ min: 0, max: 1 }).withMessage('Margin must be between 0 and 100%'),
-  body('commissionRate').optional().isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be between 0 and 100%'),
-  body('storeId').optional().isUUID().withMessage('Store ID must be a valid UUID'),
-];
-
-app.post('/api/products', authenticateToken, validateProduct, async (req, res) => {
-  const requestingUser = (req as any).user;
-
-  if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Director') {
-    return res.status(403).json({ message: 'Only Managers and Directors can create products.' });
-  }
-
-  const { name, costUSD, margin, commissionRate, storeId } = req.body;
-
-  if (!name || !costUSD || margin === undefined) {
-    return res.status(400).json({ message: 'Name, cost, and margin are required' });
-  }
-
-// Endpoint to get inventory conflicts
-app.get('/api/inventory-conflicts', authenticateToken, async (req, res) => {
-    const requestingUser = (req as any).user;
-
-    if (requestingUser.role !== 'Manager') {
-      return res.status(403).json({ message: 'Only Managers can view conflicts.' });
-    }
-
-    try {
-      const result = await db.query(
-        `SELECT ic.*, ai."productId", ai.quantity, p.name as productName, g.name as gestorName
-         FROM "InventoryConflict" ic
-         JOIN "AssignedInventory" ai ON ic."assignedInventoryId" = ai.id
-         JOIN "Product" p ON ai."productId" = p.id
-         JOIN "User" g ON ic.gestorId = g.id
-         WHERE ic.status = 'Pending'`
-      );
-      res.json(result.rows);
-    } catch (error: any) {
-      console.error('Fetch conflicts error:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-
-  const finalStoreId = storeId || requestingUser.storeId;
-
-  if (requestingUser.role === 'Director' && !finalStoreId) {
-    return res.status(400).json({ message: 'Directors must provide their store ID when creating products.' });
-  }
-
-  try {
-    const productId = 'prod-' + Date.now();
-    const result = await db.query(
-      'INSERT INTO "Product" (id, name, "costUSD", margin, "commissionRate", "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [productId, name, parseFloat(costUSD), parseFloat(margin), commissionRate ? parseFloat(commissionRate) : null, finalStoreId]
-    );
-
-    console.log('[create-product] Product created:', result.rows[0]);
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Product creation error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-app.put('/api/products/:id', authenticateToken, validateProduct, async (req, res) => {
-  const requestingUser = (req as any).user;
-  const { id } = req.params;
-
-  if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Director') {
-    return res.status(403).json({ message: 'Only Managers and Directors can update products.' });
-  }
-
-  const { name, costUSD, margin, commissionRate } = req.body;
-
-  if (!name || !costUSD || margin === undefined) {
-    return res.status(400).json({ message: 'Name, cost, and margin are required' });
-  }
-
-  try {
-    const existingProduct = await db.query('SELECT * FROM "Product" WHERE id = $1', [id]);
-    if (existingProduct.rows.length === 0) {
-      return res.status(404).json({ message: 'Product not found.' });
-    }
-
-    const product = existingProduct.rows[0];
-
-    // Check if product is assigned to any gestor
-    const assignedCheck = await db.query(
-      'SELECT COUNT(*) FROM "InventoryItem" WHERE "productId" = $1',
-      [id]
-    );
-    const isAssigned = parseInt(assignedCheck.rows[0].count) > 0;
-
-    if (isAssigned) {
-      return res.status(400).json({ message: 'El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.' });
-    }
-
-    const updateFields = [];
-    const updateValues = [];
-
-    if (name !== undefined) {
-      updateFields.push('name');
-      updateValues.push(name);
-    }
-    if (costUSD !== undefined) {
-      updateFields.push('"costUSD"');
-      updateValues.push(parseFloat(costUSD));
-    }
-    if (margin !== undefined) {
-      updateFields.push('margin');
-      updateValues.push(parseFloat(margin));
-    }
-    if (commissionRate !== undefined) {
-      updateFields.push('"commissionRate"');
-      updateValues.push(parseFloat(commissionRate));
-    }
-
-    const updateSetClause = updateFields.map((f, i) => '"' + f + '" = $' + (i + 1)).join(', ');
-
-    const result = await db.query(
-      'UPDATE "Product" SET ' + updateSetClause + ' WHERE id = $1 RETURNING *',
-      updateValues.concat([id])
-    );
-
-    console.log('[update-product] Product updated:', result.rows[0]);
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Product update error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-app.delete('/api/products/:id', authenticateToken, async (req, res) => {
-  const requestingUser = (req as any).user;
-  const { id } = req.params;
-
-  if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Director') {
-    return res.status(403).json({ message: 'Only Managers and Directors can delete products.' });
-  }
-
-  try {
-    const existingProduct = await db.query('SELECT * FROM "Product" WHERE id = $1', [id]);
-    if (existingProduct.rows.length === 0) {
-      return res.status(404).json({ message: 'Product not found.' });
-    }
-
-    const product = existingProduct.rows[0];
-
-    // Check if product is assigned to any gestor
-    const assignedCheck = await db.query(
-      'SELECT COUNT(*) FROM "InventoryItem" WHERE "productId" = $1',
-      [id]
-    );
-    const isAssigned = parseInt(assignedCheck.rows[0].count) > 0;
-
-    if (isAssigned) {
-      return res.status(400).json({ message: 'El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.' });
-    }
-
-    await db.query('DELETE FROM "Product" WHERE id = $1', [id]);
-
-    console.log('[delete-product] Product deleted:', id);
-
-    res.json({ message: 'Product deleted successfully.' });
-  } catch (error) {
-    console.error('Product deletion error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
   let condition = '';
   const params: any[] = [];
 
@@ -1938,6 +1806,27 @@ app.post('/api/admin/migrate-inventory-status', authenticateToken, async (req: R
   }
 });
 
+// Temporary endpoint to execute product columns migration
+app.post('/api/admin/migrate-product-columns', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Only admins can execute migrations.' });
+  }
+
+  try {
+    await db.query('ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "createdBy" TEXT');
+    await db.query('ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "priceMN" REAL');
+    await db.query('ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "gestorCommissionMN" REAL');
+
+    console.log('[migration] Product columns migration executed successfully');
+    res.json({ success: true, message: 'Migration executed successfully' });
+  } catch (error: any) {
+    console.error('[migration] Error executing migration:', error);
+    res.status(500).json({ message: 'Migration failed', error: String(error) });
+  }
+});
+
 app.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
 });
@@ -1950,10 +1839,12 @@ app.listen(PORT, () => {
 // Validation middleware for product creation/update
 const validateProduct = [
   body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Product name must be between 1 and 100 characters'),
-  body('costUSD').isFloat({ min: 0.01 }).withMessage('Cost must be a positive number'),
+  body('costUSD').optional().isFloat({ min: 0.01 }).withMessage('Cost USD must be a positive number'),
+  body('costMN').optional().isFloat({ min: 0.01 }).withMessage('Cost MN must be a positive number'),
   body('margin').isFloat({ min: 0, max: 1 }).withMessage('Margin must be between 0 and 100%'),
-  body('commissionRate').optional().isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be between 0 and 100%'),
+  body('commissionRate').optional().isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be entre 0 y 100%'),
   body('storeId').optional().isUUID().withMessage('Store ID must be a valid UUID'),
+  body('currency').optional().isIn(['USD', 'MN']).withMessage('Currency must be USD or MN'),
 ];
 
 app.post('/api/products', authenticateToken, validateProduct, async (req: Request, res: Response, next: any) => {
@@ -1998,36 +1889,48 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
       return res.status(404).json({ message: 'Store not found.' });
     }
     const store = storeResult.rows[0];
-    const exchangeRate = store.exchangeRates.find(xr => !xr.endDate);
 
-    if (!exchangeRate && currency === 'USD') {
+    // Get current exchange rate
+    const exchangeRateResult = await db.query(
+      'SELECT * FROM "ExchangeRate" WHERE "storeId" = $1 AND "endDate" IS NULL',
+      [finalStoreId]
+    );
+    const exchangeRate = exchangeRateResult.rows.length > 0 ? exchangeRateResult.rows[0] : null;
+
+    if (!exchangeRate && (currency === 'USD' || !currency)) {
       return res.status(400).json({ message: 'No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en USD.' });
     }
 
-    const parsedMargin = parseFloat(margin) / 100;
+    const parsedMargin = parseFloat(margin);
     let priceMN: number;
     let gestorCommissionMN: number;
+
+    const parsedCommissionRate = commissionRate ? parseFloat(commissionRate) : store.defaultCommissionRate;
 
     // Calculate prices based on currency
     if (currency === 'MN') {
       // Cost is in MN, no exchange rate needed
+      if (!costMN) {
+        return res.status(400).json({ message: 'Cost is required when currency is MN.' });
+      }
       const baseMN = costMN * (1 + parsedMargin);
-      priceMN = baseMN;
-      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+      gestorCommissionMN = baseMN * parsedCommissionRate;
+      priceMN = baseMN + gestorCommissionMN;
     } else {
       // Cost is in USD, use exchange rate
+      if (!costUSD) {
+        return res.status(400).json({ message: 'Cost is required when currency is USD.' });
+      }
       const costUSDNum = parseFloat(costUSD);
       const saleUSD = costUSDNum * (1 + parsedMargin);
-      const baseMN = saleUSD * exchangeRate.rate;
-      priceMN = baseMN;
-      gestorCommissionMN = priceMN * (store.defaultCommissionRate);
+      const baseMN = saleUSD * exchangeRate!.rate;
+      gestorCommissionMN = baseMN * parsedCommissionRate;
+      priceMN = baseMN + gestorCommissionMN;
     }
 
-    const parsedCommissionRate = commissionRate ? parseFloat(commissionRate) : store.defaultCommissionRate;
-
     // Check for duplicate product name within manager's store
-    const nameCheckQuery = 'SELECT COUNT(*) FROM "Product" WHERE name = $1 AND "createdBy" = $2 AND id != $3';
-    const nameCheckParams = [name, requestingUser.id, 'ignore'];
+    const nameCheckQuery = 'SELECT COUNT(*) FROM "Product" WHERE name = $1 AND "storeId" = $2';
+    const nameCheckParams = [name, finalStoreId];
     const nameCheckResult = await db.query(nameCheckQuery, nameCheckParams);
     const nameCount = parseInt(nameCheckResult.rows[0].count);
 
@@ -2036,9 +1939,11 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     }
 
     const productId = 'prod-' + Date.now();
+    const finalCostUSD = currency === 'USD' ? costUSD : null;
+    const finalCostMN = currency === 'MN' ? costMN : null;
     const result = await db.query(
-      'INSERT INTO "Product" (id, name, "costUSD", margin, "commissionRate", "storeId", "createdBy", currency, "priceMN", "gestorCommissionMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
-      [productId, name, costUSD || null, parsedMargin, commissionRate ? parsedCommissionRate : null, finalStoreId, requestingUser.id, currency || 'USD', priceMN, gestorCommissionMN]
+      'INSERT INTO "Product" (id, name, "costUSD", "costMN", margin, "commissionRate", "storeId", "createdBy", currency, "priceMN", "gestorCommissionMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+      [productId, name, finalCostUSD, finalCostMN, parsedMargin, commissionRate ? parsedCommissionRate : null, finalStoreId, requestingUser.id, currency || 'USD', priceMN, gestorCommissionMN]
     );
 
     console.log('[create-product] Product created:', result.rows[0]);
@@ -2069,10 +1974,14 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
     return res.status(403).json({ message: 'Only Managers and Directors can update products.' });
   }
 
-  const { name, costUSD, margin, commissionRate } = req.body;
+  const { name, costUSD, costMN, margin, commissionRate, currency } = req.body;
 
-  if (!name || !costUSD || margin === undefined) {
-    return res.status(400).json({ message: 'Name, cost, and margin are required' });
+  if (!name || margin === undefined) {
+    return res.status(400).json({ message: 'Name and margin are required' });
+  }
+
+  if (!costUSD && !costMN) {
+    return res.status(400).json({ message: 'Cost (USD or MN) is required.' });
   }
 
   try {
@@ -2093,28 +2002,50 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
       return res.status(400).json({ message: 'El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.' });
     }
 
-    if (name !== undefined && name !== product.name) {
-      const duplicateCheck = await db.query(
-        'SELECT id FROM "Product" WHERE name = $1 AND "createdBy" = $2 AND id != $3',
-        [name, requestingUser.id, id]
-      );
-      if (duplicateCheck.rows.length > 0) {
-        return res.status(409).json({ message: 'Ya tienes un producto con ese nombre.' });
+    // Get store for recalculation
+    const storeResult = await db.query('SELECT * FROM "Store" WHERE id = $1', [product.storeId]);
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Store not found.' });
+    }
+    const store = storeResult.rows[0];
+
+    // Get current exchange rate
+    const exchangeRateResult = await db.query(
+      'SELECT * FROM "ExchangeRate" WHERE "storeId" = $1 AND "endDate" IS NULL',
+      [product.storeId]
+    );
+    const exchangeRate = exchangeRateResult.rows.length > 0 ? exchangeRateResult.rows[0] : null;
+
+    const finalCurrency = currency || product.currency || 'USD';
+    const finalCostUSD = costUSD !== undefined ? costUSD : product.costUSD;
+    const finalCostMN = costMN !== undefined ? costMN : product.costMN;
+    const parsedMargin = parseFloat(margin);
+    const parsedCommissionRate = commissionRate ? parseFloat(commissionRate) : store.defaultCommissionRate;
+
+    // Recalculate prices
+    let priceMN: number;
+    let gestorCommissionMN: number;
+
+    if (finalCurrency === 'MN') {
+      if (!finalCostMN) {
+        return res.status(400).json({ message: 'Cost is required when currency is MN.' });
       }
+      const baseMN = finalCostMN * (1 + parsedMargin);
+      gestorCommissionMN = baseMN * parsedCommissionRate;
+      priceMN = baseMN + gestorCommissionMN;
+    } else {
+      if (!finalCostUSD) {
+        return res.status(400).json({ message: 'Cost is required when currency is USD.' });
+      }
+      const saleUSD = finalCostUSD * (1 + parsedMargin);
+      const baseMN = saleUSD * exchangeRate!.rate;
+      gestorCommissionMN = baseMN * parsedCommissionRate;
+      priceMN = baseMN + gestorCommissionMN;
     }
 
-    const updateFields = [];
-    const updateValues = [];
-    if (name !== undefined) { updateFields.push('name'); updateValues.push(name); }
-    if (costUSD !== undefined) { updateFields.push('"costUSD"'); updateValues.push(parseFloat(costUSD)); }
-    if (margin !== undefined) { updateFields.push('margin'); updateValues.push(parseFloat(margin)); }
-    if (commissionRate !== undefined) { updateFields.push('"commissionRate"'); updateValues.push(parseFloat(commissionRate)); }
-
-    const updateSetClause = updateFields.map((f, i) => '"' + f + '" = $' + (i + 1)).join(', ');
-
     const result = await db.query(
-      'UPDATE "Product" SET ' + updateSetClause + ' WHERE id = $1 RETURNING *',
-      updateValues.concat([id])
+      'UPDATE "Product" SET name = $1, "costUSD" = $2, "costMN" = $3, margin = $4, "commissionRate" = $5, currency = $6, "priceMN" = $7, "gestorCommissionMN" = $8 WHERE id = $9 RETURNING *',
+      [name, finalCostUSD, finalCostMN, parsedMargin, parsedCommissionRate, finalCurrency, priceMN, gestorCommissionMN, id]
     );
 
     console.log('[update-product] Product updated:', result.rows[0]);
@@ -2168,8 +2099,31 @@ app.delete('/api/products/:id', authenticateToken, async (req: Request, res: Res
 });
 
 app.get('/api/inventory', authenticateToken, async (req: Request, res: Response, next: any) => {
+  const requestingUser = (req as any).user;
+
+  let condition = '';
+  const params: any[] = [];
+
+  if (requestingUser.role === 'Manager') {
+    // Managers can see inventory for their stores
+    condition = `WHERE "gestorId" IN (
+      SELECT u.id FROM "User" u
+      WHERE u."storeId" IN (
+        SELECT stum."A" FROM "_StoreToUser" stum
+        JOIN "User" mgr ON stum."B" = mgr.id
+        WHERE mgr.id = $1
+      )
+    )`;
+    params.push(requestingUser.id);
+  } else if (requestingUser.role === 'Gestor') {
+    // Gestors can only see their own inventory
+    condition = 'WHERE "gestorId" = $1';
+    params.push(requestingUser.id);
+  }
+
   try {
-    const result = await db.query('SELECT * FROM "Product"');
+    const query = `SELECT * FROM "InventoryItem" ${condition}`;
+    const result = await db.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Inventory fetch error:', error);

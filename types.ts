@@ -93,6 +93,7 @@ export interface AssignedInventory {
   status: 'Pending' | 'Confirmed' | 'Rejected';
   confirmedAt?: Date;
   rejectionReason?: string;
+  priceMN?: number;
 }
 
 /**
