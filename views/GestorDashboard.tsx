@@ -111,17 +111,10 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const groupedInventory = useMemo(() => {
     const groups: { [key: string]: InventoryGroup } = {};
 
-    console.log('[GestorDashboard] groupedInventory - filtering...');
-    console.log('[GestorDashboard] groupedInventory - user.id:', user.id);
-
     db.assignedInventory
-      .filter(ai => {
-        const matches = ai.gestorId === user.id && ai.status === 'Confirmed';
-        console.log('[GestorDashboard] groupedInventory - item:', ai, 'matches?', matches);
-        return matches;
-      })
+      .filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed')
       .forEach(ai => {
-        const key = `${ai.productId}-${ai.priceMN}`;
+        const key = `${ai.productId}`; // Use only productId for key, not productId + priceMN
         if (!groups[key]) {
           groups[key] = { quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, items: [] };
         }
