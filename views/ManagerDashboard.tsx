@@ -747,7 +747,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  Comisión gestor % (def: {(store.defaultCommissionRate * 100).toFixed(0)}%)
+                  Comisión gestor %
                 </label>
                 <input
                   value={editingCommission}
@@ -788,7 +788,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           <input
             value={commission}
             onChange={e => setCommission(e.target.value)}
-            placeholder={`Comisión gestor % (def: ${(store.defaultCommissionRate * 100).toFixed(0)}%)`}
+            placeholder="Comisión gestor %"
             type="number"
             min="0"
             max="100"
