@@ -795,7 +795,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={!currentExchangeRate || (currency === 'USD' && !hasProductsInUSD) || (currency === 'MN' && !currentExchangeRate)} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
+          <button type="submit" disabled={!currentExchangeRate} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
