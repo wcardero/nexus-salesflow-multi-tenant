@@ -102,6 +102,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   // Group inventory by product and price for display
   interface InventoryGroup {
+    productId: string;
     quantity: number;
     priceMN: number;
     assignedAt: Date;
@@ -111,12 +112,14 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const groupedInventory = useMemo(() => {
     const groups: { [key: string]: InventoryGroup } = {};
 
+    // PRIMERO filtrar por gestorId para que cada gestor solo vea sus asignaciones
     db.assignedInventory
       .filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed')
       .forEach(ai => {
-        const key = `${ai.productId}`; // Use only productId for key, not productId + priceMN
+        // Key includes both productId and gestorId to separate assignments by gestor
+        const key = `${ai.productId}-${ai.gestorId}`;
         if (!groups[key]) {
-          groups[key] = { quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, items: [] };
+          groups[key] = { productId: ai.productId, quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, items: [] };
         }
         groups[key].quantity += ai.quantity;
         
@@ -238,9 +241,11 @@ interface SalesViewProps extends GestorDashboardProps {
 
 const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInventory, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
   console.log('[SalesView] Component mounted');
+  console.log('[SalesView] user.id:', user.id);
   console.log('[SalesView] groupedInventory keys:', Object.keys(groupedInventory));
+  console.log('[SalesView] groupedInventory:', groupedInventory);
   console.log('[SalesView] gestorInventory length:', gestorInventory.length);
-
+  
   const handleSellItem = (inventoryItem: InventoryItem) => {
     if (!currentRate) {
       alert('Error: No hay un tipo de cambio activo para esta tienda.');
@@ -335,15 +340,14 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                 {console.log('[SalesView] About to render groupedInventory entries:', Object.entries(groupedInventory).length)}
                 {console.log('[SalesView] groupedInventory:', groupedInventory)}
-                {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
+                {(Object.entries(groupedInventory) as [string, InventoryGroup][]).map(([key, group]) => {
                   console.log('[SalesView] Rendering group:', key, 'group:', group);
                   console.log('[SalesView] group.items.length:', group.items.length);
-                  const productId = key.split('-')[0];
-                  const product = productsById[productId];
+                  const product = productsById[group.productId];
                   console.log('[SalesView] product:', product);
                   console.log('[SalesView] product.name:', product ? product.name : 'NOT FOUND');
                   if (!product) {
-                    console.log('[SalesView] Returning null for product:', productId);
+                    console.log('[SalesView] Returning null for product:', group.productId);
                     return null;
                   }
                   console.log('[SalesView] About to return table row');
