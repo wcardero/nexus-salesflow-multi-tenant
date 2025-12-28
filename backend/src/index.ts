@@ -1280,10 +1280,11 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         // Update existing confirmed inventory by adding quantity
         const existing = existingResult.rows[0];
         const updatedQuantity = existing.quantity + assigned.quantity;
-
+        const priceMN = assigned.priceMN;
+        
         await db.query(
-          'UPDATE "AssignedInventory" SET quantity = $1 WHERE id = $2',
-          [updatedQuantity, existing.id]
+          'UPDATE "AssignedInventory" SET quantity = $1, "priceMN" = $2 WHERE id = $3',
+          [updatedQuantity, priceMN, existing.id]
         );
 
         // Delete the new pending inventory record
