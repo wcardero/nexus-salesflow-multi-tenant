@@ -140,8 +140,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
+      console.log('[App.tsx] checkAuthAndLoadData called');
       const token = localStorage.getItem('token');
       const userJson = localStorage.getItem('user');
+      console.log('[App.tsx] checkAuthAndLoadData - token exists:', !!token);
+      console.log('[App.tsx] checkAuthAndLoadData - userJson exists:', !!userJson);
 
       if (token && userJson) {
         // If there's a token, try to load the database
@@ -155,13 +158,16 @@ const App: React.FC = () => {
             },
           });
 
-          if (response.ok) {
-            // Token is valid, load the full database
-            await refreshDb(user.role);
-          } else {
-            // Token is invalid/expired, remove it and show login
-            handleLogout();
-          }
+           if (response.ok) {
+             // Token is valid, load full database
+             console.log('[App.tsx] Token is valid, calling refreshDb');
+             await refreshDb(user.role);
+             console.log('[App.tsx] refreshDb completed, current db state:', !!db);
+           } else {
+             // Token is invalid/expired, remove it and show login
+             console.log('[App.tsx] Token is invalid, calling handleLogout');
+             handleLogout();
+           }
         } catch (err) {
           // Network error or other issue, remove token and show login
           handleLogout();
@@ -186,7 +192,8 @@ const App: React.FC = () => {
     refreshDb(user.role); // Refresh data after login, especially if a new user was created
   };
 
-  const handleLogout = () => {
+   const handleLogout = () => {
+    console.log('[App.tsx] handleLogout called');
     setCurrentUser(null);
     setDb(null);
     setCurrentView('dashboard');
@@ -202,12 +209,13 @@ const App: React.FC = () => {
     );
   }
 
-  if (!currentUser) {
-    return <Login onLogin={handleLogin} />;
-  }
+   if (!currentUser) {
+     return <Login onLogin={handleLogin} />;
+   }
 
   if (!db) {
     // If database is still null after auth check, load empty data for Login component
+    console.log('[App.tsx] db is null, showing Loading database...');
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
         <p>Loading database...</p>
