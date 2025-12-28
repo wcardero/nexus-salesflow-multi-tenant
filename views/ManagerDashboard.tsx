@@ -528,7 +528,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     e.preventDefault();
     if (!name.trim() || !cost || !margin) return;
 
-    if (currency === 'MN' && !currentExchangeRate) {
+    if (currency === 'USD' && !currentExchangeRate) {
       alert('No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en USD.');
       return;
     }
@@ -547,7 +547,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } else {
       const costUSD = parseFloat(cost);
       const saleUSD = costUSD * (1 + parsedMargin);
-      const baseMN = saleUSD * currentExchangeRate.rate;
+      const baseMN = saleUSD * currentExchangeRate!.rate;
       gestorCommissionMN = baseMN * commissionRate;
       priceMN = baseMN + gestorCommissionMN;
     }
