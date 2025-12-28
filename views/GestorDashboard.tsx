@@ -333,40 +333,45 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
               </tr>
              </thead>
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                {console.log('[SalesView] Rendering table, Object.entries(groupedInventory) length:', Object.entries(groupedInventory).length)}
+                {console.log('[SalesView] About to render groupedInventory entries:', Object.entries(groupedInventory).length)}
+                {console.log('[SalesView] groupedInventory:', groupedInventory)}
                 {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
                   console.log('[SalesView] Rendering group:', key, 'group:', group);
                   console.log('[SalesView] group.items.length:', group.items.length);
-                 const productId = key.split('-')[0];
-                 const product = productsById[productId];
-                 console.log('[SalesView] product:', product);
-                 console.log('[SalesView] product.name:', product ? product.name : 'NOT FOUND');
-                 if (!product) return null;
-                 return (
-                   <tr key={key}>
-                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
-                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
-                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                       {console.log('[SalesView] group.items.length > 0:', group.items.length > 0)}
-                       {group.items.length > 0 && (
-                         <button
-                           onClick={() => handleSellItem(group.items[0])}
-                           className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
-                         >
-                           Vender
-                         </button>
-                       )}
-                     </td>
-                   </tr>
-                );
-              })}
-              {Object.keys(groupedInventory).length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
-                </tr>
-              )}
-            </tbody>
+                  const productId = key.split('-')[0];
+                  const product = productsById[productId];
+                  console.log('[SalesView] product:', product);
+                  console.log('[SalesView] product.name:', product ? product.name : 'NOT FOUND');
+                  if (!product) {
+                    console.log('[SalesView] Returning null for product:', productId);
+                    return null;
+                  }
+                  console.log('[SalesView] About to return table row');
+                  return (
+                    <tr key={key}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {console.log('[SalesView] group.items.length > 0:', group.items.length > 0)}
+                        {group.items.length > 0 && (
+                          <button
+                            onClick={() => handleSellItem(group.items[0])}
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
+                          >
+                            Vender
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {Object.keys(groupedInventory).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
+                  </tr>
+                )}
+              </tbody>
           </table>
         </div>
       </div>
