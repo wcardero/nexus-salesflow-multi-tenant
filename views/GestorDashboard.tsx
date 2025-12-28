@@ -227,6 +227,10 @@ interface SalesViewProps extends GestorDashboardProps {
 }
 
 const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInventory, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
+  console.log('[SalesView] Component mounted');
+  console.log('[SalesView] groupedInventory keys:', Object.keys(groupedInventory));
+  console.log('[SalesView] gestorInventory length:', gestorInventory.length);
+
   const handleSellItem = (inventoryItem: InventoryItem) => {
     if (!currentRate) {
       alert('Error: No hay un tipo de cambio activo para esta tienda.');
@@ -317,9 +321,12 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
               </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-              {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
+             </thead>
+             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+               {console.log('[SalesView] Rendering table, Object.entries(groupedInventory) length:', Object.entries(groupedInventory).length)}
+               {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
+                 console.log('[SalesView] Rendering group:', key, 'group:', group);
+                 console.log('[SalesView] group.items.length:', group.items.length);
                 const productId = key.split('-')[0];
                 const product = productsById[productId];
                 if (!product) return null;
