@@ -147,8 +147,13 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const gestorClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id), [db.closings, user.id]);
 
   const renderContent = () => {
+    console.log('[GestorDashboard] renderContent called, activeTab:', activeTab);
+    console.log('[GestorDashboard] groupedInventory keys:', Object.keys(groupedInventory));
+    console.log('[GestorDashboard] groupedInventory:', groupedInventory);
+    
     switch (activeTab) {
       case 'inventory':
+        console.log('[GestorDashboard] Rendering inventory tab');
         return (
           <PendingInventoryView
             pendingInventory={pendingInventory}
@@ -158,6 +163,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
           />
         );
       case 'sales':
+        console.log('[GestorDashboard] Rendering sales tab');
         return (
           <SalesView
             user={user}
@@ -322,30 +328,33 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
                 <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
               </tr>
              </thead>
-             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-               {console.log('[SalesView] Rendering table, Object.entries(groupedInventory) length:', Object.entries(groupedInventory).length)}
-               {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
-                 console.log('[SalesView] Rendering group:', key, 'group:', group);
-                 console.log('[SalesView] group.items.length:', group.items.length);
-                const productId = key.split('-')[0];
-                const product = productsById[productId];
-                if (!product) return null;
-                return (
-                  <tr key={key}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {group.items.length > 0 && (
-                        <button
-                          onClick={() => handleSellItem(group.items[0])}
-                          className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
-                        >
-                          Vender
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                {console.log('[SalesView] Rendering table, Object.entries(groupedInventory) length:', Object.entries(groupedInventory).length)}
+                {(Object.entries(groupedInventory) as [string, any][]).map(([key, group]) => {
+                  console.log('[SalesView] Rendering group:', key, 'group:', group);
+                  console.log('[SalesView] group.items.length:', group.items.length);
+                 const productId = key.split('-')[0];
+                 const product = productsById[productId];
+                 console.log('[SalesView] product:', product);
+                 console.log('[SalesView] product.name:', product ? product.name : 'NOT FOUND');
+                 if (!product) return null;
+                 return (
+                   <tr key={key}>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
+                     <td className="px-6 py-4 whitespace-nowrap text-center">
+                       {console.log('[SalesView] group.items.length > 0:', group.items.length > 0)}
+                       {group.items.length > 0 && (
+                         <button
+                           onClick={() => handleSellItem(group.items[0])}
+                           className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
+                         >
+                           Vender
+                         </button>
+                       )}
+                     </td>
+                   </tr>
                 );
               })}
               {Object.keys(groupedInventory).length === 0 && (
