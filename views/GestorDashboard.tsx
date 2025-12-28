@@ -150,6 +150,17 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
     console.log('[GestorDashboard] renderContent called, activeTab:', activeTab);
     console.log('[GestorDashboard] groupedInventory keys:', Object.keys(groupedInventory));
     console.log('[GestorDashboard] groupedInventory:', groupedInventory);
+    console.log('[GestorDashboard] db.products length:', db.products.length);
+    
+    // Si products no está cargado, mostrar estado de carga
+    if (!db.products || db.products.length === 0) {
+      console.log('[GestorDashboard] Products not loaded yet, showing loading...');
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+          <p>Cargando inventario...</p>
+        </div>
+      );
+    }
     
     switch (activeTab) {
       case 'inventory':
