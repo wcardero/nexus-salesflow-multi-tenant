@@ -2081,17 +2081,11 @@ app.delete('/api/products/:id', authenticateToken, async (req: Request, res: Res
       return res.status(400).json({ message: 'El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.' });
     }
 
+    console.log('[delete-product] Deleting product:', existingProduct.rows[0]);
     await db.query('DELETE FROM "Product" WHERE id = $1', [id]);
 
-    const deletedProduct = await db.query('SELECT * FROM "Product" WHERE id = $1', [id]);
-    
-    if (deletedProduct.rows.length > 0) {
-      console.log('[delete-product] Returning deleted product:', deletedProduct.rows[0]);
-      res.json(deletedProduct.rows[0]);
-    } else {
-      console.log('[delete-product] Product not found in database');
-      res.status(404).json({ message: 'Product not found.' });
-    }
+    console.log('[delete-product] Product deleted successfully:', id);
+    res.json({ message: 'Product deleted successfully.' });
   } catch (error) {
     console.error('Product deletion error:', error);
     res.status(500).json({ message: 'Internal server error' });

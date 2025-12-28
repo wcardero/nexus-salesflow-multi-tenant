@@ -513,6 +513,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [editingCost, setEditingCost] = useState('');
   const [editingMargin, setEditingMargin] = useState('');
   const [editingCommission, setEditingCommission] = useState('');
+  const [editingCurrency, setEditingCurrency] = useState<'USD' | 'MN'>('USD');
 
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const currentExchangeRate = getCurrentExchangeRate(store);
@@ -597,7 +598,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     }
     setEditingProduct(product);
     setEditingName(product.name);
-    setEditingCost(product.costUSD.toString());
+    setEditingCurrency(product.currency || 'USD');
+    setEditingCost((product.currency === 'MN' ? product.costMN : product.costUSD)?.toString() || '');
     setEditingMargin((product.margin * 100).toString());
     setEditingCommission(product.commissionRate !== undefined ? (product.commissionRate * 100).toString() : '');
   };
@@ -606,29 +608,40 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     e.preventDefault();
     if (!editingProduct || !editingName.trim() || !editingCost || !editingMargin) return;
 
-    setDb(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        products: prev.products.map(p =>
-          p.id === editingProduct!.id
-            ? {
-                ...p,
-                name: editingName.trim(),
-                costUSD: parseFloat(editingCost),
-                margin: parseFloat(editingMargin) / 100,
-                commissionRate: editingCommission.trim() ? parseFloat(editingCommission) / 100 : undefined,
-              }
-            : p
-        ),
-      };
-    });
-    setEditingProduct(null);
-    setEditingName('');
-    setEditingCost('');
-    setEditingMargin('');
-    setEditingCommission('');
-    alert('Producto actualizado exitosamente.');
+    try {
+      const response = await fetch(`http://localhost:3001/api/products/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: editingName.trim(),
+          costUSD: editingCurrency === 'USD' ? parseFloat(editingCost) : undefined,
+          costMN: editingCurrency === 'MN' ? parseFloat(editingCost) : undefined,
+          margin: parseFloat(editingMargin) / 100,
+          commissionRate: editingCommission.trim() ? parseFloat(editingCommission) / 100 : undefined,
+          currency: editingCurrency
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error actualizando el producto');
+      }
+
+      await refreshDb();
+      setEditingProduct(null);
+      setEditingName('');
+      setEditingCost('');
+      setEditingMargin('');
+      setEditingCommission('');
+      setEditingCurrency('USD');
+      alert('Producto actualizado exitosamente.');
+    } catch (error: any) {
+      console.error('Error updating product:', error);
+      alert(`Error al actualizar el producto: ${error.message}`);
+    }
   };
 
   const handleDelete = async (productId: string) => {
@@ -668,6 +681,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     setEditingCost('');
     setEditingMargin('');
     setEditingCommission('');
+    setEditingCurrency('USD');
   };
 
   const isAssigned = (productId: string): boolean => {
@@ -692,6 +706,17 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Producto</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Moneda</label>
+                <select
+                  value={editingCurrency}
+                  onChange={e => setEditingCurrency(e.target.value as 'USD' | 'MN')}
+                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                >
+                  <option value="USD">USD</option>
+                  <option value="MN">MN</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
                 <input
                   value={editingName}
@@ -700,11 +725,14 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Costo (USD)</label>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Costo ({editingCurrency})
+                </label>
                 <input
                   value={editingCost}
                   onChange={e => setEditingCost(e.target.value)}
                   type="number"
+                  placeholder={`Costo (${editingCurrency})`}
                   className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
