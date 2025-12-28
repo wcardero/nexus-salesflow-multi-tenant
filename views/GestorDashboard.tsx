@@ -213,7 +213,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
       return;
     }
     const product = productsById[inventoryItem.productId];
-    const prices = calculateProductPrices(product, currentRate, store.defaultCommissionRate);
+    const prices = calculateProductPrices(product, currentRate);
     
     const newSale: Sale = {
       id: `sale-${Date.now()}`,

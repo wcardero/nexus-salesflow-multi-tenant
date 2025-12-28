@@ -59,8 +59,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          name: newStoreName.trim(),
-          defaultCommissionRate: 0.10 // Default 10% commission rate
+          name: newStoreName.trim()
         })
       });
 

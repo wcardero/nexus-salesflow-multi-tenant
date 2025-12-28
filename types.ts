@@ -28,7 +28,6 @@ export interface Store {
   name: string;
   // Un historial para permitir cambios en el tiempo
   exchangeRates: ExchangeRate[];
-  defaultCommissionRate: number; // e.g., 0.10 for 10%
   managerIds?: string[]; // IDs of managers assigned to this store
 }
 

@@ -17,36 +17,23 @@ export const getCurrentExchangeRate = (store: Store): ExchangeRate | undefined =
 };
 
 /**
- * Obtiene la tasa de comisión a aplicar para un producto.
- * Si el producto tiene una comisión específica, la usa.
- * Si no, usa la comisión por defecto de la tienda.
- * @param product El producto.
- * @param store La tienda.
- * @returns La tasa de comisión a aplicar.
- */
-export const getCommissionRateForProduct = (product: Product, store: Store): number => {
-  if (product.commissionRate !== undefined && product.commissionRate !== null) {
-    return product.commissionRate;
-  }
-  return store.defaultCommissionRate;
-};
-
-/**
  * Calcula los precios de un producto basándose en el tipo de cambio actual y la moneda del costo.
  * @param product El producto a calcular.
  * @param exchangeRate El tipo de cambio a utilizar (solo para productos en USD).
- * @param commissionRate La tasa de comisión a aplicar.
  * @returns Un objeto con todos los precios calculados.
  */
 export const calculateProductPrices = (
   product: Product,
-  exchangeRate: ExchangeRate | undefined,
-  commissionRate: number
+  exchangeRate: ExchangeRate | undefined
 ) => {
+  if (!product.commissionRate) {
+    return { saleUSD: 0, baseMN: 0, commission: 0, finalMN: 0, priceMN: 0, gestorCommissionMN: 0 };
+  }
+
   if (product.currency === 'MN') {
     const costMN = product.costMN || 0;
     const baseMN = costMN * (1 + product.margin);
-    const gestorCommissionMN = baseMN * commissionRate;
+    const gestorCommissionMN = baseMN * product.commissionRate;
     const finalMN = baseMN + gestorCommissionMN;
 
     return {
@@ -66,7 +53,7 @@ export const calculateProductPrices = (
   const costUSD = product.costUSD || 0;
   const saleUSD = costUSD * (1 + product.margin);
   const baseMN = saleUSD * exchangeRate.rate;
-  const gestorCommissionMN = baseMN * commissionRate;
+  const gestorCommissionMN = baseMN * product.commissionRate;
   const finalMN = baseMN + gestorCommissionMN;
 
   return {

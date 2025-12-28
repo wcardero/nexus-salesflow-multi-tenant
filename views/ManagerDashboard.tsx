@@ -1,7 +1,7 @@
 // views/ManagerDashboard.tsx
 import React, { useState, Pick } from 'react';
 import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus } from '../types';
-import { formatCurrency, getCurrentExchangeRate, calculateProductPrices, getCommissionRateForProduct } from '../utils';
+import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '../utils';
 
 interface ManagerDashboardProps {
   user: User;
@@ -537,8 +537,13 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     let priceMN: number;
     let gestorCommissionMN: number;
 
-    const commissionRate = commission.trim() ? parseFloat(commission) / 100 : store.defaultCommissionRate;
+    if (!commission.trim()) {
+      alert('La comisión es obligatoria.');
+      return;
+    }
 
+    const commissionRate = parseFloat(commission) / 100;
+ 
     if (currency === 'MN') {
       const costMN = parseFloat(cost);
       const baseMN = costMN * (1 + parsedMargin);
@@ -551,13 +556,13 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       gestorCommissionMN = baseMN * commissionRate;
       priceMN = baseMN + gestorCommissionMN;
     }
-
+ 
     const newProduct: Omit<Product, 'id'> = {
       name,
       costUSD: currency === 'USD' ? parseFloat(cost) : undefined,
       costMN: currency === 'MN' ? parseFloat(cost) : undefined,
       margin: parsedMargin,
-      commissionRate: commission.trim() ? commissionRate : undefined,
+      commissionRate,
       storeId: store.id,
       currency,
       priceMN,
@@ -799,9 +804,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
-          const productCommissionRate = getCommissionRateForProduct(p, store);
-          const prices = calculateProductPrices(p, currentExchangeRate, productCommissionRate);
-          const commissionLabel = p.commissionRate !== undefined ? `${(p.commissionRate * 100).toFixed(1)}% (específica)` : `${(store.defaultCommissionRate * 100).toFixed(1)}% (por defecto)`;
+          const prices = calculateProductPrices(p, currentExchangeRate);
+          const commissionLabel = p.commissionRate !== undefined ? `${(p.commissionRate * 100).toFixed(1)}%` : 'N/A';
           const assigned = isAssigned(p.id);
 
           return (

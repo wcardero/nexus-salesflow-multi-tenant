@@ -650,10 +650,6 @@ const validateStoreCreation = [
     .withMessage('Store name must be between 1 and 100 characters')
     .matches(/^[a-zA-Z0-9\s\-_]+$/)
     .withMessage('Store name can only contain letters, numbers, spaces, hyphens, and underscores'),
-  body('defaultCommissionRate')
-    .optional()
-    .isFloat({ min: 0, max: 1 })
-    .withMessage('Default commission rate must be a number between 0 and 1'),
   (req: Request, res: Response, next: any) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -664,7 +660,7 @@ const validateStoreCreation = [
 ];
 
 app.post('/api/stores', authenticateToken, validateStoreCreation, async (req: Request, res: Response) => {
-    const { name, defaultCommissionRate } = req.body;
+    const { name } = req.body;
     const requestingUser = (req as any).user;
 
     if (requestingUser.role !== 'Admin') {
@@ -683,8 +679,8 @@ app.post('/api/stores', authenticateToken, validateStoreCreation, async (req: Re
         }
 
         const result = await db.query(
-            'INSERT INTO "Store" (id, name, "defaultCommissionRate") VALUES ($1, $2, $3) RETURNING *',
-            [newStoreId, name, defaultCommissionRate || 0.10]
+            'INSERT INTO "Store" (id, name) VALUES ($1, $2) RETURNING *',
+            [newStoreId, name]
         );
         // Create audit log for store creation
         await createAuditLog(requestingUser.id, 'CREATE_STORE', 'Store', result.rows[0].id, null, result.rows[0], result.rows[0].id);
@@ -1255,14 +1251,32 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
       const assigned = assignedResult.rows[0];
       
+      // Get product commission rate
+      const productResult = await db.query(
+        'SELECT "commissionRate" FROM "Product" WHERE id = $1',
+        [assigned.productId]
+      );
+      
+      if (productResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Product not found.' });
+      }
+      
+      const product = productResult.rows[0];
+      
+      if (!product.commissionRate) {
+        return res.status(400).json({ message: 'Product does not have a commission rate set.' });
+      }
+      
       // Calculate price based on currency
       let priceMN: number;
       if (assigned.costMN) {
         // Cost is in MN
-        priceMN = assigned.costMN * (1 + assigned.margin);
+        const baseMN = assigned.costMN * (1 + assigned.margin);
+        priceMN = baseMN * (1 + product.commissionRate);
       } else {
         // Cost is in USD, use exchange rate
-        priceMN = assigned.costUSD * (1 + assigned.margin) * assigned.rate;
+        const baseMN = assigned.costUSD * (1 + assigned.margin) * assigned.rate;
+        priceMN = baseMN * (1 + product.commissionRate);
       }
 
       // Check if there's already confirmed inventory for the same product and gestor with the same price
@@ -1652,7 +1666,6 @@ async function initializeDatabase() {
 CREATE TABLE "Store" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
-    "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
     "directorId" TEXT,
     CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -1856,7 +1869,7 @@ const validateProduct = [
   body('costUSD').optional().isFloat({ min: 0.01 }).withMessage('Cost USD must be a positive number'),
   body('costMN').optional().isFloat({ min: 0.01 }).withMessage('Cost MN must be a positive number'),
   body('margin').isFloat({ min: 0, max: 1 }).withMessage('Margin must be between 0 and 100%'),
-  body('commissionRate').optional().isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be entre 0 y 100%'),
+  body('commissionRate').isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be entre 0 y 100%'),
   body('storeId').optional().isUUID().withMessage('Store ID must be a valid UUID'),
   body('currency').optional().isIn(['USD', 'MN']).withMessage('Currency must be USD or MN'),
 ];
@@ -1890,6 +1903,10 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     return res.status(400).json({ message: 'Currency must be either USD or MN.' });
   }
 
+  if (!commissionRate) {
+    return res.status(400).json({ message: 'Commission rate is required.' });
+  }
+
   const finalStoreId = storeId || requestingUser.storeId;
 
   if (requestingUser.role === 'Director' && !finalStoreId) {
@@ -1910,7 +1927,7 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
       [finalStoreId]
     );
     const exchangeRate = exchangeRateResult.rows.length > 0 ? exchangeRateResult.rows[0] : null;
-
+ 
     if (!exchangeRate && (currency === 'USD' || !currency)) {
       return res.status(400).json({ message: 'No hay un tipo de cambio vigente. Por favor, configure un tipo de cambio antes de agregar productos con costo en USD.' });
     }
@@ -1919,7 +1936,7 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     let priceMN: number;
     let gestorCommissionMN: number;
 
-    const parsedCommissionRate = commissionRate ? parseFloat(commissionRate) : store.defaultCommissionRate;
+    const parsedCommissionRate = parseFloat(commissionRate);
 
     // Calculate prices based on currency
     if (currency === 'MN') {
@@ -1988,29 +2005,33 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
     return res.status(403).json({ message: 'Only Managers and Directors can update products.' });
   }
 
-  const { name, costUSD, costMN, margin, commissionRate, currency } = req.body;
+    const { name, costUSD, costMN, margin, commissionRate, currency } = req.body;
 
-  if (!name || margin === undefined) {
-    return res.status(400).json({ message: 'Name and margin are required' });
-  }
-
-  if (!costUSD && !costMN) {
-    return res.status(400).json({ message: 'Cost (USD or MN) is required.' });
-  }
-
-  try {
-    const existingProduct = await db.query('SELECT * FROM "Product" WHERE id = $1', [id]);
-    if (existingProduct.rows.length === 0) {
-      return res.status(404).json({ message: 'Product not found.' });
+    if (!name || margin === undefined) {
+      return res.status(400).json({ message: 'Name and margin are required' });
     }
 
-    const product = existingProduct.rows[0];
+    if (!costUSD && !costMN) {
+      return res.status(400).json({ message: 'Cost (USD or MN) is required.' });
+    }
 
-    const assignedCheck = await db.query(
-      'SELECT COUNT(*) FROM "InventoryItem" WHERE "productId" = $1',
-      [id]
-    );
-    const isAssigned = parseInt(assignedCheck.rows[0].count) > 0;
+    if (!commissionRate) {
+      return res.status(400).json({ message: 'Commission rate is required.' });
+    }
+
+    try {
+      const existingProduct = await db.query('SELECT * FROM "Product" WHERE id = $1', [id]);
+      if (existingProduct.rows.length === 0) {
+        return res.status(404).json({ message: 'Product not found.' });
+      }
+
+      const product = existingProduct.rows[0];
+
+      const assignedCheck = await db.query(
+        'SELECT COUNT(*) FROM "InventoryItem" WHERE "productId" = $1',
+        [id]
+      );
+      const isAssigned = parseInt(assignedCheck.rows[0].count) > 0;
 
     if (isAssigned) {
       return res.status(400).json({ message: 'El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor.' });
@@ -2034,7 +2055,7 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
     const finalCostUSD = costUSD !== undefined ? costUSD : product.costUSD;
     const finalCostMN = costMN !== undefined ? costMN : product.costMN;
     const parsedMargin = parseFloat(margin);
-    const parsedCommissionRate = commissionRate ? parseFloat(commissionRate) : store.defaultCommissionRate;
+    const parsedCommissionRate = parseFloat(commissionRate);
 
     // Recalculate prices
     let priceMN: number;
@@ -2052,7 +2073,7 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
         return res.status(400).json({ message: 'Cost is required when currency is USD.' });
       }
       const saleUSD = finalCostUSD * (1 + parsedMargin);
-      const baseMN = saleUSD * exchangeRate!.rate;
+      const baseMN = saleUSD * exchangeRate.rate;
       gestorCommissionMN = baseMN * parsedCommissionRate;
       priceMN = baseMN + gestorCommissionMN;
     }
