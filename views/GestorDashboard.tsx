@@ -23,7 +23,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const [rejectionReason, setRejectionReason] = useState('');
 
   const storeProducts = db.products.filter(p => p.storeId === store.id);
-  const productsById = Object.fromEntries(db.products.map(p => [p.id, p]));
+  const productsById = useMemo(() => Object.fromEntries(db.products.map(p => [p.id, p])), [db.products]);
   const currentRate = getCurrentExchangeRate(store);
 
   const pendingInventory = useMemo(() => {
