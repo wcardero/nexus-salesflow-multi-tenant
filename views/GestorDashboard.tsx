@@ -8,11 +8,16 @@ interface GestorDashboardProps {
   store: Store;
   db: MockDB;
   setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
+  refreshDb: () => Promise<void>;
 }
 
 type Tabs = 'inventory' | 'sales' | 'reports';
 
-const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb }) => {
+const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
+  console.log('[GestorDashboard] Component mounted - user.id:', user.id);
+  console.log('[GestorDashboard] Component mounted - user.name:', user.name);
+  console.log('[GestorDashboard] Component mounted - user.role:', user.role);
+
   const [activeTab, setActiveTab] = useState<Tabs>('inventory');
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -21,7 +26,13 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const productsById = Object.fromEntries(db.products.map(p => [p.id, p]));
   const currentRate = getCurrentExchangeRate(store);
 
-  const pendingInventory = useMemo(() => db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Pending'), [db.assignedInventory, user.id]);
+  const pendingInventory = useMemo(() => {
+    const pending = db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Pending');
+    console.log('[GestorDashboard] pendingInventory:', pending);
+    console.log('[GestorDashboard] user.id:', user.id);
+    console.log('[GestorDashboard] db.assignedInventory:', db.assignedInventory);
+    return pending;
+  }, [db.assignedInventory, user.id]);
 
   const handleConfirmInventory = async (assignedId: string) => {
     try {
@@ -100,8 +111,15 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const groupedInventory = useMemo(() => {
     const groups: { [key: string]: InventoryGroup } = {};
 
+    console.log('[GestorDashboard] groupedInventory - filtering...');
+    console.log('[GestorDashboard] groupedInventory - user.id:', user.id);
+
     db.assignedInventory
-      .filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed')
+      .filter(ai => {
+        const matches = ai.gestorId === user.id && ai.status === 'Confirmed';
+        console.log('[GestorDashboard] groupedInventory - item:', ai, 'matches?', matches);
+        return matches;
+      })
       .forEach(ai => {
         const key = `${ai.productId}-${ai.priceMN}`;
         if (!groups[key]) {
@@ -120,6 +138,8 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
         }
       });
 
+    console.log('[GestorDashboard] groupedInventory - groups:', groups);
+    console.log('[GestorDashboard] groupedInventory - keys:', Object.keys(groups));
     return groups;
   }, [db.assignedInventory, user.id]);
 

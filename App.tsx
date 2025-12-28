@@ -113,12 +113,19 @@ const App: React.FC = () => {
 
       // Update current user from fresh database data to avoid stale cache issues
       const storedUserJson = localStorage.getItem('user');
+      console.log('[App.tsx] refreshDb - storedUserJson:', storedUserJson);
       if (storedUserJson) {
         const storedUser: User = JSON.parse(storedUserJson);
+        console.log('[App.tsx] refreshDb - storedUser.id:', storedUser.id);
+        console.log('[App.tsx] refreshDb - data.users:', data.users);
         const freshUser = data.users.find(u => u.id === storedUser.id);
+        console.log('[App.tsx] refreshDb - freshUser:', freshUser ? 'FOUND' : 'NOT FOUND');
         if (freshUser) {
           setCurrentUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
+          console.log('[App.tsx] refreshDb - user updated successfully');
+        } else {
+          console.warn('[App.tsx] refreshDb - User not found in fresh data, keeping current user');
         }
       }
 
@@ -224,7 +231,7 @@ const App: React.FC = () => {
             return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} />;
           case Role.GESTOR:
             if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
-            return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} />;
+            return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} />;
           default:
             return (
               <div className="p-4">
