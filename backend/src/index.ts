@@ -1008,17 +1008,6 @@ app.delete('/api/product-stock/:stockId', authenticateToken, async (req: Request
       return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
     }
 
-    // Check if product is assigned to any gestor
-    const assignedCheck = await db.query(
-      'SELECT COUNT(*) FROM "AssignedInventory" WHERE "productId" = $1',
-      [stock.productId]
-    );
-    const isAssigned = parseInt(assignedCheck.rows[0].count) > 0;
-
-    if (isAssigned) {
-      return res.status(400).json({ message: 'El producto no puede ser eliminado del stock porque se encuentra asignado a un gestor.' });
-    }
-
     await db.query('DELETE FROM "ProductStock" WHERE id = $1', [stockId]);
 
     // Create audit log for stock deletion

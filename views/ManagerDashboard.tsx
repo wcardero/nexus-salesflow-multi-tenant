@@ -1077,15 +1077,13 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditStock(stock)}
-                        disabled={isAssigned}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleDeleteStock(stock.id, stock.productId)}
-                        disabled={isAssigned}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="text-red-600 hover:text-red-800 font-medium text-sm"
                       >
                         Eliminar
                       </button>
