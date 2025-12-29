@@ -540,64 +540,75 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   console.log('[get-users] Request:', { userId: requestingUser.id, role: requestingUser.role, storeId: requestingUser.storeId });
 
   // Only admins can see all users
-  if (requestingUser.role !== 'Admin') {
-    // For Directors and Managers, get their store ID from _StoreToUser if not in User
-    let storeIdToUse = requestingUser.storeId;
-    console.log('[get-users] Initial storeId:', storeIdToUse);
-    if (!storeIdToUse) {
-      const storeResult = await db.query(
-        'SELECT "A" as storeId FROM "_StoreToUser" WHERE "B" = $1 LIMIT 1',
-        [requestingUser.id]
-      );
-      console.log('[get-users] _StoreToUser query result:', storeResult.rows);
-      if (storeResult.rows.length > 0) {
-        storeIdToUse = storeResult.rows[0].storeId;
-        console.log('[get-users] Got storeId from _StoreToUser:', storeIdToUse);
-      }
-    }
+  if (requestingUser.role === 'Admin') {
+    // Admins can see all users
+    const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"');
+    console.log('[get-users] Returning all users for Admin:', { count: rows.length });
+    return res.json(rows);
+  }
 
-    // Directors can see managers from their store
-    if (requestingUser.role === 'Director') {
-      if (!storeIdToUse) {
-        return res.status(400).json({ message: 'You must be assigned to a store.' });
-      }
-      const { rows } = await db.query(
-        'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
-        ['Manager', storeIdToUse]
-      );
-      console.log('[get-users] Returning Managers for store:', { storeId: storeIdToUse, count: rows.length });
-      return res.json(rows);
-    }
-    // Managers can see gestors from their store
-    if (requestingUser.role === 'Manager') {
-      if (!storeIdToUse) {
-        return res.status(400).json({ message: 'You must be assigned to a store.' });
-      }
-      const { rows } = await db.query(
-        'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
-        ['Gestor', storeIdToUse]
-      );
-      console.log('[get-users] Returning Gestores for store:', { storeId: storeIdToUse, count: rows.length });
-      return res.json(rows);
-    }
-    // Gestors can see only themselves (needed for user update in frontend)
-    const { rows } = await db.query(
-      'SELECT id, name, role, "storeId" FROM "User" WHERE id = $1',
+  // For Directors and Managers, get their store ID from _StoreToUser if not in User
+  let storeIdToUse = requestingUser.storeId;
+  console.log('[get-users] Initial storeId:', storeIdToUse);
+  if (!storeIdToUse) {
+    const storeResult = await db.query(
+      'SELECT "A" as storeId FROM "_StoreToUser" WHERE "B" = $1 LIMIT 1',
       [requestingUser.id]
     );
-    console.log('[get-users] Returning single user for Gestor:', rows[0]);
-    res.json(rows);
+    console.log('[get-users] _StoreToUser query result:', storeResult.rows);
+    if (storeResult.rows.length > 0) {
+      storeIdToUse = storeResult.rows[0].storeId;
+      console.log('[get-users] Got storeId from _StoreToUser:', storeIdToUse);
+    }
   }
+
+  // Directors can see managers from their store
+  if (requestingUser.role === 'Director') {
+    if (!storeIdToUse) {
+      return res.status(400).json({ message: 'You must be assigned to a store.' });
+    }
+    const { rows } = await db.query(
+      'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
+      ['Manager', storeIdToUse]
+    );
+    console.log('[get-users] Returning Managers for store:', { storeId: storeIdToUse, count: rows.length });
+    return res.json(rows);
+  }
+
+  // Managers can see gestors from their store
+  if (requestingUser.role === 'Manager') {
+    if (!storeIdToUse) {
+      return res.status(400).json({ message: 'You must be assigned to a store.' });
+    }
+    const { rows } = await db.query(
+      'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
+      ['Gestor', storeIdToUse]
+    );
+    console.log('[get-users] Returning Gestores for store:', { storeId: storeIdToUse, count: rows.length });
+    return res.json(rows);
+  }
+
+  // Gestors can see only themselves (needed for user update in frontend)
+  const { rows } = await db.query(
+    'SELECT id, name, role, "storeId" FROM "User" WHERE id = $1',
+    [requestingUser.id]
+  );
+  console.log('[get-users] Returning single user for Gestor:', rows[0]);
+  res.json(rows);
 });
 
 app.get('/api/stores', authenticateToken, async (req: Request, res: Response) => {
   const requestingUser = (req as any).user;
 
+  // Admin can see all stores
   // Managers can only see their assigned stores
+  // Gestors can only see their store
   let storeCondition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all stores, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     if (requestingUser.storeId) {
       // Return the manager's primary store AND stores assigned via _StoreToUser
       storeCondition = `WHERE s.id = $1 OR s.id IN (
@@ -926,11 +937,15 @@ app.delete('/api/stores/:id', authenticateToken, async (req: Request, res: Respo
 // Endpoint to get product stock
 app.get('/api/product-stock', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
-
+  // Admin can see all product stock
+  // Managers can only see product stock from their stores
+  // Gestors can only see product stock from their store
   let storeCondition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all product stock, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     storeCondition = `WHERE ps."storeId" IN (
       SELECT stum."A" FROM "_StoreToUser" stum
       JOIN "User" u ON stum."B" = u.id
@@ -1097,10 +1112,15 @@ app.post('/api/product-stock', authenticateToken, validateProductStock, async (r
 app.get('/api/assigned-inventory', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
 
+  // Admin can see all assigned inventory
+  // Managers can only see assigned inventory for gestors in their stores
+  // Gestors can only see their own assigned inventory
   let condition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all assigned inventory, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     condition = `WHERE ai."gestorId" IN (
       SELECT u.id FROM "User" u
       WHERE u."storeId" IN (
@@ -1384,10 +1404,15 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
    app.get('/api/products', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
 
+  // Admin can see all products
+  // Managers can only see products from their stores
+  // Gestors can only see products from their store
   let storeCondition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all products, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     storeCondition = 'WHERE "storeId" IN (SELECT "A" FROM "_StoreToUser" WHERE "B" = $1)';
     params.push(requestingUser.id);
   } else if (requestingUser.role === 'Gestor') {
@@ -1406,10 +1431,15 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
 app.get('/api/inventory', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
+  // Admin can see all inventory
+  // Managers can see inventory for their stores
+  // Gestors can only see their own inventory
   let condition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all inventory, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     // Managers can see inventory for their stores
     condition = `WHERE "gestorId" IN (
       SELECT u.id FROM "User" u
@@ -1433,11 +1463,15 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
 
 app.get('/api/sales', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
-
+  // Admin can see all sales
+  // Managers can see sales for gestors in their stores
+  // Gestors can only see their own sales
   let condition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all sales, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     // Managers can see sales for gestors in their stores
     condition = `WHERE "gestorId" IN (
       SELECT u.id FROM "User" u
@@ -1461,11 +1495,15 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
 
 app.get('/api/closings', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
-
+  // Admin can see all closings
+  // Managers can see closings for gestors in their stores
+  // Gestors can only see their own closings
   let condition = '';
   const params: any[] = [];
 
-  if (requestingUser.role === 'Manager') {
+  if (requestingUser.role === 'Admin') {
+    // Admin sees all closings, no condition needed
+  } else if (requestingUser.role === 'Manager') {
     // Managers can see closings for gestors in their stores
     condition = `WHERE "gestorId" IN (
       SELECT u.id FROM "User" u

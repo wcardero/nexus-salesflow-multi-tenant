@@ -68,24 +68,38 @@ const App: React.FC = () => {
       const results: [string, any][] = [];
       for (const resource of resources) {
         console.log(`refreshDb: fetching ${resource}...`);
-        const res = await fetch(`http://localhost:3001/api/${resource}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) {
-          console.error(`refreshDb: Error fetching ${resource}:`, res.status, res.statusText);
-          if (res.status === 401) {
-            // Token expired or invalid, redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/';
+        try {
+          const res = await fetch(`http://localhost:3001/api/${resource}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          console.log(`refreshDb: ${resource} response status:`, res.status);
+          if (!res.ok) {
+            console.error(`refreshDb: Error fetching ${resource}:`, res.status, res.statusText);
+            let errorData;
+            try {
+              errorData = await res.json();
+            } catch (e) {
+              errorData = res.statusText;
+            }
+            console.error(`refreshDb: Error data for ${resource}:`, errorData);
+            if (res.status === 401) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              window.location.href = '/';
+            }
+            throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
           }
-          throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
+          console.log(`refreshDb: parsing ${resource} JSON...`);
+          const data = await res.json();
+          console.log(`refreshDb: ${resource} data parsed, type:`, Array.isArray(data) ? 'array' : typeof data);
+          results.push([resource, data] as const);
+          console.log(`refreshDb: ${resource} fetched successfully, total results:`, results.length);
+        } catch (err) {
+          console.error(`refreshDb: Failed to fetch ${resource}:`, err);
+          throw err;
         }
-        const data = await res.json();
-        results.push([resource, data] as const);
-        console.log(`refreshDb: ${resource} fetched successfully`);
       }
 
       const dataMap = Object.fromEntries(results as any) as Record<string, any>;
@@ -214,7 +228,21 @@ const App: React.FC = () => {
    }
 
   if (!db) {
-    // If database is still null after auth check, load empty data for Login component
+    // If database is still null after auth check, show loading or error
+    if (error) {
+      console.log('[App.tsx] Error loading database:', error);
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white">
+          <p className="text-red-400 mb-4">Error: {error}</p>
+          <button 
+            onClick={handleLogout}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            Volver al login
+          </button>
+        </div>
+      );
+    }
     console.log('[App.tsx] db is null, showing Loading database...');
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">

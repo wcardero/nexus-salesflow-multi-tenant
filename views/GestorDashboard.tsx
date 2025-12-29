@@ -1,6 +1,6 @@
 // views/GestorDashboard.tsx
 import React, { useState, useMemo } from 'react';
-import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup } from '../types';
+import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
 import SellModal from '../components/SellModal';
 
@@ -224,8 +224,6 @@ const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (t
   </button>
 );
 
-import SellModal from '../components/SellModal';
-
 // --- SALES VIEW (Existing functionality) ---
 interface SalesViewProps extends GestorDashboardProps {
   gestorInventory: InventoryItem[];
@@ -249,8 +247,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     setIsSellModalOpen(false);
   };
 
-  const performSale = (quantity: number, group: InventoryGroup, product: Product, rate: number) => {
-    const prices = calculateProductPrices(product, rate);
+  const performSale = (quantity: number, group: InventoryGroup, product: Product, exchangeRate: ExchangeRate | undefined) => {
+    const prices = calculateProductPrices(product, exchangeRate);
 
     const newSales: Sale[] = [];
     let updatedInventoryItems: InventoryItem[] = [];
@@ -265,7 +263,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         inventoryItemId: soldItem.id,
         gestorId: user.id,
         soldAt: new Date(),
-        exchangeRateUsed: rate,
+        exchangeRateUsed: exchangeRate?.rate || 0,
         costUSD: product.costUSD,
         margin: product.margin,
         ...prices
@@ -309,7 +307,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
       return;
     }
 
-    performSale(quantity, selectedGroup, product, currentRate.rate);
+    performSale(quantity, selectedGroup, product, currentRate);
     handleCloseSellModal();
   };
   
