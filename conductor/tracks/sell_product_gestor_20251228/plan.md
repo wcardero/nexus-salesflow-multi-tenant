@@ -2,8 +2,8 @@
 
 ## Phase 1: Frontend - Gestor Dashboard UI Implementation
 
-- [~] Task: Write Failing Tests: Implement unit tests for 'Sell' button rendering on inventory item rows.
-- [ ] Task: Implement: Render 'Sell' button on each inventory item row in Gestor Dashboard.
+- [x] Task: Write Failing Tests: Implement unit tests for 'Sell' button rendering on inventory item rows. (2657e12)
+- [x] Task: Implement: Render 'Sell' button on each inventory item row in Gestor Dashboard. (2657e12)
 - [ ] Task: Write Failing Tests: Implement unit tests for opening and closing the sell modal.
 - [ ] Task: Implement: Create and integrate the sell modal component.
 - [ ] Task: Write Failing Tests: Implement unit tests for displaying product name, available quantity, and selling price in the modal.
