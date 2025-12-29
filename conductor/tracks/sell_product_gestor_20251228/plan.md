@@ -6,7 +6,7 @@
 - [x] Task: Implement: Render 'Sell' button on each inventory item row in Gestor Dashboard. (2657e12)
 - [x] Task: Write Failing Tests: Implement unit tests for opening and closing the sell modal. (8f14148)
 - [x] Task: Implement: Create and integrate the sell modal component. (8f14148)
-- [ ] Task: Write Failing Tests: Implement unit tests for displaying product name, available quantity, and selling price in the modal.
+- [~] Task: Write Failing Tests: Implement unit tests for displaying product name, available quantity, and selling price in the modal.
 - [ ] Task: Implement: Populate sell modal with Product Name, Available Quantity, and Selling Price.
 - [ ] Task: Write Failing Tests: Implement unit tests for real-time quantity input validation in the sell modal.
 - [ ] Task: Implement: Add numeric input field for quantity in sell modal with real-time validation against available stock.
