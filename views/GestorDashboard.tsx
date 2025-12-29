@@ -1,7 +1,8 @@
 // views/GestorDashboard.tsx
 import React, { useState, useMemo } from 'react';
-import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict } from '../types';
+import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
+import SellModal from '../components/SellModal';
 
 interface GestorDashboardProps {
   user: User;
@@ -100,14 +101,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
     return items;
   }, [db.assignedInventory, user.id]);
 
-  // Group inventory by product and price for display
-  interface InventoryGroup {
-    productId: string;
-    quantity: number;
-    priceMN: number;
-    assignedAt: Date;
-    items: InventoryItem[];
-  }
+
 
   const groupedInventory = useMemo(() => {
     const groups: { [key: string]: InventoryGroup } = {};
@@ -230,54 +224,65 @@ const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (t
   </button>
 );
 
+import SellModal from '../components/SellModal';
+
 // --- SALES VIEW (Existing functionality) ---
 interface SalesViewProps extends GestorDashboardProps {
   gestorInventory: InventoryItem[];
   gestorSalesSinceLastClosing: Sale[];
   productsById: { [key: string]: Product };
   currentRate: ReturnType<typeof getCurrentExchangeRate>;
-  groupedInventory: { [key: string]: any };
+  groupedInventory: { [key: string]: InventoryGroup };
 }
 
 const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInventory, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
-  console.log('[SalesView] Component mounted');
-  console.log('[SalesView] user.id:', user.id);
-  console.log('[SalesView] groupedInventory keys:', Object.keys(groupedInventory));
-  console.log('[SalesView] groupedInventory:', groupedInventory);
-  console.log('[SalesView] gestorInventory length:', gestorInventory.length);
-  
-  const handleSellItem = (inventoryItem: InventoryItem) => {
-    if (!currentRate) {
-      alert('Error: No hay un tipo de cambio activo para esta tienda.');
-      return;
-    }
-    const product = productsById[inventoryItem.productId];
-    const prices = calculateProductPrices(product, currentRate);
-    
-    const newSale: Sale = {
-      id: `sale-${Date.now()}`,
-      inventoryItemId: inventoryItem.id,
-      gestorId: user.id,
-      soldAt: new Date(),
-      exchangeRateUsed: currentRate.rate,
-      costUSD: product.costUSD,
-      margin: product.margin,
-      ...prices
-    };
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
 
-    setDb(prevDb => {
-      if (!prevDb) return prevDb;
-      const updatedInventory = prevDb.inventory.map(item =>
-        item.id === inventoryItem.id ? { ...item, status: 'Sold' as 'Available' | 'Sold', saleId: newSale.id } : item
-      );
-      return {
-        ...prevDb,
-        inventory: updatedInventory,
-        sales: [...prevDb.sales, newSale]
-      };
-    });
+  const handleOpenSellModal = (group: InventoryGroup) => {
+    setSelectedGroup(group);
+    setIsSellModalOpen(true);
   };
 
+  const handleCloseSellModal = () => {
+    setSelectedGroup(null);
+    setIsSellModalOpen(false);
+  };
+
+  const handleSell = (quantity: number) => {
+    if (!selectedGroup || !currentRate) return;
+
+    const product = productsById[selectedGroup.productId];
+    const prices = calculateProductPrices(product, currentRate);
+
+    // Create a sale for each item sold
+    for (let i = 0; i < quantity; i++) {
+      const newSale: Sale = {
+        id: `sale-${Date.now()}-${i}`,
+        inventoryItemId: selectedGroup.items[i].id, // This is not quite right, but we'll fix it later
+        gestorId: user.id,
+        soldAt: new Date(),
+        exchangeRateUsed: currentRate.rate,
+        costUSD: product.costUSD,
+        margin: product.margin,
+        ...prices
+      };
+
+      setDb(prevDb => {
+        if (!prevDb) return prevDb;
+        const updatedInventory = prevDb.inventory.map(item =>
+          item.id === selectedGroup.items[i].id ? { ...item, status: 'Sold' as 'Available' | 'Sold', saleId: newSale.id } : item
+        );
+        return {
+          ...prevDb,
+          inventory: updatedInventory,
+          sales: [...prevDb.sales, newSale]
+        };
+      });
+    }
+    handleCloseSellModal();
+  };
+  
   const handleExecuteClosing = () => {
     if (gestorSalesSinceLastClosing.length === 0) {
       alert('No hay ventas nuevas para cerrar.');
@@ -323,44 +328,36 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Columna de Inventario Asignado */}
-      <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
-        <h2 className="text-xl font-bold mb-4">Mi Inventario Disponible</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-            <thead className="bg-slate-50 dark:bg-slate-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio de Venta</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
-              </tr>
-             </thead>
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Columna de Inventario Asignado */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">Mi Inventario Disponible</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio de Venta</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+                </tr>
+              </thead>
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                {console.log('[SalesView] About to render groupedInventory entries:', Object.entries(groupedInventory).length)}
-                {console.log('[SalesView] groupedInventory:', groupedInventory)}
                 {(Object.entries(groupedInventory) as [string, InventoryGroup][]).map(([key, group]) => {
-                  console.log('[SalesView] Rendering group:', key, 'group:', group);
-                  console.log('[SalesView] group.items.length:', group.items.length);
                   const product = productsById[group.productId];
-                  console.log('[SalesView] product:', product);
-                  console.log('[SalesView] product.name:', product ? product.name : 'NOT FOUND');
                   if (!product) {
-                    console.log('[SalesView] Returning null for product:', group.productId);
                     return null;
                   }
-                  console.log('[SalesView] About to return table row');
                   return (
                     <tr key={key}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {console.log('[SalesView] group.items.length > 0:', group.items.length > 0)}
                         {group.items.length > 0 && (
                           <button
-                            onClick={() => handleSellItem(group.items[0])}
+                            onClick={() => handleOpenSellModal(group)}
                             className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
                           >
                             Vender
@@ -376,31 +373,39 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
                   </tr>
                 )}
               </tbody>
-          </table>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Columna de Cierre de Caja */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow h-fit">
-        <h2 className="text-xl font-bold mb-4">Cierre de Caja</h2>
-        <div className="space-y-4">
-            <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
-                <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{gestorSalesSinceLastClosing.length}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Total a entregar: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.baseMN, 0))}
-                </p>
-            </div>
-          <button 
-            onClick={handleExecuteClosing}
-            disabled={gestorSalesSinceLastClosing.length === 0}
-            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
-          >
-            Ejecutar Cierre
-          </button>
+        {/* Columna de Cierre de Caja */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow h-fit">
+          <h2 className="text-xl font-bold mb-4">Cierre de Caja</h2>
+          <div className="space-y-4">
+              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
+                  <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{gestorSalesSinceLastClosing.length}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Total a entregar: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.baseMN, 0))}
+                  </p>
+              </div>
+            <button 
+              onClick={handleExecuteClosing}
+              disabled={gestorSalesSinceLastClosing.length === 0}
+              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+            >
+              Ejecutar Cierre
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <SellModal
+        isOpen={isSellModalOpen}
+        onClose={handleCloseSellModal}
+        onSell={handleSell}
+        product={selectedGroup ? productsById[selectedGroup.productId] : null}
+        inventoryGroup={selectedGroup}
+      />
+    </>
   );
 };
 

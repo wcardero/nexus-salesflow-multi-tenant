@@ -109,6 +109,15 @@ export interface InventoryConflict {
   resolvedAt?: Date;
 }
 
+
+export interface InventoryGroup {
+  productId: string;
+  quantity: number;
+  priceMN: number;
+  assignedAt: Date;
+  items: InventoryItem[];
+}
+
 /**
  * Representa una venta realizada por un gestor.
  */
