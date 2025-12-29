@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import GestorDashboard from './GestorDashboard';
 import { expect, describe, it, vi } from 'vitest';
 
@@ -133,5 +133,57 @@ describe('GestorDashboard', () => {
     expect(screen.getByText(/disponibles: 10/i)).toBeInTheDocument();
     // We are not testing the price here, as it is not part of the current task
   });
-});
 
+  it('validates quantity input in the sell modal', async () => {
+    // Mock data for the test
+    const user = { id: 'gestor1', name: 'Gestor Name', role: 'Gestor' };
+    const store = { id: 'store1', name: 'My Store', currency: 'USD', exchangeRates: [{ id: 'er1', rate: 1, startDate: new Date() }] };
+    const db = {
+      assignedInventory: [
+        { id: 'inv1', productId: 'prod1', gestorId: 'gestor1', quantity: 10, priceMN: 100, status: 'Confirmed', assignedAt: new Date() },
+      ],
+      products: [
+        { id: 'prod1', name: 'Product 1', currency: 'USD', price: 10, costUSD: 5, margin: 0.5, storeId: 'store1' },
+      ],
+      sales: [],
+      closings: [],
+      users: [],
+      stores: [],
+    };
+    const setDb = vi.fn();
+    const refreshDb = vi.fn();
+
+    render(
+      <GestorDashboard
+        user={user}
+        store={store}
+        db={db}
+        setDb={setDb}
+        refreshDb={refreshDb}
+      />
+    );
+
+    // Switch to the 'Inventario y Ventas' tab
+    const salesTabButton = screen.getByRole('button', { name: /inventario y ventas/i });
+    fireEvent.click(salesTabButton);
+
+    // Click the "Vender" button from the inventory row
+    const inventorySellButton = screen.getAllByRole('button', { name: /vender/i })[0];
+    fireEvent.click(inventorySellButton);
+
+    // Get the modal
+    const sellModal = screen.getByRole('dialog', { name: /vender producto/i });
+
+    // Get the quantity input field and the sell button within the modal
+    const quantityInput = within(sellModal).getByLabelText(/cantidad a vender/i);
+    const sellModalButton = within(sellModal).getByRole('button', { name: /vender/i });
+
+    // Test with invalid quantity (greater than available)
+    fireEvent.change(quantityInput, { target: { value: '11' } });
+    expect(sellModalButton).toBeDisabled();
+
+    // Test with valid quantity
+    fireEvent.change(quantityInput, { target: { value: '5' } });
+    expect(sellModalButton).not.toBeDisabled();
+  });
+});
