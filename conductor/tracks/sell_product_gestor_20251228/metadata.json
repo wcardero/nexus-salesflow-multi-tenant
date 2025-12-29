@@ -1,0 +1,8 @@
+{
+  "track_id": "sell_product_gestor_20251228",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2025-12-28T18:18:00Z",
+  "updated_at": "2025-12-28T18:18:00Z",
+  "description": "El botón vender de gestor debe comportarse como sigue: debe abrirse una ventana para que le pregunte al usuario que cantidad de ese producto quiere vender (siempre tiene que ser menor o igual que le disponibilidad del mismo). Una vez que se haga la venta debe disminuirse la cantidad disponible del stock actual de ese producto del gestor. Entonces debe haber algun apartado de ventas realizadas fuera de cierre donde esten las cantidades por productos vendidos y el precio que reprenta (precio final de cada producto x cantidad de ese producto vendida)"
+}
