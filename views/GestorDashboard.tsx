@@ -235,7 +235,7 @@ interface SalesViewProps extends GestorDashboardProps {
   groupedInventory: { [key: string]: InventoryGroup };
 }
 
-const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInventory, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
+const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
 
@@ -249,37 +249,67 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorInv
     setIsSellModalOpen(false);
   };
 
-  const handleSell = (quantity: number) => {
-    if (!selectedGroup || !currentRate) return;
+  const performSale = (quantity: number, group: InventoryGroup, product: Product, rate: number) => {
+    const prices = calculateProductPrices(product, rate);
 
-    const product = productsById[selectedGroup.productId];
-    const prices = calculateProductPrices(product, currentRate);
+    const newSales: Sale[] = [];
+    let updatedInventoryItems: InventoryItem[] = [];
 
-    // Create a sale for each item sold
+    // Assuming a simple scenario where we sell from the beginning of the items array
+    // In a real app, you might have a more complex inventory management (e.g., specific item IDs)
     for (let i = 0; i < quantity; i++) {
+      const soldItem = group.items[i]; // Get the specific item to mark as sold
+
       const newSale: Sale = {
-        id: `sale-${Date.now()}-${i}`,
-        inventoryItemId: selectedGroup.items[i].id, // This is not quite right, but we'll fix it later
+        id: `sale-${Date.now()}-${soldItem.id}`,
+        inventoryItemId: soldItem.id,
         gestorId: user.id,
         soldAt: new Date(),
-        exchangeRateUsed: currentRate.rate,
+        exchangeRateUsed: rate,
         costUSD: product.costUSD,
         margin: product.margin,
         ...prices
       };
-
-      setDb(prevDb => {
-        if (!prevDb) return prevDb;
-        const updatedInventory = prevDb.inventory.map(item =>
-          item.id === selectedGroup.items[i].id ? { ...item, status: 'Sold' as 'Available' | 'Sold', saleId: newSale.id } : item
-        );
-        return {
-          ...prevDb,
-          inventory: updatedInventory,
-          sales: [...prevDb.sales, newSale]
-        };
+      newSales.push(newSale);
+      
+      // Mark the specific inventory item as sold
+      updatedInventoryItems.push({
+        ...soldItem,
+        status: 'Sold',
+        saleId: newSale.id
       });
     }
+
+    setDb(prevDb => {
+      if (!prevDb) return prevDb;
+
+      // Update the main inventory list
+      const updatedGlobalInventory = prevDb.inventory.map(item => {
+        const soldMatch = updatedInventoryItems.find(sold => sold.id === item.id);
+        return soldMatch ? soldMatch : item;
+      });
+
+      return {
+        ...prevDb,
+        inventory: updatedGlobalInventory,
+        sales: [...prevDb.sales, ...newSales]
+      };
+    });
+  };
+
+  const handleSell = (quantity: number) => {
+    if (!selectedGroup || !currentRate) {
+      alert('Error: No se pudo completar la venta. Faltan datos.');
+      return;
+    }
+
+    const product = productsById[selectedGroup.productId];
+    if (!product) {
+      alert('Error: Producto no encontrado.');
+      return;
+    }
+
+    performSale(quantity, selectedGroup, product, currentRate.rate);
     handleCloseSellModal();
   };
   
