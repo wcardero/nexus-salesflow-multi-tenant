@@ -1212,8 +1212,8 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     // Create or update assigned inventory
     const assignedId = `assign-${Date.now()}`;
     const result = await db.query(
-      'INSERT INTO "AssignedInventory" (id, "productId", "gestorId", "quantity") VALUES ($1, $2, $3, $4) RETURNING *',
-      [assignedId, productId, gestorId, quantity]
+      'INSERT INTO "AssignedInventory" (id, "productId", "gestorId", "quantity", status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [assignedId, productId, gestorId, quantity, 'Pending']
     );
 
     // Update product stock by reducing the assigned quantity
