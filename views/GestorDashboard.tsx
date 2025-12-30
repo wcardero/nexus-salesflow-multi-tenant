@@ -384,17 +384,19 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   };
 
   const salesByProduct = useMemo(() => {
-    const groups: { [key: string]: { quantity: number; total: number } } = {};
+    const groups: { [key: string]: { quantity: number; total: number; gestorGain: number; storeGain: number } } = {};
 
     gestorSalesSinceLastClosing.forEach(sale => {
       const assignedInventory = db.assignedInventory.find(ai => ai.gestorId === user.id && sale.inventoryItemId.startsWith(ai.id));
       if (assignedInventory) {
         const key = assignedInventory.productId;
         if (!groups[key]) {
-          groups[key] = { quantity: 0, total: 0 };
+          groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0 };
         }
         groups[key].quantity += 1;
         groups[key].total += sale.finalMN;
+        groups[key].gestorGain += sale.commission;
+        groups[key].storeGain += sale.baseMN;
       }
     });
 
@@ -402,6 +404,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   }, [gestorSalesSinceLastClosing, db.assignedInventory, user.id]);
 
   const totalSalesAmount = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.total, 0);
+  const totalGestorGain = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.gestorGain, 0);
+  const totalStoreGain = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.storeGain, 0);
 
   return (
     <>
@@ -465,17 +469,21 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ganancia Gestor</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ganancia Tienda</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Dinero Recaudado</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                  {(Object.entries(salesByProduct) as [string, { quantity: number; total: number }][]).map(([productId, data]) => {
+                  {(Object.entries(salesByProduct) as [string, { quantity: number; total: number; gestorGain: number; storeGain: number }][]).map(([productId, data]) => {
                     const product = productsById[productId];
                     if (!product) return null;
                     return (
                       <tr key={productId}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{data.quantity}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.gestorGain)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.storeGain)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.total)}</td>
                       </tr>
                     );
@@ -484,6 +492,12 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                 <tfoot className="bg-slate-50 dark:bg-slate-700">
                   <tr>
                     <td colSpan={2} className="px-6 py-3 text-left text-sm font-bold text-slate-900 dark:text-slate-200">Total</td>
+                    <td className="px-6 py-3 text-right text-sm font-bold text-green-600 dark:text-green-400">
+                      {formatCurrency(totalGestorGain)}
+                    </td>
+                    <td className="px-6 py-3 text-right text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {formatCurrency(totalStoreGain)}
+                    </td>
                     <td className="px-6 py-3 text-right text-sm font-bold text-sky-600 dark:text-sky-400">
                       {formatCurrency(totalSalesAmount)}
                     </td>
