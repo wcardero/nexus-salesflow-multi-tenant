@@ -1543,7 +1543,7 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
         'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
         [
           saleId,
-          `invitem-${now}-${i}`,
+          `assign-${assignedInventoryId}-${i}`,
           requestingUser.id,
           new Date(),
           0,

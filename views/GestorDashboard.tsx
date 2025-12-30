@@ -383,6 +383,26 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     }
   };
 
+  const salesByProduct = useMemo(() => {
+    const groups: { [key: string]: { quantity: number; total: number } } = {};
+
+    gestorSalesSinceLastClosing.forEach(sale => {
+      const assignedInventory = db.assignedInventory.find(ai => ai.gestorId === user.id && sale.inventoryItemId.startsWith(ai.id));
+      if (assignedInventory) {
+        const key = assignedInventory.productId;
+        if (!groups[key]) {
+          groups[key] = { quantity: 0, total: 0 };
+        }
+        groups[key].quantity += 1;
+        groups[key].total += sale.finalMN;
+      }
+    });
+
+    return groups;
+  }, [gestorSalesSinceLastClosing, db.assignedInventory, user.id]);
+
+  const totalSalesAmount = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.total, 0);
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -432,6 +452,45 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
             </table>
           </div>
         </div>
+
+        {/* Ventas Realizadas */}
+        {Object.keys(salesByProduct).length > 0 && (
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4">Ventas Realizadas</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Dinero Recaudado</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                  {(Object.entries(salesByProduct) as [string, { quantity: number; total: number }][]).map(([productId, data]) => {
+                    const product = productsById[productId];
+                    if (!product) return null;
+                    return (
+                      <tr key={productId}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{data.quantity}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.total)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <td colSpan={2} className="px-6 py-3 text-left text-sm font-bold text-slate-900 dark:text-slate-200">Total</td>
+                    <td className="px-6 py-3 text-right text-sm font-bold text-sky-600 dark:text-sky-400">
+                      {formatCurrency(totalSalesAmount)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Columna de Cierre de Caja */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow h-fit">
