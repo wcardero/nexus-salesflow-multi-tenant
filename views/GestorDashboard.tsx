@@ -415,6 +415,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio de Venta</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">% Comision Gestor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
                 </tr>
@@ -429,6 +430,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                     <tr key={key}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{((product.commissionRate || 0) * 100).toFixed(0)}%</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         {group.items.length > 0 && (
@@ -445,7 +447,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                 })}
                 {Object.keys(groupedInventory).length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
+                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
                   </tr>
                 )}
               </tbody>
