@@ -113,10 +113,10 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
         // Key includes both productId and gestorId to separate assignments by gestor
         const key = `${ai.productId}-${ai.gestorId}`;
         if (!groups[key]) {
-          groups[key] = { productId: ai.productId, quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, items: [] };
+          groups[key] = { productId: ai.productId, quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, assignedInventoryId: ai.id, items: [] };
         }
         groups[key].quantity += ai.quantity;
-        
+
         for (let i = 0; i < ai.quantity; i++) {
           groups[key].items.push({
             id: `${ai.id}-${i}`,
@@ -176,6 +176,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
             productsById={productsById}
             currentRate={currentRate}
             groupedInventory={groupedInventory}
+            refreshDb={refreshDb}
           />
         );
       case 'reports':
@@ -231,9 +232,10 @@ interface SalesViewProps extends GestorDashboardProps {
   productsById: { [key: string]: Product };
   currentRate: ReturnType<typeof getCurrentExchangeRate>;
   groupedInventory: { [key: string]: InventoryGroup };
+  refreshDb: () => Promise<void>;
 }
 
-const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory }) => {
+const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory, refreshDb }) => {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
 
@@ -295,20 +297,46 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     });
   };
 
-  const handleSell = (quantity: number) => {
-    if (!selectedGroup || !currentRate) {
+  const handleSell = async (quantity: number) => {
+    if (!selectedGroup) {
       alert('Error: No se pudo completar la venta. Faltan datos.');
       return;
     }
 
-    const product = productsById[selectedGroup.productId];
-    if (!product) {
-      alert('Error: Producto no encontrado.');
+    if (quantity > selectedGroup.quantity) {
+      alert(`Solo tienes ${selectedGroup.quantity} unidades disponibles.`);
       return;
     }
 
-    performSale(quantity, selectedGroup, product, currentRate);
-    handleCloseSellModal();
+    if (!window.confirm(`¿Vender ${quantity} unidad(es) de ${productsById[selectedGroup.productId]?.name} por ${formatCurrency(selectedGroup.priceMN * quantity)}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          assignedInventoryId: selectedGroup.assignedInventoryId,
+          quantity
+        })
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        handleCloseSellModal();
+        alert(`Venta exitosa: ${quantity} unidad(es) por ${formatCurrency(selectedGroup.priceMN * quantity)}`);
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating sale:', error);
+      alert('Error al crear la venta.');
+    }
   };
   
   const handleExecuteClosing = () => {
@@ -413,7 +441,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                   <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
                   <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{gestorSalesSinceLastClosing.length}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Total a entregar: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.baseMN, 0))}
+                    Total recaudado: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.finalMN, 0))}
                   </p>
               </div>
             <button 

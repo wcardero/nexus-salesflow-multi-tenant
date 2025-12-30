@@ -115,6 +115,7 @@ export interface InventoryGroup {
   quantity: number;
   priceMN: number;
   assignedAt: Date;
+  assignedInventoryId?: string;
   items: InventoryItem[];
 }
 

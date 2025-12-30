@@ -9,6 +9,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import db from './db';
+import { updateInventoryAfterSale } from './inventory';
 
 // Secret for JWT tokens (should be in environment variables)
 const JWT_SECRET = process.env.JWT_SECRET || 'nexus_salesflow_secret';
@@ -1491,6 +1492,94 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
   const query = `SELECT * FROM "Sale" ${condition}`;
   const { rows } = await db.query(query, params);
   res.json(rows);
+});
+
+app.post('/api/sales', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Gestor') {
+    return res.status(403).json({ message: 'Only Gestors can create sales.' });
+  }
+
+  const { assignedInventoryId, quantity } = req.body;
+
+  if (!assignedInventoryId || !quantity || quantity < 1) {
+    return res.status(400).json({ message: 'Assigned inventory ID and quantity are required.' });
+  }
+
+  try {
+    await db.query('BEGIN');
+
+    const assignedResult = await db.query(
+      'SELECT ai.*, p."costUSD", p."costMN", p.margin, p."commissionRate", p.currency FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id WHERE ai.id = $1 AND ai."gestorId" = $2 AND ai.status = $3',
+      [assignedInventoryId, requestingUser.id, 'Confirmed']
+    );
+
+    if (assignedResult.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ message: 'Assigned inventory not found or not confirmed.' });
+    }
+
+    const assigned = assignedResult.rows[0];
+
+    if (assigned.quantity < quantity) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ message: `Not enough inventory. Requested: ${quantity}, Available: ${assigned.quantity}` });
+    }
+
+    if (!assigned.priceMN) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ message: 'Price not set for this inventory.' });
+    }
+
+    const pricePerUnit = assigned.priceMN;
+    const commissionRate = assigned.commissionRate || 0;
+
+    const sales = [];
+    const now = Date.now();
+    for (let i = 0; i < quantity; i++) {
+      const saleId = `sale-${now}-${i}`;
+      const sale = await db.query(
+        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+        [
+          saleId,
+          `invitem-${now}-${i}`,
+          requestingUser.id,
+          new Date(),
+          0,
+          assigned.costUSD || 0,
+          assigned.margin || 0,
+          0,
+          pricePerUnit * (1 - commissionRate),
+          pricePerUnit * commissionRate,
+          pricePerUnit
+        ]
+      );
+      sales.push(sale.rows[0]);
+    }
+
+    const totalFinalMN = pricePerUnit * quantity;
+
+    await updateInventoryAfterSale(assignedInventoryId, quantity);
+
+    await createAuditLog(
+      requestingUser.id,
+      'CREATE_SALES',
+      'Sale',
+      sales.map(s => s.id).join(','),
+      null,
+      { assignedInventoryId, quantity, totalFinalMN },
+      requestingUser.storeId
+    );
+
+    await db.query('COMMIT');
+
+    res.status(201).json({ sales, totalFinalMN });
+  } catch (error: any) {
+    await db.query('ROLLBACK');
+    console.error('Create sales error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 app.get('/api/closings', authenticateToken, async (req, res) => {
