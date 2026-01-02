@@ -1430,17 +1430,20 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
   app.get('/api/inventory-conflicts', authenticateToken, async (req, res) => {
     const requestingUser = (req as any).user;
 
-    if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Admin') {
-      return res.status(403).json({ message: 'Only Managers and Admins can view inventory conflicts.' });
-    }
-
     try {
       let condition = '';
       const params: any[] = [];
 
-      if (requestingUser.role === 'Manager') {
+      if (requestingUser.role === 'Admin') {
+        condition = '';
+      } else if (requestingUser.role === 'Manager') {
         condition = `WHERE ic."managerid" = $1`;
         params.push(requestingUser.id);
+      } else if (requestingUser.role === 'Gestor') {
+        condition = `WHERE ic."gestorid" = $1`;
+        params.push(requestingUser.id);
+      } else {
+        return res.status(403).json({ message: 'Access denied.' });
       }
 
       const query = `
