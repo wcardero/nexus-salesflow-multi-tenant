@@ -1373,14 +1373,19 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     }
 
     try {
+      await db.query('BEGIN');
+
       const assigned = await db.query(
         'SELECT ai.*, u."storeId" FROM "AssignedInventory" ai JOIN "User" u ON ai."gestorId" = u.id WHERE ai.id = $1 AND ai."gestorId" = $2',
         [id, requestingUser.id]
       );
 
       if (assigned.rows.length === 0) {
+        await db.query('ROLLBACK');
         return res.status(404).json({ message: 'Inventory not found or not assigned to you.' });
       }
+
+      const assignedData = assigned.rows[0];
 
       const updateResult = await db.query(
         'UPDATE "AssignedInventory" SET status = $1, "rejectionReason" = $2 WHERE id = $3 AND "gestorId" = $4 RETURNING *',
@@ -1388,8 +1393,14 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       );
 
       if (updateResult.rows.length === 0) {
+        await db.query('ROLLBACK');
         return res.status(404).json({ message: 'Inventory not found or not assigned to you.' });
       }
+
+      await db.query(
+        'UPDATE "ProductStock" SET "quantity" = "quantity" + $1 WHERE "productId" = $2 AND "storeId" = $3',
+        [assignedData.quantity, assignedData.productId, assignedData.storeId]
+      );
 
       const conflictId = `conflict-${Date.now()}`;
       await db.query(
@@ -1403,13 +1414,47 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         'AssignedInventory',
         id,
         null,
-        { status: 'Rejected', reason: reason.trim() },
+        { status: 'Rejected', reason: reason.trim(), quantityReturned: assignedData.quantity },
         requestingUser.storeId
       );
 
+      await db.query('COMMIT');
       res.json(updateResult.rows[0]);
     } catch (error: any) {
+      await db.query('ROLLBACK');
       console.error('Reject inventory error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/inventory-conflicts', authenticateToken, async (req, res) => {
+    const requestingUser = (req as any).user;
+
+    if (requestingUser.role !== 'Manager' && requestingUser.role !== 'Admin') {
+      return res.status(403).json({ message: 'Only Managers and Admins can view inventory conflicts.' });
+    }
+
+    try {
+      let condition = '';
+      const params: any[] = [];
+
+      if (requestingUser.role === 'Manager') {
+        condition = `WHERE "managerId" = $1`;
+        params.push(requestingUser.id);
+      }
+
+      const query = `
+        SELECT ic.*, ai."productId", ai.quantity, u.name as "gestorName"
+        FROM "InventoryConflict" ic
+        JOIN "AssignedInventory" ai ON ic."assignedInventoryId" = ai.id
+        JOIN "User" u ON ic."gestorId" = u.id
+        ${condition}
+        ORDER BY ic.id DESC
+      `;
+      const { rows } = await db.query(query, params);
+      res.json(rows);
+    } catch (error: any) {
+      console.error('Get inventory conflicts error:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });

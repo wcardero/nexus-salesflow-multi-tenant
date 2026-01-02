@@ -1,6 +1,6 @@
 // views/ManagerDashboard.tsx
 import React, { useState, Pick, useEffect } from 'react';
-import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus } from '../types';
+import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus, InventoryConflict } from '../types';
 import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '../utils';
 
 interface ManagerDashboardProps {
@@ -11,7 +11,7 @@ interface ManagerDashboardProps {
   refreshDb: () => Promise<void>;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit' | 'conflicts';
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
@@ -77,6 +77,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   const storeClosings = db.closings.filter(c => storeGestores.some(g => g.id === c.gestorId));
   const storeSales = db.sales.filter(s => storeGestores.some(g => g.id === s.gestorId));
 
+  console.log('[ManagerDashboard] store.id:', store.id);
+  console.log('[ManagerDashboard] storeGestores:', storeGestores.map(g => g.id));
+  console.log('[ManagerDashboard] All closings from DB:', db.closings.map(c => ({ id: c.id, gestorId: c.gestorId, status: c.status })));
+  console.log('[ManagerDashboard] storeClosings:', storeClosings);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'closings':
@@ -95,6 +100,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'audit':
         return <AuditLogsView db={db} store={store} />;
+      case 'conflicts':
+        return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} />;
       default:
         return null;
     }
@@ -105,6 +112,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
       <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
@@ -194,6 +202,12 @@ const ReportsView: React.FC<{sales: MockDB['sales'], gestores: User[]}> = ({ sal
 const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (id: string) => void}> = ({ closings, users, onValidate }) => {
   const pendingClosings = closings.filter(c => c.status === ClosingStatus.PENDING);
   const usersById = Object.fromEntries(users.map(u => [u.id, u]));
+
+  console.log('[ClosingsView] All closings received:', closings.map(c => ({ id: c.id, status: c.status, gestorId: c.gestorId })));
+  console.log('[ClosingsView] ClosingStatus.PENDING:', ClosingStatus.PENDING);
+  console.log('[ClosingsView] pendingClosings after filter:', pendingClosings);
+  console.log('[ClosingsView] usersById keys:', Object.keys(usersById));
+
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Cierres Pendientes de Validación</h3>
@@ -1337,6 +1351,54 @@ const AuditLogsView: React.FC<{db: MockDB, store: Store}> = ({ db, store }) => {
             )) : (
               <tr>
                 <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No hay registros de auditoría.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product[]}> = ({ conflicts, products }) => {
+  const productsById = Object.fromEntries(products.map(p => [p.id, p]));
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold mb-4">Conflictos de Inventario (Asignaciones Rechazadas)</h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-700">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Razón</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            {conflicts.length > 0 ? conflicts.map(conflict => (
+              <tr key={conflict.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {new Date(conflict.timestamp).toLocaleString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                  {conflict.gestorName || 'Gestor desconocido'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {productsById[conflict.productId]?.name || 'Producto desconocido'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                  {conflict.quantity}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-300 max-w-xs">
+                  {conflict.reason}
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No hay conflictos de inventario.</td>
               </tr>
             )}
           </tbody>

@@ -54,6 +54,7 @@ const App: React.FC = () => {
         'assigned-inventory',
         'sales',
         'closings',
+        'inventory-conflicts',
         'audit-logs',
       ];
 
@@ -119,11 +120,26 @@ const App: React.FC = () => {
       };
 
         // Dates are transmitted as strings, so we need to convert them back to Date objects
-        data.stores.forEach(s => s.exchangeRates.forEach(xr => {
-          xr.startDate = new Date(xr.startDate);
-          if(xr.endDate) xr.endDate = new Date(xr.endDate);
-        }));
+        data.stores.forEach(s => {
+          if (s.exchangeRates && Array.isArray(s.exchangeRates)) {
+            s.exchangeRates.forEach(xr => {
+              xr.startDate = new Date(xr.startDate);
+              if(xr.endDate) xr.endDate = new Date(xr.endDate);
+            });
+          }
+        });
         data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
+
+        // Convert dates in closings and their sales
+        console.log('[App.tsx] closings before processing:', data.closings);
+        data.closings.forEach(c => {
+          c.initiatedAt = new Date(c.initiatedAt);
+          if (c.completedAt) c.completedAt = new Date(c.completedAt);
+          if (c.sales && Array.isArray(c.sales)) {
+            c.sales.forEach(s => s.soldAt = new Date(s.soldAt));
+          }
+        });
+        console.log('[App.tsx] closings after processing:', data.closings);
 
       // Update current user from fresh database data to avoid stale cache issues
       const storedUserJson = localStorage.getItem('user');
