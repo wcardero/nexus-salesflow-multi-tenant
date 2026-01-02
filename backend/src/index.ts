@@ -1405,7 +1405,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       const conflictId = `conflict-${Date.now()}`;
       await db.query(
         'INSERT INTO "InventoryConflict" (id, "assignedInventoryId", gestorid, managerid, reason) VALUES ($1, $2, $3, $4, $5)',
-        [conflictId, id, requestingUser.id, requestingUser.storeId, reason.trim()]
+        [conflictId, id, requestingUser.id, requestingUser.id, reason.trim()]
       );
 
       await createAuditLog(
