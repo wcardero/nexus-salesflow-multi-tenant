@@ -25,8 +25,8 @@ const NavLink: React.FC<{
     onClick={onClick}
     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-medium ${
       active
-        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 shadow-sm'
+        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md'
     }`}
   >
     <span className={`material-symbols-outlined ${active ? 'fill' : ''}`}>{icon}</span>
@@ -203,7 +203,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
         <div className={`flex flex-col gap-2 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md transition-all"
           >
             <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
             <p className="text-sm font-medium leading-normal">
@@ -222,10 +222,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
               <p className="text-sm font-medium leading-tight text-slate-800 dark:text-white">
                 {currentUser.name}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser.role}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{currentUser.role}</p>
             </div>
             <button onClick={onLogout} title="Cerrar Sesión">
-              <span className="material-symbols-outlined text-danger-500 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-500 transition-colors">logout</span>
+              <span className="material-symbols-outlined text-danger-500 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-500 hover:shadow-sm transition-all">logout</span>
             </button>
           </div>
         </div>

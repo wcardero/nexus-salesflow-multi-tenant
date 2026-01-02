@@ -120,17 +120,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     includeStoreSelect: boolean = false
   ) => (
     <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 font-display">
-      <div className="w-full max-w-md bg-slate-50 dark:bg-slate-800 shadow-2xl rounded-2xl p-8 m-4">
+      <div className="w-full max-w-md bg-slate-50 dark:bg-slate-800 shadow-3xl rounded-2xl p-8 m-4">
         <h1 className="text-3xl font-black text-center bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent mb-2 tracking-tight">
           Nexus SalesFlow
         </h1>
-        <p className="text-center text-slate-600 dark:text-slate-400 mb-8">{subtitle}</p>
+        <p className="text-center text-slate-700 dark:text-slate-400 mb-8">{subtitle}</p>
 
         <form onSubmit={submitHandler} className="space-y-6">
           <div>
             <label
               htmlFor="loginUsername"
-              className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1"
+              className="block text-sm font-medium text-slate-800 dark:text-slate-400 mb-1"
             >
               Usuario
             </label>
@@ -139,7 +139,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+              className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-md py-2.5 px-4 focus:outline-none focus:ring-3 focus:ring-primary-500/50 focus:border-primary-500 hover:shadow-lg transition-all"
               placeholder="Tu nombre de usuario"
               disabled={loading}
             />
@@ -147,7 +147,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div>
             <label
               htmlFor="loginPassword"
-              className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1"
+              className="block text-sm font-medium text-slate-800 dark:text-slate-400 mb-1"
             >
               Contraseña
             </label>
@@ -156,7 +156,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+              className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-md py-2.5 px-4 focus:outline-none focus:ring-3 focus:ring-primary-500/50 focus:border-primary-500 hover:shadow-lg transition-all"
               placeholder="Tu contraseña"
               disabled={loading}
             />
@@ -165,7 +165,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div>
               <label
                 htmlFor="loginStore"
-                className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1"
+                className="block text-sm font-medium text-slate-800 dark:text-slate-400 mb-1"
               >
                 Tienda
               </label>
@@ -173,7 +173,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 id="loginStore"
                 value={storeId}
                 onChange={(e) => setStoreId(e.target.value)}
-                className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-md py-2.5 px-4 focus:outline-none focus:ring-3 focus:ring-primary-500/50 focus:border-primary-500 hover:shadow-lg transition-all"
                 disabled={loading}
               >
                 <option value="">Seleccione su tienda</option>
@@ -185,7 +185,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
           <button
             type="submit"
-            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
+            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
             disabled={loading}
           >
             {loading ? 'Cargando...' : buttonText}

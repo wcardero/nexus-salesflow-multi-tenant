@@ -14,17 +14,17 @@ const StatCard: React.FC<{
   changeType?: 'positive' | 'negative' | 'stable';
   iconColor?: string;
 }> = ({ icon, label, value, change, changeType = 'stable', iconColor = 'text-primary-600' }) => (
-  <div className="flex flex-col gap-2 rounded-xl p-6 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm">
+  <div className="flex flex-col gap-2 rounded-xl p-6 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-md hover:shadow-lg transition-shadow">
     <div className="flex items-center justify-between">
-      <p className="text-slate-700 dark:text-slate-400 text-sm font-medium">{label}</p>
+      <p className="text-slate-800 dark:text-slate-400 text-sm font-medium">{label}</p>
       <span className={`material-symbols-outlined p-1.5 rounded-lg ${iconColor}`}>{icon}</span>
     </div>
-    <p className="text-slate-800 dark:text-slate-200 tracking-light text-2xl font-bold leading-tight">{value}</p>
+    <p className="text-slate-900 dark:text-slate-200 tracking-light text-2xl font-bold leading-tight">{value}</p>
     {change && (
       <div className="flex items-center gap-1 text-sm">
         <span
           className={`font-medium flex items-center ${
-            changeType === 'positive' ? 'text-success-600' : changeType === 'negative' ? 'text-danger-600' : 'text-slate-600'
+            changeType === 'positive' ? 'text-success-600' : changeType === 'negative' ? 'text-danger-600' : 'text-slate-700'
           }`}
         >
           {changeType !== 'stable' && (
@@ -208,7 +208,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       {/* Page Heading */}
       <div className="flex flex-wrap justify-between items-end gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-slate-800 dark:text-slate-200 text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">
+          <h1 className="text-slate-900 dark:text-slate-200 text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">
             Resumen del Sistema
           </h1>
           <p className="text-slate-600 dark:text-slate-400 text-base font-normal leading-normal">
@@ -216,11 +216,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+          <button className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md transition-all">
             <span className="material-symbols-outlined text-[20px]">calendar_today</span>
             <span>Este Mes</span>
           </button>
-          <button className="flex items-center gap-2 bg-primary-600 text-white rounded-lg px-4 py-2 text-sm font-bold shadow-md hover:bg-primary-700 transition-colors hover:shadow-lg">
+          <button className="flex items-center gap-2 bg-primary-600 text-white rounded-lg px-4 py-2 text-sm font-bold shadow-md hover:bg-primary-700 transition-all hover:shadow-xl">
             <span className="material-symbols-outlined text-[20px]">download</span>
             <span>Exportar Reporte</span>
           </button>
@@ -237,9 +237,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       {/* Split Section: Quick Actions & Top Performers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
-        <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm">
+        <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-md hover:shadow-lg transition-shadow">
           <div className="flex flex-col gap-1">
-            <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Acciones Rápidas</h3>
+            <h3 className="text-slate-900 dark:text-slate-200 text-xl font-bold leading-tight">Acciones Rápidas</h3>
             <p className="text-slate-600 dark:text-slate-400 text-sm font-normal">Administre su jerarquía e inventario de manera eficiente.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -247,7 +247,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
              <div className="flex flex-col items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                 <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Añadir Nueva Tienda</h4>
                 <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <button onClick={handleCreateStore} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 transition-colors">Añadir Tienda</button>
+                <button onClick={handleCreateStore} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Añadir Tienda</button>
              </div>
              {/* Create Director */}
              <div className="flex flex-col items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
@@ -256,7 +256,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
-                <button onClick={handleCreateDirector} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 transition-colors">Crear Director</button>
+                <button onClick={handleCreateDirector} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Crear Director</button>
              </div>
              {/* Create Manager */}
              <div className="flex flex-col items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
@@ -265,20 +265,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
-                <button onClick={handleCreateManager} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 transition-colors">Crear Manager</button>
+                <button onClick={handleCreateManager} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Crear Manager</button>
              </div>
           </div>
         </div>
 
         {/* Top Performing Stores Table */}
-        <div className="flex flex-col gap-4 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm overflow-hidden">
+        <div className="flex flex-col gap-4 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
           <div className="flex justify-between items-center">
-            <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Tiendas y Directores</h3>
-            <a className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline" href="#">Ver Todas</a>
+            <h3 className="text-slate-900 dark:text-slate-200 text-xl font-bold leading-tight">Tiendas y Directores</h3>
+            <a className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors" href="#">Ver Todas</a>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-slate-600 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-700">
+              <thead className="text-xs text-slate-700 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-700">
                 <tr>
                   <th className="px-4 py-3 rounded-l-lg" scope="col">Nombre de la Tienda</th>
                   <th className="px-4 py-3" scope="col">Director</th>
@@ -290,10 +290,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                   const director = db.users.find(u => u.id === store.directorId);
                   const managers = db.users.filter(u => store.managerIds?.includes(u.id));
                   return (
-                    <tr key={store.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{store.name}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{director?.name || 'N/A'}</td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">{managers.length}</td>
+                    <tr key={store.id} className="hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{store.name}</td>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{director?.name || 'N/A'}</td>
+                      <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-slate-200">{managers.length}</td>
                     </tr>
                   )
                 })}
