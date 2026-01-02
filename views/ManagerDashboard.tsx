@@ -1,5 +1,5 @@
 // views/ManagerDashboard.tsx
-import React, { useState, Pick } from 'react';
+import React, { useState, Pick, useEffect } from 'react';
 import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus } from '../types';
 import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '../utils';
 
@@ -15,6 +15,10 @@ type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'repor
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
+
+  useEffect(() => {
+    refreshDb();
+  }, [activeTab]);
 
   // Handlers
   const handleValidateClosing = async (closingId: string) => {
