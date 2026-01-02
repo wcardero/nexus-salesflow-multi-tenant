@@ -172,7 +172,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
             db={db}
             setDb={setDb}
             gestorInventory={gestorInventory.filter(item => item.status === 'Available')}
-            gestorSalesSinceLastClosing={gestorSales.filter(sale => !gestorClosings.some(c => c.sales.some(s => s.id === sale.id)))}
+            gestorSalesSinceLastClosing={gestorSales.filter(sale => !gestorClosings.some(c => c.sales && c.sales.some(s => s.id === sale.id)))}
             productsById={productsById}
             currentRate={currentRate}
             groupedInventory={groupedInventory}
@@ -339,7 +339,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     }
   };
   
-  const handleExecuteClosing = () => {
+  const handleExecuteClosing = async () => {
     if (gestorSalesSinceLastClosing.length === 0) {
       alert('No hay ventas nuevas para cerrar.');
       return;
@@ -349,18 +349,6 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     const totalCommission = gestorSalesSinceLastClosing.reduce((sum, sale) => sum + sale.commission, 0);
     const totalFinalMN = gestorSalesSinceLastClosing.reduce((sum, sale) => sum + sale.finalMN, 0);
 
-    const newClosing: Closing = {
-      id: `closing-${Date.now()}`,
-      gestorId: user.id,
-      initiatedAt: new Date(),
-      status: ClosingStatus.PENDING,
-      sales: gestorSalesSinceLastClosing,
-      totalBaseMN,
-      totalCommission,
-      totalFinalMN,
-    };
-    
-    // Simple summary for user confirmation
     const summary = `
       Resumen del Cierre:
       - Artículos Vendidos: ${gestorSalesSinceLastClosing.length}
@@ -371,15 +359,32 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
       ¿Confirmas la ejecución del cierre?
     `;
 
-    if (window.confirm(summary)) {
-      setDb(prevDb => {
-        if (!prevDb) return prevDb;
-        return {
-          ...prevDb,
-          closings: [...prevDb.closings, newClosing],
-        };
+    if (!window.confirm(summary)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/closings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          saleIds: gestorSalesSinceLastClosing.map(s => s.id)
+        })
       });
-      alert('Cierre ejecutado. El manager ha sido notificado.');
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Cierre ejecutado. El manager ha sido notificado.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating closing:', error);
+      alert('Error al crear el cierre.');
     }
   };
 
@@ -403,9 +408,9 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     return groups;
   }, [gestorSalesSinceLastClosing, db.assignedInventory, user.id]);
 
-  const totalSalesAmount = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.total, 0);
-  const totalGestorGain = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.gestorGain, 0);
-  const totalStoreGain = Object.values(salesByProduct).reduce((sum: number, data: any) => sum + data.storeGain, 0);
+  const totalSalesAmount = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.total || 0), 0);
+  const totalGestorGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.gestorGain || 0), 0);
+  const totalStoreGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.storeGain || 0), 0);
 
   return (
     <>

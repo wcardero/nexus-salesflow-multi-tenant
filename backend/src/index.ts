@@ -1647,6 +1647,127 @@ app.get('/api/closings', authenticateToken, async (req, res) => {
   res.json(closingsWithSales);
 });
 
+app.post('/api/closings', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Gestor') {
+    return res.status(403).json({ message: 'Only Gestors can create closings.' });
+  }
+
+  const { saleIds } = req.body;
+
+  if (!saleIds || !Array.isArray(saleIds) || saleIds.length === 0) {
+    return res.status(400).json({ message: 'Sale IDs are required.' });
+  }
+
+  try {
+    await db.query('BEGIN');
+
+    const closingId = `closing-${Date.now()}`;
+
+    const salesResult = await db.query(
+      'SELECT * FROM "Sale" WHERE id = ANY($1) AND "gestorId" = $2',
+      [saleIds, requestingUser.id]
+    );
+
+    if (salesResult.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ message: 'No valid sales found for this gestor.' });
+    }
+
+    const totalBaseMN = salesResult.rows.reduce((sum, sale) => sum + parseFloat(sale.baseMN), 0);
+    const totalCommission = salesResult.rows.reduce((sum, sale) => sum + parseFloat(sale.commission), 0);
+    const totalFinalMN = salesResult.rows.reduce((sum, sale) => sum + parseFloat(sale.finalMN), 0);
+
+    const closingResult = await db.query(
+      'INSERT INTO "Closing" (id, "gestorId", "initiatedAt", "status", "totalBaseMN", "totalCommission", "totalFinalMN") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [closingId, requestingUser.id, new Date(), 'PENDING', totalBaseMN, totalCommission, totalFinalMN]
+    );
+
+    for (const sale of salesResult.rows) {
+      await db.query(
+        'INSERT INTO "_ClosingToSale" ("A", "B") VALUES ($1, $2)',
+        [closingId, sale.id]
+      );
+    }
+
+    await createAuditLog(
+      requestingUser.id,
+      'CREATE_CLOSING',
+      'Closing',
+      closingId,
+      null,
+      { saleIds, totalBaseMN, totalCommission, totalFinalMN },
+      requestingUser.storeId
+    );
+
+    await db.query('COMMIT');
+
+    res.status(201).json({
+      ...closingResult.rows[0],
+      sales: salesResult.rows.map(sale => ({
+        ...sale,
+        soldAt: new Date(sale.soldAt)
+      }))
+    });
+  } catch (error: any) {
+    await db.query('ROLLBACK');
+    console.error('Create closing error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.patch('/api/closings/:id/complete', authenticateToken, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Manager') {
+    return res.status(403).json({ message: 'Only Managers can complete closings.' });
+  }
+
+  try {
+    const closingResult = await db.query(
+      'SELECT c.*, u."storeId" FROM "Closing" c JOIN "User" u ON c."gestorId" = u.id WHERE c.id = $1',
+      [id]
+    );
+
+    if (closingResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Closing not found.' });
+    }
+
+    const closing = closingResult.rows[0];
+
+    const storeAccess = await db.query(
+      'SELECT * FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
+      [closing.storeId, requestingUser.id]
+    );
+
+    if (storeAccess.rows.length === 0) {
+      return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
+    }
+
+    const result = await db.query(
+      'UPDATE "Closing" SET status = $1, "completedAt" = $2 WHERE id = $3 RETURNING *',
+      ['COMPLETED', new Date(), id]
+    );
+
+    await createAuditLog(
+      requestingUser.id,
+      'COMPLETE_CLOSING',
+      'Closing',
+      id,
+      { status: 'PENDING' },
+      { status: 'COMPLETED' },
+      closing.storeId
+    );
+
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Complete closing error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Endpoint to create an audit log entry
 app.post('/api/audit-logs', authenticateToken, async (req: Request, res: Response) => {
   const { userId, action, entityType, entityId, oldValues, newValues, storeId } = req.body;

@@ -17,17 +17,25 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
 
   // Handlers
-  const handleValidateClosing = (closingId: string) => {
-    if (window.confirm('¿Confirmas que has recibido el dinero de este cierre? Esta acción no se puede deshacer.')) {
-      setDb(prevDb => {
-        if (!prevDb) return prevDb;
-        return {
-          ...prevDb,
-          closings: prevDb.closings.map(c =>
-            c.id === closingId ? { ...c, status: ClosingStatus.COMPLETED, completedAt: new Date() } : c
-          ),
-        };
+  const handleValidateClosing = async (closingId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/closings/${closingId}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Cierre validado exitosamente.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error completing closing:', error);
+      alert('Error al completar el cierre.');
     }
   };
 
@@ -261,7 +269,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-            {store.exchangeRates.sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map(xr => (
+            {(store.exchangeRates || []).sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map(xr => (
               <tr key={xr.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{xr.rate}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{new Date(xr.startDate).toLocaleDateString()}</td>
