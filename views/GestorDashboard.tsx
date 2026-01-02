@@ -193,7 +193,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm w-full">
+    <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm w-full">
       <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
@@ -416,20 +416,20 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Columna de Inventario Asignado */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
+        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm">
           <h2 className="text-xl font-bold mb-4">Mi Inventario Disponible</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-50 dark:bg-slate-700">
+              <thead className="bg-slate-100 dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio de Venta</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">% Comision Gestor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Producto</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Precio de Venta</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">% Comision Gestor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Cantidad</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Acción</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+              <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                 {(Object.entries(groupedInventory) as [string, InventoryGroup][]).map(([key, group]) => {
                   const product = productsById[group.productId];
                   if (!product) {
@@ -438,9 +438,9 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                   return (
                     <tr key={key}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{((product.commissionRate || 0) * 100).toFixed(0)}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{group.quantity}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{((product.commissionRate || 0) * 100).toFixed(0)}%</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{group.quantity}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         {group.items.length > 0 && (
                           <button
@@ -456,7 +456,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                 })}
                 {Object.keys(groupedInventory).length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No tienes inventario asignado.</td>
+                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-600">No tienes inventario asignado.</td>
                   </tr>
                 )}
               </tbody>
@@ -466,35 +466,35 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
         {/* Ventas Realizadas */}
         {Object.keys(salesByProduct).length > 0 && (
-          <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
+          <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-bold mb-4">Ventas Realizadas</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-700">
+                <thead className="bg-slate-100 dark:bg-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ganancia Gestor</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ganancia Tienda</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Dinero Recaudado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Producto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Cantidad</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Ganancia Gestor</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Ganancia Tienda</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Dinero Recaudado</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                   {(Object.entries(salesByProduct) as [string, { quantity: number; total: number; gestorGain: number; storeGain: number }][]).map(([productId, data]) => {
                     const product = productsById[productId];
                     if (!product) return null;
                     return (
                       <tr key={productId}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{data.quantity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.gestorGain)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.storeGain)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(data.total)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{data.quantity}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(data.gestorGain)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(data.storeGain)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(data.total)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
-                <tfoot className="bg-slate-50 dark:bg-slate-700">
+                <tfoot className="bg-slate-100 dark:bg-slate-700">
                   <tr>
                     <td colSpan={2} className="px-6 py-3 text-left text-sm font-bold text-slate-900 dark:text-slate-200">Total</td>
                     <td className="px-6 py-3 text-right text-sm font-bold text-success-600 dark:text-success-400">
@@ -514,17 +514,17 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         )}
 
         {/* Columna de Cierre de Caja */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm h-fit">
+        <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm h-fit">
           <h2 className="text-xl font-bold mb-4">Cierre de Caja</h2>
           <div className="space-y-4">
-              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
                   <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
                   <p className="text-2xl font-bold text-info-600 dark:text-info-400">{gestorSalesSinceLastClosing.length}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Total recaudado: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.finalMN, 0))}
                   </p>
               </div>
-            <button
+            <button 
               onClick={handleExecuteClosing}
               disabled={gestorSalesSinceLastClosing.length === 0}
               className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"

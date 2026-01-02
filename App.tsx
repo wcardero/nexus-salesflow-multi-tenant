@@ -238,7 +238,7 @@ const App: React.FC = () => {
   
    if (checkingAuth) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
         <p>Loading...</p>
       </div>
     );
@@ -253,7 +253,7 @@ const App: React.FC = () => {
     if (error) {
       console.log('[App.tsx] Error loading database:', error);
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
           <p className="text-danger-600 dark:text-danger-400 mb-4">Error: {error}</p>
           <button
             onClick={handleLogout}
@@ -266,7 +266,7 @@ const App: React.FC = () => {
     }
     console.log('[App.tsx] db is null, showing Loading database...');
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
         <p>Loading database...</p>
       </div>
     );

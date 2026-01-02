@@ -81,10 +81,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
   const navigationItems = getNavigationItems(currentUser.role);
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display overflow-hidden">
+    <div className="flex h-screen w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display overflow-hidden">
       {/* Mobile Sidebar */}
       <aside
-        className={`md:hidden flex flex-col justify-between border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-transform duration-300 h-full z-20 fixed ${
+        className={`md:hidden flex flex-col justify-between border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 transition-transform duration-300 h-full z-20 fixed ${
           isMenuOpen ? 'translate-x-0 w-64 p-4' : '-translate-x-full w-64 p-4'
         }`}
       >
@@ -159,7 +159,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
 
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex flex-col justify-between border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-all duration-300 h-full overflow-hidden ${
+        className={`hidden md:flex flex-col justify-between border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 transition-all duration-300 h-full overflow-hidden ${
           isSidebarCollapsed ? 'w-0 border-none p-0' : 'w-64 p-4'
         }`}
       >
@@ -235,7 +235,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
       {isSidebarCollapsed && (
         <button
           onClick={() => setIsSidebarCollapsed(false)}
-          className="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 shadow-lg hover:shadow-xl transition-shadow hover:bg-slate-50 dark:hover:bg-slate-700"
+          className="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 shadow-lg hover:shadow-xl transition-shadow hover:bg-slate-100 dark:hover:bg-slate-700"
           title="Abrir barra lateral"
         >
           <span className="material-symbols-outlined text-slate-700 dark:text-slate-300">menu</span>
@@ -245,7 +245,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="md:hidden flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
           <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}>
             <span className="material-symbols-outlined">menu</span>
           </button>

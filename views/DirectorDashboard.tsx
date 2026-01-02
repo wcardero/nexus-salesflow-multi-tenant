@@ -204,36 +204,36 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
       </div>
 
       {/* Create Manager Section */}
-      <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+      <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm">
         <div className="flex flex-col gap-1">
           <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Crear Nuevo Manager</h3>
           <p className="text-slate-600 dark:text-slate-400 text-sm font-normal">Agregue un nuevo manager a su tienda.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nombre de usuario</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Nombre de usuario</label>
             <input
               type="text"
               placeholder="Nombre de usuario del manager"
               value={newManagerName}
               onChange={e => setNewManagerName(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
+              className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Contraseña</label>
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={newManagerPassword}
-              onChange={e => setNewManagerPassword(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Contraseña</label>
+            <input 
+              type="password" 
+              placeholder="Contraseña" 
+              value={newManagerPassword} 
+              onChange={e => setNewManagerPassword(e.target.value)} 
+              className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
             />
           </div>
         </div>
         <div className="flex justify-end">
-          <button
-            onClick={handleCreateManager}
+          <button 
+            onClick={handleCreateManager} 
             className="bg-primary-600 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-primary-700 transition-colors"
           >
             Crear Manager
@@ -243,7 +243,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
 
       {/* Edit Manager Section (if editing) */}
       {editingManager && (
-        <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+        <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm">
           <div className="flex flex-col gap-1">
             <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Editar Manager</h3>
             <p className="text-slate-600 dark:text-slate-400 text-sm font-normal">Modifique la información del manager.</p>
@@ -252,19 +252,19 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
             <input
               type="text"
               placeholder="Nombre de usuario del manager"
-              value={editingManagerName}
-              onChange={e => setEditingManagerName(e.target.value)}
-              className="flex-1 bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
+              value={editingManagerName} 
+              onChange={e => setEditingManagerName(e.target.value)} 
+              className="flex-1 bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
             />
             <div className="flex gap-2">
-              <button
-                onClick={handleUpdateManager}
+              <button 
+                onClick={handleUpdateManager} 
                 className="bg-primary-600 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-primary-700 transition-colors"
               >
                 Guardar Cambios
               </button>
-              <button
-                onClick={cancelEditing}
+              <button 
+                onClick={cancelEditing} 
                 className="bg-slate-500 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-slate-600 transition-colors"
               >
                 Cancelar
@@ -275,7 +275,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
       )}
 
       {/* Managers List */}
-      <div className="flex flex-col gap-4 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+      <div className="flex flex-col gap-4 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm overflow-hidden">
         <div className="flex justify-between items-center">
           <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Managers de la Tienda</h3>
           <p className="text-slate-600 dark:text-slate-400 text-sm font-normal">{storeManagers.length} managers</p>
@@ -322,7 +322,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
       {/* Change Password Modal */}
       {showPasswordModal && passwordChangeManager && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">
               Cambiar Contraseña - {passwordChangeManager.name}
             </h3>
@@ -334,7 +334,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
                 type="password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
+                className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"
                 placeholder="Ingrese nueva contraseña"
               />
             </div>

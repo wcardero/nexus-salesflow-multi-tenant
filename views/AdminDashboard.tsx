@@ -14,9 +14,9 @@ const StatCard: React.FC<{
   changeType?: 'positive' | 'negative' | 'stable';
   iconColor?: string;
 }> = ({ icon, label, value, change, changeType = 'stable', iconColor = 'text-primary-600' }) => (
-  <div className="flex flex-col gap-2 rounded-xl p-6 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+  <div className="flex flex-col gap-2 rounded-xl p-6 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm">
     <div className="flex items-center justify-between">
-      <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">{label}</p>
+      <p className="text-slate-700 dark:text-slate-400 text-sm font-medium">{label}</p>
       <span className={`material-symbols-outlined p-1.5 rounded-lg ${iconColor}`}>{icon}</span>
     </div>
     <p className="text-slate-800 dark:text-slate-200 tracking-light text-2xl font-bold leading-tight">{value}</p>
@@ -216,7 +216,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+          <button className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
             <span className="material-symbols-outlined text-[20px]">calendar_today</span>
             <span>Este Mes</span>
           </button>
@@ -237,7 +237,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       {/* Split Section: Quick Actions & Top Performers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
-        <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+        <div className="flex flex-col gap-6 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm">
           <div className="flex flex-col gap-1">
             <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Acciones Rápidas</h3>
             <p className="text-slate-600 dark:text-slate-400 text-sm font-normal">Administre su jerarquía e inventario de manera eficiente.</p>
@@ -246,14 +246,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
              {/* Add Store */}
              <div className="flex flex-col items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                 <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Añadir Nueva Tienda</h4>
-                <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
                 <button onClick={handleCreateStore} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 transition-colors">Añadir Tienda</button>
              </div>
              {/* Create Director */}
              <div className="flex flex-col items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                 <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Director</h4>
-                <input type="text" placeholder="Nombre del Director" value={newDirectorName} onChange={e => setNewDirectorName(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
+                <input type="text" placeholder="Nombre del Director" value={newDirectorName} onChange={e => setNewDirectorName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
                 <button onClick={handleCreateDirector} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 transition-colors">Crear Director</button>
@@ -261,8 +261,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
              {/* Create Manager */}
              <div className="flex flex-col items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                 <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Manager</h4>
-                <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
+                <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
                 <button onClick={handleCreateManager} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 transition-colors">Crear Manager</button>
@@ -271,7 +271,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
         </div>
 
         {/* Top Performing Stores Table */}
-        <div className="flex flex-col gap-4 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+        <div className="flex flex-col gap-4 p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-sm overflow-hidden">
           <div className="flex justify-between items-center">
             <h3 className="text-slate-800 dark:text-slate-200 text-xl font-bold leading-tight">Tiendas y Directores</h3>
             <a className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline" href="#">Ver Todas</a>

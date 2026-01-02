@@ -108,7 +108,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow w-full">
+    <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow w-full">
       <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
@@ -180,7 +180,7 @@ const ReportsView: React.FC<{sales: MockDB['sales'], gestores: User[]}> = ({ sal
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión Gestor</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {salesByGestor.map(report => (
               <tr key={report.gestorName}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{report.gestorName}</td>
@@ -257,7 +257,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             step="0.01"
             value={newRate}
             onChange={(e) => setNewRate(e.target.value)}
-            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             placeholder="Ej: 300.50"
           />
         </div>
@@ -268,7 +268,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
           />
         </div>
         <button type="submit" className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
@@ -286,7 +286,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vigente Hasta</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {(store.exchangeRates || []).sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map(xr => (
               <tr key={xr.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{xr.rate}</td>
@@ -438,7 +438,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       {/* Edit Gestor Modal */}
       {editingGestor && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Editar Gestor</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
@@ -446,7 +446,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div>
@@ -456,7 +456,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   value={editingPassword}
                   onChange={e => setEditingPassword(e.target.value)}
                   placeholder="Dejar vacío para no cambiar"
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -478,14 +478,14 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Nombre de usuario del nuevo gestor"
-          className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
+          className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
         />
         <input
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
           placeholder="Contraseña"
-          className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
+          className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
         />
         <button type="submit" className="md:col-span-2 bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
       </form>
@@ -733,7 +733,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       {/* Edit Product Modal */}
       {editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Editar Producto</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
@@ -741,7 +741,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <select
                   value={editingCurrency}
                   onChange={e => setEditingCurrency(e.target.value as 'USD' | 'MN')}
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 >
                   <option value="USD">USD</option>
                   <option value="MN">MN</option>
@@ -752,7 +752,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div>
@@ -764,7 +764,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   onChange={e => setEditingCost(e.target.value)}
                   type="number"
                   placeholder={`Costo (${editingCurrency})`}
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div>
@@ -773,7 +773,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   value={editingMargin}
                   onChange={e => setEditingMargin(e.target.value)}
                   type="number"
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div>
@@ -788,7 +788,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   max="100"
                   step="0.1"
                   placeholder="Dejar vacío para usar por defecto"
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -805,17 +805,17 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       )}
 
         <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6 items-end">
-          <select value={currency} onChange={e => setCurrency(e.target.value as 'USD' | 'MN')} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600">
+          <select value={currency} onChange={e => setCurrency(e.target.value as 'USD' | 'MN')} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600">
             <option value="USD">USD</option>
             <option value="MN">MN</option>
           </select>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           {currency === 'USD' ? (
-            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           ) : (
-            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (MN)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (MN)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           )}
-          <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
           <input
             value={commission}
             onChange={e => setCommission(e.target.value)}
@@ -824,7 +824,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             min="0"
             max="100"
             step="0.1"
-            className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+            className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
           <button type="submit" disabled={!currentExchangeRate} className="bg-primary-600 hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
         </form>
@@ -1013,7 +1013,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
       {/* Edit Stock Modal */}
       {editingStock && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Editar Stock</h3>
             <form onSubmit={handleUpdateStock} className="space-y-4">
               <div>
@@ -1021,7 +1021,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                 <input
                   value={db.products.find(p => p.id === editingStock.productId)?.name || ''}
                   disabled
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600 opacity-60"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600 opacity-60"
                 />
               </div>
               <div>
@@ -1031,7 +1031,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                   onChange={e => setEditingQuantity(parseInt(e.target.value) || 0)}
                   type="number"
                   min="0"
-                  className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -1051,7 +1051,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
         <select
           value={productId}
           onChange={e => setProductId(e.target.value)}
-          className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+          className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
         >
           <option value="">Seleccionar producto</option>
           {storeProducts.map(p => (
@@ -1064,7 +1064,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
           type="number"
           min="0"
           placeholder="Cantidad"
-          className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+          className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
         />
         <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Actualizar Stock</button>
       </form>
@@ -1080,7 +1080,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {storeStock.length > 0 ? storeStock.map(stock => {
               const product = db.products.find(p => p.id === stock.productId);
               const isAssigned = isStockAssignedToGestor(stock.id);
@@ -1219,9 +1219,9 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
     <div>
       <h3 className="text-lg font-bold mb-4">Asignar Inventario a Gestores</h3>
       <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 items-end">
-        <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
-        <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
-        <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+        <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
+        <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
+        <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
         <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
        </form>
        {/* Pending inventory list */}
@@ -1236,7 +1236,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
              </tr>
            </thead>
-           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+           <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {assignedInventory.filter(ai => ai.status === 'Pending').length > 0 ? assignedInventory.filter(ai => ai.status === 'Pending').map(ai => {
                 const product = db.products.find(p => p.id === ai.productId);
                 const gestor = db.users.find(u => u.id === ai.gestorId);
@@ -1277,7 +1277,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad Total</th>
              </tr>
            </thead>
-           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+           <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {Object.keys(groupedAssignedInventory).length > 0 ? (Object.values(groupedAssignedInventory) as InventoryGroup[]).map((group, idx) => (
                 <tr key={idx}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
@@ -1329,7 +1329,7 @@ const AuditLogsView: React.FC<{db: MockDB, store: Store}> = ({ db, store }) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Detalles</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {storeAuditLogs.length > 0 ? storeAuditLogs.map(log => (
               <tr key={log.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
@@ -1377,7 +1377,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Razón</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {conflicts.length > 0 ? conflicts.map(conflict => (
               <tr key={conflict.id} className="hover:bg-warning-50 dark:hover:bg-warning-900/10">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
