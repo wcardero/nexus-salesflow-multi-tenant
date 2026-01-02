@@ -1253,7 +1253,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     try {
       // Get inventory to confirm and calculate price
       const assignedResult = await db.query(
-        'SELECT ai.*, p."costUSD", p."costMN", p.margin, er.rate FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id JOIN "ExchangeRate" er ON p."storeId" = er."storeId" WHERE ai.id = $1 AND ai."gestorId" = $2 AND er."endDate" IS NULL',
+        'SELECT ai.*, p."costUSD", p."costMN", p.margin FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id WHERE ai.id = $1 AND ai."gestorId" = $2',
         [id, requestingUser.id]
       );
 
@@ -1262,33 +1262,45 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       }
 
       const assigned = assignedResult.rows[0];
-      
+
       // Get product commission rate
       const productResult = await db.query(
         'SELECT "commissionRate" FROM "Product" WHERE id = $1',
         [assigned.productId]
       );
-      
+
       if (productResult.rows.length === 0) {
         return res.status(404).json({ message: 'Product not found.' });
       }
-      
+
       const product = productResult.rows[0];
-      
+
       if (!product.commissionRate) {
         return res.status(400).json({ message: 'Product does not have a commission rate set.' });
       }
-      
+
       // Calculate price based on currency
       let priceMN: number;
       if (assigned.costMN) {
-        // Cost is in MN
+        // Cost is in MN, no exchange rate needed
         const baseMN = assigned.costMN * (1 + assigned.margin);
         priceMN = baseMN * (1 + product.commissionRate);
-      } else {
-        // Cost is in USD, use exchange rate
-        const baseMN = assigned.costUSD * (1 + assigned.margin) * assigned.rate;
+      } else if (assigned.costUSD) {
+        // Cost is in USD, get exchange rate
+        const exchangeRateResult = await db.query(
+          'SELECT rate FROM "ExchangeRate" WHERE "storeId" = $1 AND "endDate" IS NULL',
+          [assigned.productId]
+        );
+
+        if (exchangeRateResult.rows.length === 0) {
+          return res.status(400).json({ message: 'No se ha configurado un tipo de cambio vigente para esta tienda. Contacta al manager para configurar el tipo de cambio antes de confirmar el inventario.' });
+        }
+
+        const rate = exchangeRateResult.rows[0].rate;
+        const baseMN = assigned.costUSD * (1 + assigned.margin) * rate;
         priceMN = baseMN * (1 + product.commissionRate);
+      } else {
+        return res.status(400).json({ message: 'Product must have either costUSD or costMN.' });
       }
 
       // Check if there's already confirmed inventory for the same product and gestor with the same price
@@ -1539,11 +1551,12 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
     const now = Date.now();
     for (let i = 0; i < quantity; i++) {
       const saleId = `sale-${now}-${i}`;
+      const inventoryItemId = `inv-${now}-${i}-${Math.random().toString(36).substr(2, 9)}`;
       const sale = await db.query(
-        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
         [
           saleId,
-          `${assignedInventoryId}-${i}`,
+          inventoryItemId,
           requestingUser.id,
           new Date(),
           0,
@@ -1609,10 +1622,29 @@ app.get('/api/closings', authenticateToken, async (req, res) => {
     params.push(requestingUser.id);
   }
 
-  // This would require a JOIN for sales
+  // Include sales in the response
   const query = `SELECT * FROM "Closing" ${condition}`;
-  const { rows } = await db.query(query, params);
-  res.json(rows);
+  const { rows: closings } = await db.query(query, params);
+
+  // Populate sales for each closing
+  const closingsWithSales = await Promise.all(closings.map(async (closing) => {
+    const { rows: sales } = await db.query(`
+      SELECT s.* FROM "Sale" s
+      JOIN "_ClosingToSale" cts ON s.id = cts."B"
+      WHERE cts."A" = $1
+      ORDER BY s."soldAt" ASC
+    `, [closing.id]);
+
+    return {
+      ...closing,
+      sales: sales.map(sale => ({
+        ...sale,
+        soldAt: new Date(sale.soldAt)
+      }))
+    };
+  }));
+
+  res.json(closingsWithSales);
 });
 
 // Endpoint to create an audit log entry
