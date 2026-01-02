@@ -146,7 +146,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
     if (!db.products || db.products.length === 0) {
       console.log('[GestorDashboard] Products not loaded yet, showing loading...');
       return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-slate-200">
           <p>Cargando inventario...</p>
         </div>
       );
@@ -193,7 +193,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow w-full">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm w-full">
       <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
@@ -215,10 +215,10 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (tab: Tabs) => void}> = ({ name, tab, activeTab, onClick }) => (
   <button
     onClick={() => onClick(tab)}
-    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
       activeTab === tab
-        ? 'border-sky-500 text-sky-600'
-        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:hover:text-slate-200'
+        ? 'border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
     }`}
   >
     {name}
@@ -416,7 +416,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Columna de Inventario Asignado */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
           <h2 className="text-xl font-bold mb-4">Mi Inventario Disponible</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
@@ -445,7 +445,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                         {group.items.length > 0 && (
                           <button
                             onClick={() => handleOpenSellModal(group)}
-                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
+                            className="bg-success-600 hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs transition-colors"
                           >
                             Vender
                           </button>
@@ -466,7 +466,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
         {/* Ventas Realizadas */}
         {Object.keys(salesByProduct).length > 0 && (
-          <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-bold mb-4">Ventas Realizadas</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
@@ -497,13 +497,13 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                 <tfoot className="bg-slate-50 dark:bg-slate-700">
                   <tr>
                     <td colSpan={2} className="px-6 py-3 text-left text-sm font-bold text-slate-900 dark:text-slate-200">Total</td>
-                    <td className="px-6 py-3 text-right text-sm font-bold text-green-600 dark:text-green-400">
+                    <td className="px-6 py-3 text-right text-sm font-bold text-success-600 dark:text-success-400">
                       {formatCurrency(totalGestorGain)}
                     </td>
-                    <td className="px-6 py-3 text-right text-sm font-bold text-blue-600 dark:text-blue-400">
+                    <td className="px-6 py-3 text-right text-sm font-bold text-primary-600 dark:text-primary-400">
                       {formatCurrency(totalStoreGain)}
                     </td>
-                    <td className="px-6 py-3 text-right text-sm font-bold text-sky-600 dark:text-sky-400">
+                    <td className="px-6 py-3 text-right text-sm font-bold text-info-600 dark:text-info-400">
                       {formatCurrency(totalSalesAmount)}
                     </td>
                   </tr>
@@ -514,20 +514,20 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         )}
 
         {/* Columna de Cierre de Caja */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow h-fit">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm h-fit">
           <h2 className="text-xl font-bold mb-4">Cierre de Caja</h2>
           <div className="space-y-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                   <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
-                  <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{gestorSalesSinceLastClosing.length}</p>
+                  <p className="text-2xl font-bold text-info-600 dark:text-info-400">{gestorSalesSinceLastClosing.length}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Total recaudado: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.finalMN, 0))}
                   </p>
               </div>
-            <button 
+            <button
               onClick={handleExecuteClosing}
               disabled={gestorSalesSinceLastClosing.length === 0}
-              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+              className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
               Ejecutar Cierre
             </button>
@@ -567,13 +567,13 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
       <div>
         <h3 className="text-xl font-bold mb-4">Resumen General</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow">
+          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
             <p className="text-sm text-slate-500 dark:text-slate-400">Total de Ventas Realizadas</p>
-            <p className="text-3xl font-bold text-sky-600 dark:text-sky-400">{totalSalesCount}</p>
+            <p className="text-3xl font-bold text-info-600 dark:text-info-400">{totalSalesCount}</p>
           </div>
-          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow">
+          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
             <p className="text-sm text-slate-500 dark:text-slate-400">Mi Comisión Total Acumulada</p>
-            <p className="text-3xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalCommissionEarned)}</p>
+            <p className="text-3xl font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommissionEarned)}</p>
           </div>
         </div>
       </div>
@@ -636,23 +636,23 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
   };
 
   return (
-    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg shadow mb-8">
-      <h2 className="text-xl font-bold mb-4 text-yellow-800 dark:text-yellow-200">
+    <div className="bg-warning-50 dark:bg-warning-900/20 p-6 rounded-lg shadow-sm mb-8">
+      <h2 className="text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
         Inventario Pendiente de Confirmación
       </h2>
-      <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+      <p className="text-sm text-warning-700 dark:text-warning-300 mb-4">
         Por favor, verifica que los productos asignados se corresponden con lo que tienes en existencia.
       </p>
       {pendingInventory.length === 0 ? (
-        <p className="text-sm text-yellow-600 dark:text-yellow-400">No hay inventario pendiente de confirmación.</p>
+        <p className="text-sm text-warning-600 dark:text-warning-400">No hay inventario pendiente de confirmación.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-yellow-200 dark:divide-yellow-700">
+          <table className="min-w-full divide-y divide-warning-200 dark:divide-warning-700">
             <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-yellow-900 dark:text-yellow-200 uppercase">Producto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-yellow-900 dark:text-yellow-200 uppercase">Cantidad</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-yellow-900 dark:text-yellow-200 uppercase">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase">Producto</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase">Cantidad</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -666,13 +666,13 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => onConfirm(ai.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-xs mr-2"
+                        className="bg-success-600 hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs mr-2"
                       >
                         Aceptar
                       </button>
                       <button
                         onClick={() => setRejecting(ai.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-xs"
+                        className="bg-danger-600 hover:bg-danger-700 text-white font-bold py-1 px-3 rounded-md text-xs"
                       >
                         Rechazar
                       </button>
@@ -697,13 +697,13 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => { setRejecting(null); setRejectionReason(''); }}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md"
+                className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleReject(rejecting)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                className="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-md"
               >
                 Confirmar Rechazo
               </button>

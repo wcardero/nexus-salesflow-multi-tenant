@@ -236,28 +236,28 @@ const App: React.FC = () => {
     localStorage.removeItem('user');
   };
   
-  if (checkingAuth) {
+   if (checkingAuth) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
         <p>Loading...</p>
       </div>
     );
   }
 
    if (!currentUser) {
-     return <Login onLogin={handleLogin} />;
-   }
+      return <Login onLogin={handleLogin} />;
+    }
 
   if (!db) {
     // If database is still null after auth check, show loading or error
     if (error) {
       console.log('[App.tsx] Error loading database:', error);
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white">
-          <p className="text-red-400 mb-4">Error: {error}</p>
-          <button 
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+          <p className="text-danger-600 dark:text-danger-400 mb-4">Error: {error}</p>
+          <button
             onClick={handleLogout}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md"
           >
             Volver al login
           </button>
@@ -266,7 +266,7 @@ const App: React.FC = () => {
     }
     console.log('[App.tsx] db is null, showing Loading database...');
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
         <p>Loading database...</p>
       </div>
     );

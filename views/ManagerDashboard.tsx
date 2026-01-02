@@ -137,10 +137,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
 const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (tab: Tabs) => void}> = ({ name, tab, activeTab, onClick }) => (
   <button
     onClick={() => onClick(tab)}
-    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
       activeTab === tab
-        ? 'border-sky-500 text-sky-600'
-        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:hover:text-slate-200'
+        ? 'border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
     }`}
   >
     {name}
@@ -217,9 +217,9 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
             <div>
               <p className="font-semibold">{usersById[c.gestorId]?.name || 'Usuario desconocido'}</p>
               <p className="text-sm text-slate-500">Iniciado: {new Date(c.initiatedAt).toLocaleString()}</p>
-              <p className="font-bold text-sky-600 dark:text-sky-400 mt-1">Monto a Recibir: {formatCurrency(c.totalBaseMN)}</p>
+              <p className="font-bold text-info-600 dark:text-info-400 mt-1">Monto a Recibir: {formatCurrency(c.totalBaseMN)}</p>
             </div>
-            <button onClick={() => onValidate(c.id)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">
+            <button onClick={() => onValidate(c.id)} className="bg-success-600 hover:bg-success-700 text-white font-bold py-2 px-4 rounded-md">
               Validar Recepción
             </button>
           </div>
@@ -257,7 +257,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             step="0.01"
             value={newRate}
             onChange={(e) => setNewRate(e.target.value)}
-            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             placeholder="Ej: 300.50"
           />
         </div>
@@ -268,10 +268,10 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+            className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
           />
         </div>
-        <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
           Actualizar Tipo de Cambio
         </button>
       </form>
@@ -439,10 +439,10 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       {editingGestor && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Gestor</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Editar Gestor</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre de usuario</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nombre de usuario</label>
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
@@ -450,7 +450,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nueva contraseña (opcional)</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nueva contraseña (opcional)</label>
                 <input
                   type="password"
                   value={editingPassword}
@@ -460,10 +460,10 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
                   Guardar Cambios
                 </button>
               </div>
@@ -487,7 +487,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           placeholder="Contraseña"
           className="w-full bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
         />
-        <button type="submit" className="md:col-span-2 bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
+        <button type="submit" className="md:col-span-2 bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
       </form>
       {/* List */}
       <div className="space-y-2">
@@ -498,7 +498,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
               <div>
                 <span className="font-medium text-slate-900 dark:text-slate-200">{g.name}</span>
                 {hasInventory && (
-                  <span className="ml-2 text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
+                  <span className="ml-2 text-xs px-2 py-0.5 bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300 rounded-md">
                     Tiene inventario asignado
                   </span>
                 )}
@@ -507,14 +507,14 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <button
                   onClick={() => handleEdit(g)}
                   disabled={hasInventory}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="text-primary-600 hover:text-primary-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleDelete(g.id)}
                   disabled={hasInventory}
-                  className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="text-danger-600 hover:text-danger-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   Eliminar
                 </button>
@@ -723,8 +723,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     <div>
       <h3 className="text-lg font-bold mb-4">Gestionar Productos</h3>
        {!currentExchangeRate && (
-        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-          <p className="text-amber-800 dark:text-amber-200 text-sm font-medium">
+        <div className="mb-4 p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-md">
+          <p className="text-warning-800 dark:text-warning-200 text-sm font-medium">
             ⚠️ No hay un tipo de cambio vigente. Configure uno en la pestaña "Tipo de Cambio".
           </p>
         </div>
@@ -734,10 +734,10 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       {editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Producto</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Editar Producto</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Moneda</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
                 <select
                   value={editingCurrency}
                   onChange={e => setEditingCurrency(e.target.value as 'USD' | 'MN')}
@@ -748,7 +748,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nombre</label>
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
@@ -756,7 +756,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Costo ({editingCurrency})
                 </label>
                 <input
@@ -768,7 +768,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Margen (%)</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Margen (%)</label>
                 <input
                   value={editingMargin}
                   onChange={e => setEditingMargin(e.target.value)}
@@ -777,7 +777,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Comisión gestor %
                 </label>
                 <input
@@ -792,10 +792,10 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
                   Guardar Cambios
                 </button>
               </div>
@@ -826,7 +826,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={!currentExchangeRate} className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
+          <button type="submit" disabled={!currentExchangeRate} className="bg-primary-600 hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
@@ -843,7 +843,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                     {p.currency || 'USD'}
                   </span>
                   {assigned && (
-                    <span className="ml-2 text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
+                    <span className="ml-2 text-xs px-2 py-0.5 bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300 rounded-md">
                       Asignado a gestor
                     </span>
                   )}
@@ -853,11 +853,11 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                     Costo: {p.currency === 'MN' ? `${formatCurrency(p.costMN || 0)}` : `$${p.costUSD}`} | Margen: {(p.margin*100).toFixed(1)}% | Comisión gestor: {commissionLabel}
                   </div>
                   {p.priceMN ? (
-                    <div className="text-base font-bold text-sky-600 dark:text-sky-400">
+                    <div className="text-base font-bold text-primary-600 dark:text-primary-400">
                       Precio: {formatCurrency(p.priceMN)}
                     </div>
                   ) : currentExchangeRate && (
-                    <div className="text-base font-bold text-sky-600 dark:text-sky-400">
+                    <div className="text-base font-bold text-primary-600 dark:text-primary-400">
                       Precio: {formatCurrency(prices.finalMN)}
                     </div>
                   )}
@@ -865,14 +865,14 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                     <button
                       onClick={() => handleEdit(p)}
                       disabled={assigned}
-                      className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      className="text-primary-600 hover:text-primary-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(p.id)}
                       disabled={assigned}
-                      className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      className="text-danger-600 hover:text-danger-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                     >
                       Eliminar
                     </button>
@@ -1014,10 +1014,10 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
       {editingStock && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Stock</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Editar Stock</h3>
             <form onSubmit={handleUpdateStock} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Producto</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Producto</label>
                 <input
                   value={db.products.find(p => p.id === editingStock.productId)?.name || ''}
                   disabled
@@ -1025,7 +1025,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Cantidad</label>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Cantidad</label>
                 <input
                   value={editingQuantity}
                   onChange={e => setEditingQuantity(parseInt(e.target.value) || 0)}
@@ -1035,10 +1035,10 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={cancelEditStock} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                <button type="button" onClick={cancelEditStock} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
                   Guardar
                 </button>
               </div>
@@ -1066,7 +1066,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
           placeholder="Cantidad"
           className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
         />
-        <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Actualizar Stock</button>
+        <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Actualizar Stock</button>
       </form>
 
       {/* Current stock list */}
@@ -1090,7 +1090,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                     <div className="flex items-center gap-2">
                       <span>{product?.name || 'Producto desconocido'}</span>
                       {isAssigned && (
-                        <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md">
+                        <span className="text-xs px-2 py-0.5 bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300 rounded-md">
                           Asignado a gestor
                         </span>
                       )}
@@ -1103,13 +1103,13 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditStock(stock)}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                        className="text-primary-600 hover:text-primary-800 font-medium text-sm"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleDeleteStock(stock.id, stock.productId)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        className="text-danger-600 hover:text-danger-800 font-medium text-sm"
                       >
                         Eliminar
                       </button>
@@ -1222,7 +1222,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
         <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
         <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-100 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
-        <button type="submit" className="bg-sky-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
+        <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
        </form>
        {/* Pending inventory list */}
        <h4 className="font-bold mt-6 mb-2">Inventario Pendiente de Aceptación</h4>
@@ -1251,7 +1251,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                       {ai.quantity}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-600 dark:text-amber-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-warning-600 dark:text-warning-400">
                       Pendiente
                     </td>
                   </tr>
@@ -1379,7 +1379,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
           </thead>
           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {conflicts.length > 0 ? conflicts.map(conflict => (
-              <tr key={conflict.id}>
+              <tr key={conflict.id} className="hover:bg-warning-50 dark:hover:bg-warning-900/10">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                   {new Date(conflict.createdat).toLocaleString()}
                 </td>
@@ -1392,7 +1392,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                   {conflict.quantity}
                 </td>
-                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-300 max-w-xs">
+                <td className="px-6 py-4 text-sm text-warning-600 dark:text-warning-400 max-w-xs">
                   {conflict.reason}
                 </td>
               </tr>
