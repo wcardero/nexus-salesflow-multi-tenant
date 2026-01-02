@@ -130,6 +130,11 @@ const App: React.FC = () => {
         });
         data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
 
+        data.inventoryConflicts.forEach(c => {
+          c.createdat = new Date(c.createdat);
+          if (c.resolvedat) c.resolvedat = new Date(c.resolvedat);
+        });
+
         // Convert dates in closings and their sales
         console.log('[App.tsx] closings before processing:', data.closings);
         data.closings.forEach(c => {

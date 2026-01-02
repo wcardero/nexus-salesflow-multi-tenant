@@ -1381,7 +1381,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
             {conflicts.length > 0 ? conflicts.map(conflict => (
               <tr key={conflict.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                  {new Date(conflict.timestamp).toLocaleString()}
+                  {new Date(conflict.createdat).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
                   {conflict.gestorName || 'Gestor desconocido'}

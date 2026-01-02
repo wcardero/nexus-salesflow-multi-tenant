@@ -1404,7 +1404,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
       const conflictId = `conflict-${Date.now()}`;
       await db.query(
-        'INSERT INTO "InventoryConflict" (id, "assignedInventoryId", gestorId, managerId, reason) VALUES ($1, $2, $3, $4, $5)',
+        'INSERT INTO "InventoryConflict" (id, "assignedInventoryId", gestorid, managerid, reason) VALUES ($1, $2, $3, $4, $5)',
         [conflictId, id, requestingUser.id, requestingUser.storeId, reason.trim()]
       );
 
@@ -1439,7 +1439,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       const params: any[] = [];
 
       if (requestingUser.role === 'Manager') {
-        condition = `WHERE "managerId" = $1`;
+        condition = `WHERE ic."managerid" = $1`;
         params.push(requestingUser.id);
       }
 
@@ -1447,7 +1447,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         SELECT ic.*, ai."productId", ai.quantity, u.name as "gestorName"
         FROM "InventoryConflict" ic
         JOIN "AssignedInventory" ai ON ic."assignedInventoryId" = ai.id
-        JOIN "User" u ON ic."gestorId" = u.id
+        JOIN "User" u ON ic."gestorid" = u.id
         ${condition}
         ORDER BY ic.id DESC
       `;

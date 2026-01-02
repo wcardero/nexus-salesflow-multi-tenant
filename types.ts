@@ -101,12 +101,15 @@ export interface AssignedInventory {
 export interface InventoryConflict {
   id: string;
   assignedInventoryId: string;
-  gestorId: string;
-  managerId: string;
+  gestorid: string;
+  managerid: string;
   reason: string;
   status: 'Pending' | 'Resolved';
-  createdAt: Date;
-  resolvedAt?: Date;
+  createdat: Date;
+  resolvedat?: Date;
+  gestorName?: string;
+  productId?: string;
+  quantity?: number;
 }
 
 
