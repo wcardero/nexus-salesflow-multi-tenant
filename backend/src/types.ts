@@ -109,8 +109,8 @@ export interface Sale {
  * Estados del proceso de cierre de caja.
  */
 export enum ClosingStatus {
-  PENDING = 'Pending', // El gestor ya cerró, pendiente de entrega de dinero
-  COMPLETED = 'Completed', // El manager confirmó la recepción del dinero
+  PENDING = 'PENDING', // El gestor ya cerró, pendiente de entrega de dinero
+  COMPLETED = 'COMPLETED', // El manager confirmó la recepción del dinero
 }
 
 /**
