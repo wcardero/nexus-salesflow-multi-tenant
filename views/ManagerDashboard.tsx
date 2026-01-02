@@ -108,9 +108,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   };
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow w-full">
-      <div className="border-b border-slate-200 dark:border-slate-700">
-        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+    <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow w-full">
+      <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+        <nav className="-mb-px flex space-x-4 md:space-x-6 min-w-max" aria-label="Tabs">
           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
@@ -122,7 +122,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
           <TabButton name="Auditoría" tab="audit" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
       </div>
-      <div className="py-6">
+      <div className="py-4 md:py-6">
         {renderContent()}
       </div>
     </div>
@@ -168,7 +168,7 @@ const ReportsView: React.FC<{sales: MockDB['sales'], gestores: User[]}> = ({ sal
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Reporte de Ventas por Gestor</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Reporte de Ventas por Gestor</h3>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead className="bg-slate-50 dark:bg-slate-700">
@@ -210,7 +210,7 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Cierres Pendientes de Validación</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Cierres Pendientes de Validación</h3>
       <div className="space-y-4">
         {pendingClosings.length > 0 ? pendingClosings.map(c => (
           <div key={c.id} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg flex justify-between items-center">
@@ -247,36 +247,36 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Configurar Tipo de Cambio (USD a MN)</h3>
-      <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+      <h3 className="text-base md:text-lg font-bold mb-4">Configurar Tipo de Cambio (USD a MN)</h3>
+      <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4 mb-6 md:mb-8">
         <div>
-          <label htmlFor="newRate" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Nuevo Tipo de Cambio (MN por USD)</label>
+          <label htmlFor="newRate" className="block text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400">Nuevo Tipo de Cambio (MN por USD)</label>
           <input
             id="newRate"
             type="number"
             step="0.01"
             value={newRate}
             onChange={(e) => setNewRate(e.target.value)}
-            className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 text-xs md:text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             placeholder="Ej: 300.50"
           />
         </div>
         <div>
-          <label htmlFor="effectiveDate" className="block text-sm font-medium text-slate-600 dark:text-slate-400">Fecha de Vigencia (desde)</label>
+          <label htmlFor="effectiveDate" className="block text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400">Fecha de Vigencia (desde)</label>
           <input
             id="effectiveDate"
             type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 text-xs md:text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-xs md:text-sm">
           Actualizar Tipo de Cambio
         </button>
       </form>
 
-      <h4 className="font-bold text-lg mb-3">Historial de Tipos de Cambio</h4>
+      <h4 className="font-bold text-base md:text-lg mb-2 md:mb-3">Historial de Tipos de Cambio</h4>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead className="bg-slate-50 dark:bg-slate-700">
@@ -433,7 +433,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Gestionar Gestores</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Gestionar Gestores</h3>
 
       {/* Edit Gestor Modal */}
       {editingGestor && (
@@ -721,7 +721,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Gestionar Productos</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Gestionar Productos</h3>
        {!currentExchangeRate && (
         <div className="mb-4 p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-md">
           <p className="text-warning-800 dark:text-warning-200 text-sm font-medium">
@@ -1008,7 +1008,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Gestión de Stock Inicial</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Gestión de Stock Inicial</h3>
 
       {/* Edit Stock Modal */}
       {editingStock && (
@@ -1070,7 +1070,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
       </form>
 
       {/* Current stock list */}
-      <h4 className="font-bold mt-6 mb-2">Stock Actual</h4>
+      <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Stock Actual</h4>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead className="bg-slate-50 dark:bg-slate-700">
@@ -1217,15 +1217,15 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
 
   return(
     <div>
-      <h3 className="text-lg font-bold mb-4">Asignar Inventario a Gestores</h3>
-      <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 items-end">
+      <h3 className="text-base md:text-lg font-bold mb-4">Asignar Inventario a Gestores</h3>
+      <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6 items-end">
         <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
         <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
         <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
        </form>
        {/* Pending inventory list */}
-       <h4 className="font-bold mt-6 mb-2">Inventario Pendiente de Aceptación</h4>
+       <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Pendiente de Aceptación</h4>
        <div className="overflow-x-auto mb-6">
          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
            <thead className="bg-slate-50 dark:bg-slate-700">
@@ -1263,10 +1263,10 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
               )}
            </tbody>
          </table>
-       </div>
+        </div>
 
-       {/* Confirmed inventory grouped by price */}
-       <h4 className="font-bold mt-6 mb-2">Inventario Confirmado (Agrupado por Precio)</h4>
+        {/* Confirmed inventory grouped by price */}
+        <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Confirmado (Agrupado por Precio)</h4>
        <div className="overflow-x-auto">
          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
            <thead className="bg-slate-50 dark:bg-slate-700">
@@ -1317,7 +1317,7 @@ const AuditLogsView: React.FC<{db: MockDB, store: Store}> = ({ db, store }) => {
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Registro de Auditoría</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Registro de Auditoría</h3>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead className="bg-slate-50 dark:bg-slate-700">
@@ -1365,7 +1365,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Conflictos de Inventario (Asignaciones Rechazadas)</h3>
+      <h3 className="text-base md:text-lg font-bold mb-4">Conflictos de Inventario (Asignaciones Rechazadas)</h3>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead className="bg-slate-50 dark:bg-slate-700">

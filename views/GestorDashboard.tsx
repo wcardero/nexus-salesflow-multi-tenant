@@ -193,15 +193,15 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   };
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm w-full">
-      <div className="border-b border-slate-200 dark:border-slate-700">
-        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+    <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm w-full">
+      <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+        <nav className="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
           <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Inventario y Ventas" tab="sales" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Mis Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
       </div>
-      <div className="py-6">
+      <div className="py-4 md:py-6">
         {renderContent()}
       </div>
     </div>
@@ -416,8 +416,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Columna de Inventario Asignado */}
-        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm">
-          <h2 className="text-xl font-bold mb-4">Mi Inventario Disponible</h2>
+        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm">
+          <h2 className="text-lg md:text-xl font-bold mb-4">Mi Inventario Disponible</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
               <thead className="bg-slate-100 dark:bg-slate-700">
@@ -466,8 +466,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
         {/* Ventas Realizadas */}
         {Object.keys(salesByProduct).length > 0 && (
-          <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm">
-            <h2 className="text-xl font-bold mb-4">Ventas Realizadas</h2>
+          <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg md:text-xl font-bold mb-4">Ventas Realizadas</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                 <thead className="bg-slate-100 dark:bg-slate-700">
@@ -514,8 +514,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         )}
 
         {/* Columna de Cierre de Caja */}
-        <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg shadow-sm h-fit">
-          <h2 className="text-xl font-bold mb-4">Cierre de Caja</h2>
+        <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm h-fit">
+          <h2 className="text-lg md:text-xl font-bold mb-4">Cierre de Caja</h2>
           <div className="space-y-4">
               <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
                   <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
@@ -565,21 +565,21 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-xl font-bold mb-4">Resumen General</h3>
+        <h3 className="text-lg md:text-xl font-bold mb-4">Resumen General</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Total de Ventas Realizadas</p>
-            <p className="text-3xl font-bold text-info-600 dark:text-info-400">{totalSalesCount}</p>
+          <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Total de Ventas Realizadas</p>
+            <p className="text-2xl md:text-3xl font-bold text-info-600 dark:text-info-400">{totalSalesCount}</p>
           </div>
-          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Mi Comisión Total Acumulada</p>
-            <p className="text-3xl font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommissionEarned)}</p>
+          <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Mi Comisión Total Acumulada</p>
+            <p className="text-2xl md:text-3xl font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommissionEarned)}</p>
           </div>
         </div>
       </div>
 
       <div>
-        <h3 className="text-xl font-bold mb-4">Historial de Cierres Completados</h3>
+        <h3 className="text-lg md:text-xl font-bold mb-4">Historial de Cierres Completados</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead className="bg-slate-50 dark:bg-slate-700">
@@ -636,8 +636,8 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
   };
 
   return (
-    <div className="bg-warning-50 dark:bg-warning-900/20 p-6 rounded-lg shadow-sm mb-8">
-      <h2 className="text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
+    <div className="bg-warning-50 dark:bg-warning-900/20 p-4 md:p-6 rounded-lg shadow-sm mb-6 md:mb-8">
+      <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
         Inventario Pendiente de Confirmación
       </h2>
       <p className="text-sm text-warning-700 dark:text-warning-300 mb-4">

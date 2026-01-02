@@ -82,13 +82,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
 
   return (
     <div className="flex h-screen w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display overflow-hidden">
-      {/* Mobile Sidebar */}
+       {/* Mobile Sidebar */}
       <aside
         className={`md:hidden flex flex-col justify-between border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 transition-transform duration-300 h-full z-20 fixed ${
-          isMenuOpen ? 'translate-x-0 w-64 p-4' : '-translate-x-full w-64 p-4'
+          isMenuOpen ? 'translate-x-0 w-64 p-4 overflow-y-auto' : '-translate-x-full w-64 p-4 overflow-y-auto'
         }`}
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 px-4">
           <div className="flex gap-3 items-center mb-4">
             <div
               className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-primary-200 dark:ring-primary-800"
@@ -112,7 +112,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
               )}
             </div>
           </div>
-          <nav className="flex flex-col gap-2">
+          <nav className="overflow-x-auto">
             {navigationItems.map((item) => (
               <NavLink
                 key={item.view}
@@ -126,17 +126,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
             ))}
           </nav>
         </div>
-        <div className="flex flex-col gap-2 border-t border-slate-200 dark:border-slate-700">
+        <div className={`flex flex-col gap-2 border-t border-slate-200 dark:border-slate-700 px-4 ${isMenuOpen ? 'pb-4' : ''}`}>
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md transition-all"
           >
             <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
             <p className="text-sm font-medium leading-normal">
               Cambiar a Modo {theme === 'dark' ? 'Claro' : 'Oscuro'}
             </p>
           </button>
-          <div className="flex items-center gap-3 px-3 py-4 mt-2">
+          <div className="flex items-center gap-3 px-3 py-4">
             <div
               className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 ring-2 ring-slate-200 dark:ring-slate-600"
               style={{
@@ -148,10 +148,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
               <p className="text-sm font-medium leading-tight text-slate-800 dark:text-white">
                 {currentUser.name}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser.role}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{currentUser.role}</p>
             </div>
             <button onClick={onLogout} title="Cerrar Sesión">
-              <span className="material-symbols-outlined text-danger-500 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-500 transition-colors">logout</span>
+              <span className="material-symbols-outlined text-danger-500 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-500 hover:shadow-sm transition-all">logout</span>
             </button>
           </div>
         </div>
