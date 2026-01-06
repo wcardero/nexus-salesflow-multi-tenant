@@ -11,7 +11,7 @@ interface ManagerDashboardProps {
   refreshDb: () => Promise<void>;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'audit' | 'conflicts';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'conflicts';
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
@@ -98,8 +98,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <ReportsView sales={storeSales} gestores={storeGestores} />;
       case 'stock':
         return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
-      case 'audit':
-        return <AuditLogsView db={db} store={store} />;
       case 'conflicts':
         return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} />;
       default:
@@ -119,7 +117,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
           <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Tipo de Cambio" tab="rate" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Auditoría" tab="audit" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
       </div>
       <div className="py-4 md:py-6">
@@ -507,14 +504,14 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <button
                   onClick={() => handleEdit(g)}
                   disabled={hasInventory}
-                  className="text-primary-600 hover:text-primary-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleDelete(g.id)}
                   disabled={hasInventory}
-                  className="text-danger-600 hover:text-danger-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   Eliminar
                 </button>
@@ -865,14 +862,14 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                     <button
                       onClick={() => handleEdit(p)}
                       disabled={assigned}
-                      className="text-primary-600 hover:text-primary-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(p.id)}
                       disabled={assigned}
-                      className="text-danger-600 hover:text-danger-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
                     >
                       Eliminar
                     </button>
@@ -1103,13 +1100,13 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditStock(stock)}
-                        className="text-primary-600 hover:text-primary-800 font-medium text-sm"
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleDeleteStock(stock.id, stock.productId)}
-                        className="text-danger-600 hover:text-danger-800 font-medium text-sm"
+                        className="text-red-600 hover:text-red-800 font-medium text-sm"
                       >
                         Eliminar
                       </button>
@@ -1306,60 +1303,6 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
 };
 
 // --- AUDIT LOGS VIEW ---
-const AuditLogsView: React.FC<{db: MockDB, store: Store}> = ({ db, store }) => {
-  // Filter audit logs for the current store
-  const storeAuditLogs = db.auditLogs
-    .filter(log => log.storeId === store.id)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort by newest first
-
-  // Get user names for display
-  const userNames = Object.fromEntries(db.users.map(u => [u.id, u.name]));
-
-  return (
-    <div>
-      <h3 className="text-base md:text-lg font-bold mb-4">Registro de Auditoría</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead className="bg-slate-50 dark:bg-slate-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Usuario</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Entidad</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Detalles</th>
-            </tr>
-          </thead>
-          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-            {storeAuditLogs.length > 0 ? storeAuditLogs.map(log => (
-              <tr key={log.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                  {new Date(log.timestamp).toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                  {userNames[log.userId] || 'Usuario desconocido'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                  {log.action}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                  {log.entityType}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-300 max-w-xs">
-                  {log.entityId ? `ID: ${log.entityId}` : 'N/A'}
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No hay registros de auditoría.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
 const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product[]}> = ({ conflicts, products }) => {
   const productsById = Object.fromEntries(products.map(p => [p.id, p]));
 
