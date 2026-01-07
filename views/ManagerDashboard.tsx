@@ -1,7 +1,13 @@
 // views/ManagerDashboard.tsx
-import React, { useState, Pick, useEffect } from 'react';
-import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus, InventoryConflict } from '../types';
+import React, { useState, Pick, useEffect, useMemo } from 'react';
+import { User, Store, MockDB, Role, Product, InventoryItem, Closing, ClosingStatus, InventoryConflict, AssignedInventory } from '../types';
 import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '../utils';
+import DateRangeSelector from '../components/DateRangeSelector';
+import ExportButton from '../components/ExportButton';
+import ReportCard from '../components/ReportCard';
+import { formatDate } from '../dateUtils';
+import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
+import { addDays } from 'date-fns';
 
 interface ManagerDashboardProps {
   user: User;
@@ -95,7 +101,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
       case 'rate':
         return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
       case 'reports':
-        return <ReportsView sales={storeSales} gestores={storeGestores} />;
+        return <ReportsView sales={storeSales} gestores={storeGestores} products={storeProducts} assignedInventory={db.assignedInventory} />;
       case 'stock':
         return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'conflicts':
@@ -145,50 +151,259 @@ const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (t
 );
 
 // --- REPORTS VIEW ---
-const ReportsView: React.FC<{sales: MockDB['sales'], gestores: User[]}> = ({ sales, gestores }) => {
-  
-  const salesByGestor = gestores.map(gestor => {
-    const gestorSales = sales.filter(s => s.gestorId === gestor.id);
-    const totalSales = gestorSales.length;
-    const totalFinalMN = gestorSales.reduce((sum, s) => sum + s.finalMN, 0);
-    const totalBaseMN = gestorSales.reduce((sum, s) => sum + s.baseMN, 0);
-    const totalCommission = gestorSales.reduce((sum, s) => sum + s.commission, 0);
+interface ReportsViewProps {
+  sales: MockDB['sales'];
+  gestores: User[];
+  products: Product[];
+  assignedInventory: AssignedInventory[];
+}
 
-    return {
-      gestorName: gestor.name,
-      totalSales,
-      totalFinalMN,
-      totalBaseMN,
-      totalCommission,
-    };
+const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, assignedInventory }) => {
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)),
+    end: new Date()
   });
 
+  const salesInPeriod = useMemo(() => 
+    sales.filter(s => s.soldAt >= dateRange.start && s.soldAt <= dateRange.end),
+    [sales, dateRange]
+  );
+
+  const previousPeriodSales = useMemo(() => {
+    const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24));
+    const previousStart = addDays(dateRange.start, -daysDiff);
+    const previousEnd = dateRange.start;
+    return sales.filter(s => s.soldAt >= previousStart && s.soldAt < previousEnd);
+  }, [sales, dateRange]);
+
+  const totalSales = salesInPeriod.length;
+  const totalFinalMN = salesInPeriod.reduce((sum, s) => sum + s.finalMN, 0);
+  const totalCommission = salesInPeriod.reduce((sum, s) => sum + s.commission, 0);
+
+  const previousTotalSales = previousPeriodSales.length;
+  const previousTotalFinalMN = previousPeriodSales.reduce((sum, s) => sum + s.finalMN, 0);
+
+  const growthRate = {
+    sales: previousTotalSales > 0 ? ((totalSales - previousTotalSales) / previousTotalSales) * 100 : 0,
+    amount: previousTotalFinalMN > 0 ? ((totalFinalMN - previousTotalFinalMN) / previousTotalFinalMN) * 100 : 0
+  };
+
+  const salesByGestor = useMemo(() => {
+    return gestores.map(gestor => {
+      const gestorSalesInPeriod = salesInPeriod.filter(s => s.gestorId === gestor.id);
+      const totalSalesCount = gestorSalesInPeriod.length;
+      const totalFinalMNGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.finalMN, 0);
+      const totalBaseMNGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.baseMN, 0);
+      const totalCommissionGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.commission, 0);
+
+      return {
+        gestorName: gestor.name,
+        totalSales: totalSalesCount,
+        totalFinalMN: totalFinalMNGestor,
+        totalBaseMN: totalBaseMNGestor,
+        totalCommission: totalCommissionGestor,
+      };
+    }).sort((a, b) => b.totalFinalMN - a.totalFinalMN);
+  }, [gestores, salesInPeriod]);
+
+  const productsByQuantity = useMemo(() => {
+    const productSales: Record<string, number> = {};
+    const productsById = Object.fromEntries(products.map(p => [p.id, p.name]));
+
+    salesInPeriod.forEach(sale => {
+      const assignedInv = assignedInventory.find(ai => sale.inventoryItemId.startsWith(ai.id));
+      if (assignedInv) {
+        productSales[assignedInv.productId] = (productSales[assignedInv.productId] || 0) + 1;
+      }
+    });
+
+    return Object.entries(productSales)
+      .map(([productId, quantity]) => ({
+        productId,
+        productName: productsById[productId] || 'Producto desconocido',
+        quantity,
+        totalAmount: quantity * (products.find(p => p.id === productId)?.priceMN || 0)
+      }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+  }, [salesInPeriod, assignedInventory, products]);
+
+  const topGestors = salesByGestor.slice(0, 5);
+
+  const handleExportCSV = () => {
+    const data = salesByGestor.map(g => ({
+      Gestor: g.gestorName,
+      Ventas: g.totalSales,
+      TotalVendido: g.totalFinalMN,
+      BaseAPagar: g.totalBaseMN,
+      Comision: g.totalCommission
+    }));
+    exportToCSV(data, `reporte_manager_${formatDate(new Date())}`);
+  };
+
+  const handleExportPDF = () => {
+    const data = salesByGestor.map(g => ({
+      Gestor: g.gestorName,
+      Ventas: g.totalSales,
+      Total: g.totalFinalMN,
+      Base: g.totalBaseMN,
+      Comisión: g.totalCommission
+    }));
+    exportToPDF(data, 'Reporte de Ventas por Gestor', `reporte_manager_${formatDate(new Date())}`);
+  };
+
+  const handleExportExcel = () => {
+    const data = salesByGestor.map(g => ({
+      Gestor: g.gestorName,
+      Ventas: g.totalSales,
+      TotalVendido: g.totalFinalMN,
+      BaseAPagar: g.totalBaseMN,
+      Comision: g.totalCommission
+    }));
+    exportToExcel(data, 'Ventas por Gestor', `reporte_manager_${formatDate(new Date())}`);
+  };
+
   return (
-    <div>
-      <h3 className="text-base md:text-lg font-bold mb-4">Reporte de Ventas por Gestor</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead className="bg-slate-50 dark:bg-slate-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Vendido</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Base a Pagar</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión Gestor</th>
-            </tr>
-          </thead>
-          <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-            {salesByGestor.map(report => (
-              <tr key={report.gestorName}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{report.gestorName}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{report.totalSales}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalFinalMN)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalBaseMN)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalCommission)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <DateRangeSelector value={dateRange} onChange={setDateRange} />
+        <ExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          onExportExcel={handleExportExcel}
+          disabled={salesInPeriod.length === 0}
+          filename={`reporte_manager_${formatDate(new Date())}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ReportCard
+          title="Ventas"
+          value={totalSales}
+          icon="shopping_cart"
+          trend={{
+            value: Math.round(growthRate.sales),
+            positive: growthRate.sales >= 0,
+            label: 'Período anterior'
+          }}
+        />
+        <ReportCard
+          title="Total Vendido"
+          value={formatCurrency(totalFinalMN)}
+          icon="payments"
+          trend={{
+            value: Math.round(growthRate.amount),
+            positive: growthRate.amount >= 0,
+            label: 'Período anterior'
+          }}
+        />
+        <ReportCard
+          title="Comisión Total"
+          value={formatCurrency(totalCommission)}
+          icon="account_balance"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-amber-600">emoji_events</span>
+            Top Gestores
+          </h3>
+          <div className="space-y-3">
+            {topGestors.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">No hay datos en el período seleccionado</p>
+            ) : (
+              topGestors.map((gestor, index) => (
+                <div key={gestor.gestorName} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${
+                      index === 0 ? 'bg-amber-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-amber-700' : 'bg-slate-300'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">{gestor.gestorName}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{gestor.totalSales} ventas</p>
+                    </div>
+                  </div>
+                  <p className="font-bold text-primary-600 dark:text-primary-400">{formatCurrency(gestor.totalFinalMN)}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-blue-600">inventory_2</span>
+            Productos Más Vendidos
+          </h3>
+          <div className="space-y-3">
+            {productsByQuantity.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">No hay datos en el período seleccionado</p>
+            ) : (
+              productsByQuantity.map((product, index) => (
+                <div key={product.productId} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-blue-600 text-sm">inventory</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">{product.productName}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{product.quantity} vendidos</p>
+                    </div>
+                  </div>
+                  <p className="font-bold text-success-600 dark:text-success-400">{formatCurrency(product.totalAmount)}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-bold mb-4">Ventas por Gestor Detallado</h3>
+        {salesByGestor.length === 0 ? (
+          <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">trending_down</span>
+            <p className="text-slate-500 dark:text-slate-400">No hay ventas en el período seleccionado</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Vendido</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Base a Pagar</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión Gestor</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                {salesByGestor.map(report => (
+                  <tr key={report.gestorName}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{report.gestorName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{report.totalSales}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalFinalMN)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalBaseMN)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalCommission)}</td>
+                  </tr>
+                ))}
+                <tfoot className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white">TOTAL</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totalSales}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-info-600 dark:text-info-400">{formatCurrency(totalFinalMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-primary-600 dark:text-primary-400">{formatCurrency(totalFinalMN - totalCommission)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommission)}</td>
+                  </tr>
+                </tfoot>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

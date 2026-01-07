@@ -3,6 +3,11 @@ import React, { useState, useMemo } from 'react';
 import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
 import SellModal from '../components/SellModal';
+import DateRangeSelector from '../components/DateRangeSelector';
+import ExportButton from '../components/ExportButton';
+import ReportCard from '../components/ReportCard';
+import { formatDate } from '../dateUtils';
+import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 
 interface GestorDashboardProps {
   user: User;
@@ -554,60 +559,120 @@ interface GestorReportsViewProps {
 }
 
 const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gestorClosings, products }) => {
-  const completedClosings = gestorClosings.filter(c => c.status === ClosingStatus.COMPLETED);
-  
-  const totalSalesCount = gestorSales.length;
-  const totalCommissionEarned = completedClosings.reduce((sum, c) => sum + c.totalCommission, 0);
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)),
+    end: new Date()
+  });
 
-  // Map product IDs to names
-  const productsById = Object.fromEntries(products.map(p => [p.id, p.name]));
+  const filteredClosings = gestorClosings.filter(c => 
+    c.status === ClosingStatus.COMPLETED &&
+    c.completedAt &&
+    c.completedAt >= dateRange.start &&
+    c.completedAt <= dateRange.end
+  );
+
+  const totalClosings = filteredClosings.length;
+  const totalCommissionEarned = filteredClosings.reduce((sum, c) => sum + c.totalCommission, 0);
+  const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
+  const totalEntregado = filteredClosings.reduce((sum, c) => sum + c.totalBaseMN, 0);
+
+  const handleExportCSV = () => {
+    const data = filteredClosings.map(c => ({
+      Fecha: formatDate(new Date(c.completedAt!)),
+      Ventas: c.sales.length,
+      TotalRecaudado: c.totalFinalMN,
+      MontoEntregado: c.totalBaseMN,
+      MiComision: c.totalCommission
+    }));
+    exportToCSV(data, `reporte_gestor_${formatDate(new Date())}`);
+  };
+
+  const handleExportPDF = () => {
+    const data = filteredClosings.map(c => ({
+      Fecha: formatDate(new Date(c.completedAt!)),
+      Ventas: c.sales.length,
+      Total: c.totalFinalMN,
+      Entregado: c.totalBaseMN,
+      Comisión: c.totalCommission
+    }));
+    exportToPDF(data, 'Reporte de Cierres - Gestor', `reporte_gestor_${formatDate(new Date())}`);
+  };
+
+  const handleExportExcel = () => {
+    const data = filteredClosings.map(c => ({
+      Fecha: formatDate(new Date(c.completedAt!)),
+      Ventas: c.sales.length,
+      TotalRecaudado: c.totalFinalMN,
+      MontoEntregado: c.totalBaseMN,
+      MiComision: c.totalCommission
+    }));
+    exportToExcel(data, 'Cierres', `reporte_gestor_${formatDate(new Date())}`);
+  };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="text-lg md:text-xl font-bold mb-4">Resumen General</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
-            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Total de Ventas Realizadas</p>
-            <p className="text-2xl md:text-3xl font-bold text-info-600 dark:text-info-400">{totalSalesCount}</p>
-          </div>
-          <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg shadow-sm">
-            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Mi Comisión Total Acumulada</p>
-            <p className="text-2xl md:text-3xl font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommissionEarned)}</p>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <DateRangeSelector value={dateRange} onChange={setDateRange} />
+        <ExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          onExportExcel={handleExportExcel}
+          disabled={filteredClosings.length === 0}
+          filename={`reporte_gestor_${formatDate(new Date())}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ReportCard
+          title="Cierres"
+          value={totalClosings}
+          icon="receipt_long"
+        />
+        <ReportCard
+          title="Comisión Ganada"
+          value={formatCurrency(totalCommissionEarned)}
+          icon="payments"
+        />
+        <ReportCard
+          title="Total Recaudado"
+          value={formatCurrency(totalRecaudado)}
+          icon="account_balance_wallet"
+        />
       </div>
 
       <div>
-        <h3 className="text-lg md:text-xl font-bold mb-4">Historial de Cierres Completados</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-            <thead className="bg-slate-50 dark:bg-slate-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Recaudado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Entregado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Mi Comisión</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-              {completedClosings.length > 0 ? completedClosings.map(closing => (
-                <tr key={closing.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{new Date(closing.completedAt!).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{closing.sales.length}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalFinalMN)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalBaseMN)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalCommission)}</td>
-                </tr>
-              )) : (
+        <h3 className="text-lg md:text-xl font-bold mb-4">Cierres Completados</h3>
+        {filteredClosings.length === 0 ? (
+          <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">event_busy</span>
+            <p className="text-slate-500 dark:text-slate-400">No hay cierres en el período seleccionado</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-700">
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No hay cierres completados.</td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Recaudado</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Entregado</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Mi Comisión</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                {filteredClosings.map(closing => (
+                  <tr key={closing.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{formatDate(new Date(closing.completedAt!))}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{closing.sales.length}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalFinalMN)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalBaseMN)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalCommission)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
