@@ -431,7 +431,7 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
               <p className="text-sm text-slate-500">Iniciado: {new Date(c.initiatedAt).toLocaleString()}</p>
               <p className="font-bold text-info-600 dark:text-info-400 mt-1">Monto a Recibir: {formatCurrency(c.totalBaseMN)}</p>
             </div>
-            <button onClick={() => onValidate(c.id)} className="bg-success-700 hover:bg-success-800 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all">
+            <button onClick={() => onValidate(c.id)} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all">
               Validar Recepción
             </button>
           </div>
