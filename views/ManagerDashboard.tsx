@@ -431,7 +431,7 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
               <p className="text-sm text-slate-500">Iniciado: {new Date(c.initiatedAt).toLocaleString()}</p>
               <p className="font-bold text-info-600 dark:text-info-400 mt-1">Monto a Recibir: {formatCurrency(c.totalBaseMN)}</p>
             </div>
-            <button onClick={() => onValidate(c.id)} className="bg-success-600 hover:bg-success-700 text-white font-bold py-2 px-4 rounded-md">
+            <button onClick={() => onValidate(c.id)} className="bg-success-700 hover:bg-success-800 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all">
               Validar Recepción
             </button>
           </div>
@@ -483,7 +483,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 text-xs md:text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-xs md:text-sm">
+        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 dark:bg-info-700 dark:hover:bg-info-800 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg text-xs md:text-sm">
           Actualizar Tipo de Cambio
         </button>
       </form>
@@ -675,7 +675,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all">
                   Guardar Cambios
                 </button>
               </div>
@@ -699,7 +699,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           placeholder="Contraseña"
           className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
         />
-        <button type="submit" className="md:col-span-2 bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Agregar</button>
+        <button type="submit" className="md:col-span-2 bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Agregar</button>
       </form>
       {/* List */}
       <div className="space-y-2">
@@ -1007,7 +1007,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all">
                   Guardar Cambios
                 </button>
               </div>
@@ -1038,7 +1038,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={!currentExchangeRate} className="bg-primary-600 hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md">Agregar Producto</button>
+          <button type="submit" disabled={!currentExchangeRate} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md shadow-md transition-all disabled:shadow-none">Agregar Producto</button>
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
@@ -1250,7 +1250,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                 <button type="button" onClick={cancelEditStock} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
+                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all">
                   Guardar
                 </button>
               </div>
@@ -1278,7 +1278,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
           placeholder="Cantidad"
           className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
         />
-        <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Actualizar Stock</button>
+        <button type="submit" className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Actualizar Stock</button>
       </form>
 
       {/* Current stock list */}
@@ -1434,7 +1434,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
         <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
         <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
-        <button type="submit" className="bg-primary-600 text-white font-bold py-2 px-4 rounded-md">Asignar</button>
+        <button type="submit" className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Asignar</button>
        </form>
        {/* Pending inventory list */}
        <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Pendiente de Aceptación</h4>
