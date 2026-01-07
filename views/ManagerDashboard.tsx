@@ -406,16 +406,16 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(report.totalCommission)}</td>
                   </tr>
                 ))}
-                <tfoot className="bg-slate-50 dark:bg-slate-700">
-                  <tr>
-                    <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white">TOTAL</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totalSales}</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold text-info-600 dark:text-info-400">{formatCurrency(totalFinalMN)}</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold text-primary-600 dark:text-primary-400">{formatCurrency(totalFinalMN - totalCommission)}</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommission)}</td>
-                  </tr>
-                </tfoot>
               </tbody>
+              <tfoot className="bg-slate-50 dark:bg-slate-700">
+                <tr>
+                  <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white">TOTAL</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totalSales}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-info-600 dark:text-info-400">{formatCurrency(totalFinalMN)}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-primary-600 dark:text-primary-400">{formatCurrency(totalFinalMN - totalCommission)}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-success-600 dark:text-success-400">{formatCurrency(totalCommission)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
