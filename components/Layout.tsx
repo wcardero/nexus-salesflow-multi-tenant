@@ -64,14 +64,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
       case Role.MANAGER:
         return [
           { view: 'dashboard', icon: 'dashboard', label: 'Panel de Control' },
-          { view: 'inventory', icon: 'inventory_2', label: 'Inventario' },
-          { view: 'closings', icon: 'receipt_long', label: 'Cierres' },
         ];
       case Role.GESTOR:
         return [
           { view: 'dashboard', icon: 'dashboard', label: 'Panel de Control' },
-          { view: 'sales', icon: 'point_of_sale', label: 'Ventas' },
-          { view: 'closings', icon: 'receipt_long', label: 'Cierres' },
         ];
       default:
         return [];
