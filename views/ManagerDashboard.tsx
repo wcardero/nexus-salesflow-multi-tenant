@@ -483,7 +483,7 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 text-xs md:text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 dark:bg-info-700 dark:hover:bg-info-800 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg text-xs md:text-sm">
+        <button type="submit" className="w-full bg-info-600 hover:bg-info-700 dark:bg-info-700 dark:hover:bg-info-800 text-slate-900 dark:text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg text-xs md:text-sm">
           Actualizar Tipo de Cambio
         </button>
       </form>
