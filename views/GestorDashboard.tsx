@@ -532,7 +532,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
             <button 
               onClick={handleExecuteClosing}
               disabled={gestorSalesSinceLastClosing.length === 0}
-              className="w-full bg-info-700 hover:bg-info-800 dark:bg-info-600 dark:hover:bg-info-700 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
+              className="w-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Ejecutar Cierre
             </button>
