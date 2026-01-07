@@ -84,7 +84,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   const storeSales = db.sales.filter(s => storeGestores.some(g => g.id === s.gestorId));
 
   console.log('[ManagerDashboard] store.id:', store.id);
-  console.log('[ManagerDashboard] storeGestores:', storeGestores.map(g => g.id));
+  console.log('[ManagerDashboard] Total DB sales:', db.sales.length);
+  console.log('[ManagerDashboard] storeGestores:', storeGestores.map(g => ({ id: g.id, name: g.name })));
+  console.log('[ManagerDashboard] storeSales count:', storeSales.length);
+  console.log('[ManagerDashboard] storeSales sample:', storeSales.slice(0, 3).map(s => ({ id: s.id, gestorId: s.gestorId, soldAt: s.soldAt })));
   console.log('[ManagerDashboard] All closings from DB:', db.closings.map(c => ({ id: c.id, gestorId: c.gestorId, status: c.status })));
   console.log('[ManagerDashboard] storeClosings:', storeClosings);
 
@@ -164,10 +167,19 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
     end: new Date()
   });
 
-  const salesInPeriod = useMemo(() => 
-    sales.filter(s => s.soldAt >= dateRange.start && s.soldAt <= dateRange.end),
-    [sales, dateRange]
-  );
+  console.log('[ReportsView] Total sales received:', sales.length);
+  console.log('[ReportsView] Date range:', dateRange.start, 'to', dateRange.end);
+  console.log('[ReportsView] Gestores:', gestores.map(g => ({ id: g.id, name: g.name })));
+
+  const salesInPeriod = useMemo(() => {
+    const filtered = sales.filter(s => {
+      const isInRange = s.soldAt >= dateRange.start && s.soldAt <= dateRange.end;
+      console.log('[ReportsView] Sale:', s.id, 'Date:', s.soldAt, 'In range:', isInRange);
+      return isInRange;
+    });
+    console.log('[ReportsView] Sales in period:', filtered.length);
+    return filtered;
+  }, [sales, dateRange]);
 
   const previousPeriodSales = useMemo(() => {
     const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24));
@@ -189,7 +201,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
   };
 
   const salesByGestor = useMemo(() => {
-    return gestores.map(gestor => {
+    const result = gestores.map(gestor => {
       const gestorSalesInPeriod = salesInPeriod.filter(s => s.gestorId === gestor.id);
       const totalSalesCount = gestorSalesInPeriod.length;
       const totalFinalMNGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.finalMN, 0);
@@ -204,6 +216,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
         totalCommission: totalCommissionGestor,
       };
     }).sort((a, b) => b.totalFinalMN - a.totalFinalMN);
+
+    console.log('[ReportsView] Sales by gestor:', result);
+    return result;
   }, [gestores, salesInPeriod]);
 
   const productsByQuantity = useMemo(() => {

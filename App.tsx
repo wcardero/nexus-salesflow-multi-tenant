@@ -135,6 +135,8 @@ const App: React.FC = () => {
           if (c.resolvedat) c.resolvedat = new Date(c.resolvedat);
         });
 
+        data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
+
         // Convert dates in closings and their sales
         console.log('[App.tsx] closings before processing:', data.closings);
         data.closings.forEach(c => {
