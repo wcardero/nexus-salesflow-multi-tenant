@@ -108,7 +108,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
   const handleDeleteManager = async (managerId: string) => {
     // Prevent director from deleting their own account
-    const currentUserId = JSON.parse(localStorage.getItem('user') || '{}').id;
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const currentUserId = currentUser.id;
     if (managerId === currentUserId) {
       alert('No puedes eliminar tu propia cuenta de director.');
       return;
