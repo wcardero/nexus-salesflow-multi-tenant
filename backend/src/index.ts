@@ -943,9 +943,6 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
                 ['Gestor', requestingUser.storeId, id]
             );
             console.log(`[delete-manager] Deleted ${deletedGestors.rows.length} gestors created by manager ${id}`);
-
-            // Continue with manager deletion below
-            return;
         } else {
             return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
         }
