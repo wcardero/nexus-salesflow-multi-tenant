@@ -6,6 +6,7 @@ import GestorDashboard from './views/GestorDashboard';
 import Login from './views/Login';
 import { Layout } from './components/Layout';
 import DirectorDashboard from './views/DirectorDashboard';
+import { ManagerManagement } from './views/ManagerManagement';
 import StoreManagement from './views/StoreManagement';
 import UserManagement from './views/UserManagement';
 
@@ -315,7 +316,9 @@ const App: React.FC = () => {
         case 'managers':
           switch (role) {
             case Role.DIRECTOR:
-              return <DirectorDashboard db={db} refreshDb={refreshDb} currentUser={currentUser} />;
+              return <ManagerManagement db={db} currentUser={currentUser} refreshDb={refreshDb} />;
+            case Role.ADMIN:
+              return <UserManagement db={db} setDb={setDb} currentView={currentView} />;
             default:
               return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
           }
