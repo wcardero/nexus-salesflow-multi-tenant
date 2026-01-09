@@ -110,19 +110,19 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <InventoryView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'products':
         return <ProductsView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
-      case 'gestores':
-        return <GestoresView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
-      case 'rate':
-        return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
-      case 'reports':
-        return <ReportsView sales={storeSales} gestores={storeGestores} products={storeProducts} assignedInventory={db.assignedInventory} />;
-      case 'reporte-cierres':
-        return <ClosingsReportView closings={storeClosings} users={db.users} products={storeProducts} assignedInventory={db.assignedInventory} />;
-      case 'stock':
-        return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
-      case 'conflicts':
-        return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} />;
-      default:
+        case 'gestores':
+         return <GestoresView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
+        case 'rate':
+         return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
+        case 'reports':
+         return <ReportsView sales={storeSales} gestores={storeGestores} products={storeProducts} assignedInventory={db.assignedInventory} />;
+        case 'stock':
+         return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
+        case 'conflicts':
+         return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} />;
+        case 'reporte-cierres':
+         return <ClosingsReportView closings={storeClosings} users={db.users} products={storeProducts} assignedInventory={db.assignedInventory} />;
+        default:
         return null;
     }
   };
@@ -131,10 +131,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
     <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow w-full">
       <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
         <nav className="-mb-px flex space-x-4 md:space-x-6 min-w-max" aria-label="Tabs">
-          <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Reporte Ventas (Tab Interno)" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
+           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
+           <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
+           <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
