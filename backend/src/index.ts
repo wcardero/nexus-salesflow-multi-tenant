@@ -470,20 +470,26 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
 
         // Directors can only update managers from their store
         if (requestingUser.role === 'Director') {
+            console.log('[update-user] Director attempting update...');
             const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
             if (targetUser.rows.length === 0) {
                 return res.status(404).json({ message: 'User not found.' });
             }
             const userToUpdate = targetUser.rows[0];
+            console.log('[update-user] Target user:', { id: userToUpdate.id, name: userToUpdate.name, role: userToUpdate.role, storeId: userToUpdate.storeId });
 
             // Directors can only update managers from their store
             if (userToUpdate.role !== 'Manager') {
                 return res.status(403).json({ message: 'Directors can only update managers.' });
             }
 
-            // Directors cannot change role or storeId
-            if (role || storeId) {
-                return res.status(403).json({ message: 'Directors cannot change role or storeId.' });
+            // Directors cannot change role or storeId (only check if these fields are present and different)
+            if (role && role !== userToUpdate.role) {
+                return res.status(403).json({ message: 'Directors cannot change role.' });
+            }
+
+            if (storeId && storeId !== userToUpdate.storeId) {
+                return res.status(403).json({ message: 'Directors cannot change storeId.' });
             }
 
             // Manager must belong to director's store
@@ -498,6 +504,7 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
 
             // Update manager name
             await db.query('UPDATE "User" SET name = $1 WHERE id = $2', [name.trim(), id]);
+            console.log('[update-user] Manager name updated successfully');
             res.status(200).json({ message: 'Manager updated successfully.' });
             return;
         }
