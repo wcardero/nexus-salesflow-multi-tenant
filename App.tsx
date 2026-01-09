@@ -285,9 +285,9 @@ const App: React.FC = () => {
           case Role.DIRECTOR:
             if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
             return <DirectorDashboard />;
-          case Role.MANAGER:
-            if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
-            return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} />;
+           case Role.MANAGER:
+             if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
+             return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} currentView={currentView} />;
           case Role.GESTOR:
             if (!activeStore) return <div>Error: Gestor sin tienda asignada.</div>;
             return <GestorDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} />;
@@ -312,15 +312,30 @@ const App: React.FC = () => {
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }
-      case 'managers':
-        switch (role) {
-          case Role.DIRECTOR:
-            return <DirectorDashboard db={db} refreshDb={refreshDb} />;
-          default:
-            return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
-        }
-      // Add other cases for other views here
-      default:
+       case 'managers':
+         switch (role) {
+           case Role.DIRECTOR:
+             return <DirectorDashboard db={db} refreshDb={refreshDb} />;
+           default:
+             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+         }
+       case 'report-ventas':
+         switch (role) {
+           case Role.MANAGER:
+             if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
+             return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} currentView={currentView} />;
+           default:
+             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+         }
+       case 'report-cierres':
+         switch (role) {
+           case Role.MANAGER:
+             if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
+             return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} currentView={currentView} />;
+           default:
+             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+         }
+       default:
         return <div>Vista no encontrada</div>;
     }
   };

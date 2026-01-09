@@ -15,16 +15,27 @@ interface ManagerDashboardProps {
   db: MockDB;
   setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
   refreshDb: () => Promise<void>;
+  currentView?: string;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'conflicts';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'conflicts' | 'reporte-ventas' | 'reporte-cierres';
 
-const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
+const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb, currentView }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
 
   useEffect(() => {
     refreshDb();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (currentView === 'dashboard') {
+      setActiveTab('closings');
+    } else if (currentView === 'report-ventas') {
+      setActiveTab('reports');
+    } else if (currentView === 'report-cierres') {
+      setActiveTab('reporte-cierres');
+    }
+  }, [currentView]);
 
   // Handlers
   const handleValidateClosing = async (closingId: string) => {
@@ -105,6 +116,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         return <ExchangeRateView store={store} onSetExchangeRate={handleSetExchangeRate} />;
       case 'reports':
         return <ReportsView sales={storeSales} gestores={storeGestores} products={storeProducts} assignedInventory={db.assignedInventory} />;
+      case 'reporte-cierres':
+        return <ClosingsReportView closings={storeClosings} users={db.users} products={storeProducts} assignedInventory={db.assignedInventory} />;
       case 'stock':
         return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'conflicts':
@@ -120,7 +133,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         <nav className="-mb-px flex space-x-4 md:space-x-6 min-w-max" aria-label="Tabs">
           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Reporte Ventas (Tab Interno)" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
@@ -1577,6 +1590,410 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
           </tbody>
         </table>
       </div>
+    </div>
+  );
+};
+
+// --- CLOSINGS REPORT VIEW ---
+interface ClosingMetrics {
+  closing: Closing;
+  gestorName: string;
+  ventas: number;
+  costoProductosMN: number;
+  gananciaTiendaMN: number;
+  comisionGestorMN: number;
+  totalVendidoMN: number;
+  margenPorcentaje: number;
+}
+
+const ClosingsReportView: React.FC<{
+  closings: Closing[];
+  users: User[];
+  products: Product[];
+  assignedInventory: AssignedInventory[];
+}> = ({ closings, users, products, assignedInventory }) => {
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)),
+    end: new Date()
+  });
+  const [viewMode, setViewMode] = useState<'por-cierre' | 'por-gestor'>('por-cierre');
+
+  const usersById = Object.fromEntries(users.map(u => [u.id, u]));
+
+  const filteredClosings = useMemo(() => 
+    closings.filter(c => 
+      c.status === ClosingStatus.COMPLETED &&
+      c.completedAt &&
+      c.completedAt >= dateRange.start && 
+      c.completedAt <= dateRange.end
+    ),
+    [closings, dateRange]
+  );
+
+  const closingMetrics = useMemo(() => {
+    return filteredClosings.map(closing => {
+      const gestorName = usersById[closing.gestorId]?.name || 'Desconocido';
+      
+      const costoProductosMN = closing.sales.reduce((sum, sale) => {
+        if (sale.costUSD) {
+          return sum + (sale.costUSD * sale.exchangeRateUsed);
+        }
+        return sum + (sale.costMN || 0);
+      }, 0);
+      
+      const gananciaTiendaMN = closing.totalFinalMN - costoProductosMN - closing.totalCommission;
+      const margenPorcentaje = (gananciaTiendaMN / closing.totalFinalMN) * 100;
+      
+      return {
+        closing,
+        gestorName,
+        ventas: closing.sales.length,
+        costoProductosMN,
+        gananciaTiendaMN,
+        comisionGestorMN: closing.totalCommission,
+        totalVendidoMN: closing.totalFinalMN,
+        margenPorcentaje
+      };
+    });
+  }, [filteredClosings, usersById]);
+
+  const totals = useMemo(() => {
+    const totals = closingMetrics.reduce((acc, m) => ({
+      cantidadCierres: acc.cantidadCierres + 1,
+      totalVentas: acc.totalVentas + m.ventas,
+      costoProductosMN: acc.costoProductosMN + m.costoProductosMN,
+      gananciaTiendaMN: acc.gananciaTiendaMN + m.gananciaTiendaMN,
+      comisionGestorMN: acc.comisionGestorMN + m.comisionGestorMN,
+      totalVendidoMN: acc.totalVendidoMN + m.totalVendidoMN
+    }), {
+      cantidadCierres: 0,
+      totalVentas: 0,
+      costoProductosMN: 0,
+      gananciaTiendaMN: 0,
+      comisionGestorMN: 0,
+      totalVendidoMN: 0
+    });
+    
+    return {
+      ...totals,
+      margenPromedio: totals.totalVendidoMN > 0 ? (totals.gananciaTiendaMN / totals.totalVendidoMN) * 100 : 0
+    };
+  }, [closingMetrics]);
+
+  const metricsByGestor = useMemo(() => {
+    const grouped: Record<string, ClosingMetrics[]> = {};
+    
+    closingMetrics.forEach(metric => {
+      const key = metric.gestorName;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(metric);
+    });
+    
+    return Object.entries(grouped).map(([gestorName, metrics]) => {
+      const aggregates = metrics.reduce((acc, m) => ({
+        cantidadCierres: acc.cantidadCierres + 1,
+        ventas: acc.ventas + m.ventas,
+        costoProductosMN: acc.costoProductosMN + m.costoProductosMN,
+        gananciaTiendaMN: acc.gananciaTiendaMN + m.gananciaTiendaMN,
+        comisionGestorMN: acc.comisionGestorMN + m.comisionGestorMN,
+        totalVendidoMN: acc.totalVendidoMN + m.totalVendidoMN
+      }), {
+        cantidadCierres: 0,
+        ventas: 0,
+        costoProductosMN: 0,
+        gananciaTiendaMN: 0,
+        comisionGestorMN: 0,
+        totalVendidoMN: 0
+      });
+      
+      const margenPorcentaje = aggregates.totalVendidoMN > 0 
+        ? (aggregates.gananciaTiendaMN / aggregates.totalVendidoMN) * 100 
+        : 0;
+      
+      return {
+        gestorName,
+        ...aggregates,
+        margenPorcentaje
+      };
+    }).sort((a, b) => b.gananciaTiendaMN - a.gananciaTiendaMN);
+  }, [closingMetrics]);
+
+  const handleExportCSV = () => {
+    const data = viewMode === 'por-cierre' 
+      ? closingMetrics.map(m => ({
+          Fecha: formatDate(new Date(m.closing.completedAt!)),
+          Gestor: m.gestorName,
+          Ventas: m.ventas,
+          CostoProductosMN: m.costoProductosMN,
+          GananciaTiendaMN: m.gananciaTiendaMN,
+          ComisionGestorMN: m.comisionGestorMN,
+          TotalVendidoMN: m.totalVendidoMN,
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+        }))
+      : metricsByGestor.map(m => ({
+          Gestor: m.gestorName,
+          Cierres: m.cantidadCierres,
+          Ventas: m.ventas,
+          CostoProductosMN: m.costoProductosMN,
+          GananciaTiendaMN: m.gananciaTiendaMN,
+          ComisionGestorMN: m.comisionGestorMN,
+          TotalVendidoMN: m.totalVendidoMN,
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+        }));
+    exportToCSV(data, `reporte_cierres_${formatDate(new Date())}`);
+  };
+
+  const handleExportPDF = () => {
+    const data = viewMode === 'por-cierre' 
+      ? closingMetrics.map(m => ({
+          Fecha: formatDate(new Date(m.closing.completedAt!)),
+          Gestor: m.gestorName,
+          Ventas: m.ventas,
+          Costo: m.costoProductosMN,
+          Ganancia: m.gananciaTiendaMN,
+          Comisión: m.comisionGestorMN,
+          Total: m.totalVendidoMN,
+          Margen: m.margenPorcentaje.toFixed(2) + '%'
+        }))
+      : metricsByGestor.map(m => ({
+          Gestor: m.gestorName,
+          Cierres: m.cantidadCierres,
+          Ventas: m.ventas,
+          Costo: m.costoProductosMN,
+          Ganancia: m.gananciaTiendaMN,
+          Comisión: m.comisionGestorMN,
+          Total: m.totalVendidoMN,
+          Margen: m.margenPorcentaje.toFixed(2) + '%'
+        }));
+    exportToPDF(data, 'Reporte de Cierres', `reporte_cierres_${formatDate(new Date())}`);
+  };
+
+  const handleExportExcel = () => {
+    const data = viewMode === 'por-cierre' 
+      ? closingMetrics.map(m => ({
+          Fecha: formatDate(new Date(m.closing.completedAt!)),
+          Gestor: m.gestorName,
+          Ventas: m.ventas,
+          CostoProductosMN: m.costoProductosMN,
+          GananciaTiendaMN: m.gananciaTiendaMN,
+          ComisionGestorMN: m.comisionGestorMN,
+          TotalVendidoMN: m.totalVendidoMN,
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+        }))
+      : metricsByGestor.map(m => ({
+          Gestor: m.gestorName,
+          Cierres: m.cantidadCierres,
+          Ventas: m.ventas,
+          CostoProductosMN: m.costoProductosMN,
+          GananciaTiendaMN: m.gananciaTiendaMN,
+          ComisionGestorMN: m.comisionGestorMN,
+          TotalVendidoMN: m.totalVendidoMN,
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+        }));
+    exportToExcel(data, 'Cierres', `reporte_cierres_${formatDate(new Date())}`);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <DateRangeSelector value={dateRange} onChange={setDateRange} />
+        <ExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          onExportExcel={handleExportExcel}
+          disabled={filteredClosings.length === 0}
+          filename={`reporte_cierres_${formatDate(new Date())}`}
+        />
+      </div>
+
+      <div className="border-b border-slate-200 dark:border-slate-700">
+        <nav className="-mb-px flex space-x-4">
+          <button
+            onClick={() => setViewMode('por-cierre')}
+            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              viewMode === 'por-cierre'
+                ? 'border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
+            }`}
+          >
+            Por Cierre
+          </button>
+          <button
+            onClick={() => setViewMode('por-gestor')}
+            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              viewMode === 'por-gestor'
+                ? 'border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
+            }`}
+          >
+            Por Gestor
+          </button>
+        </nav>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <ReportCard
+          title="Cierres"
+          value={totals.cantidadCierres}
+          icon="receipt"
+        />
+        <ReportCard
+          title="Costo Productos"
+          value={formatCurrency(totals.costoProductosMN)}
+          icon="inventory_2"
+        />
+        <ReportCard
+          title="Ganancia Tienda"
+          value={formatCurrency(totals.gananciaTiendaMN)}
+          icon="trending_up"
+        />
+        <ReportCard
+          title="Margen Promedio"
+          value={totals.margenPromedio.toFixed(1) + '%'}
+          icon="percent"
+        />
+      </div>
+
+      {viewMode === 'por-cierre' && (
+        <div>
+          <h3 className="text-lg font-bold mb-4">Cierres Detallados</h3>
+          {closingMetrics.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">event_busy</span>
+              <p className="text-slate-500 dark:text-slate-400">No hay cierres en el período seleccionado</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Costo Prod (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ganancia (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Margen %</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                  {closingMetrics.map((m, index) => (
+                    <tr key={`${m.closing.id}-${index}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                        {formatDate(new Date(m.closing.completedAt!))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                        {m.gestorName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {m.ventas}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {formatCurrency(m.costoProductosMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-success-600 dark:text-success-400 text-right">
+                        {formatCurrency(m.gananciaTiendaMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {formatCurrency(m.comisionGestorMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {formatCurrency(m.totalVendidoMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {m.margenPorcentaje.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white" colSpan={2}>TOTAL</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totals.totalVentas}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(totals.costoProductosMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-success-600 dark:text-success-400">{formatCurrency(totals.gananciaTiendaMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(totals.comisionGestorMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-info-600 dark:text-info-400">{formatCurrency(totals.totalVendidoMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totals.margenPromedio.toFixed(1)}%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewMode === 'por-gestor' && (
+        <div>
+          <h3 className="text-lg font-bold mb-4">Agrupado por Gestor</h3>
+          {metricsByGestor.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">group_off</span>
+              <p className="text-slate-500 dark:text-slate-400">No hay datos en el período seleccionado</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Cierres</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Costo Prod (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ganancia (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Comisión (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total (MN)</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Margen %</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                  {metricsByGestor.map((m) => (
+                    <tr key={m.gestorName}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                        {m.gestorName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {m.cantidadCierres}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {m.ventas}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {formatCurrency(m.costoProductosMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-success-600 dark:text-success-400 text-right">
+                        {formatCurrency(m.gananciaTiendaMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {formatCurrency(m.comisionGestorMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {formatCurrency(m.totalVendidoMN)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">
+                        {m.margenPorcentaje.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50 dark:bg-slate-700">
+                  <tr>
+                    <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white">TOTAL</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totals.cantidadCierres}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totals.totalVentas}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(totals.costoProductosMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-success-600 dark:text-success-400">{formatCurrency(totals.gananciaTiendaMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(totals.comisionGestorMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-info-600 dark:text-info-400">{formatCurrency(totals.totalVendidoMN)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totals.margenPromedio.toFixed(1)}%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
