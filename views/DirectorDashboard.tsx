@@ -257,199 +257,213 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
   if (loading && !dashboardData) {
     return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold mb-6">Panel de Director</h1>
-        <p className="text-gray-500">Cargando métricas...</p>
-      </div>
-    );
-  }
+       <div className="p-8">
+         <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Panel de Director</h1>
+         <p className="text-gray-500 dark:text-gray-400">Cargando métricas...</p>
+       </div>
+     );
+   }
+ 
+   const metrics = dashboardData?.metrics || { totalSales: 0, netProfit: 0, numberOfSales: 0, margin: 0, isProfitable: false };
 
-  const metrics = dashboardData?.metrics || { totalSales: 0, netProfit: 0, numberOfSales: 0, margin: 0, isProfitable: false };
+   return (
+     <div className="p-8">
+       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Panel de Director</h1>
 
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Panel de Director</h1>
+       <div className="mb-6">
+         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período:</label>
+         <div className="flex gap-2">
+           {[
+             { value: 'today', label: 'Hoy' },
+             { value: '7days', label: '7 días' },
+             { value: '30days', label: '30 días' }
+           ].map(p => (
+             <button
+               key={p.value}
+               onClick={() => setPeriod(p.value)}
+               className={`px-4 py-2 rounded ${
+                 period === p.value
+                   ? 'bg-blue-500 dark:bg-blue-600 text-white'
+                   : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+               }`}
+             >
+               {p.label}
+             </button>
+           ))}
+         </div>
+       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Período:</label>
-        <div className="flex gap-2">
-          {[
-            { value: 'today', label: 'Hoy' },
-            { value: '7days', label: '7 días' },
-            { value: '30days', label: '30 días' }
-          ].map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-4 py-2 rounded ${period === p.value ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
+       <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow-lg">
+         <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Rentabilidad de la Tienda - {getPeriodLabel()}</h2>
+         <p className="mb-4 text-gray-600 dark:text-gray-300">
+           {metrics.isProfitable ? '✅ Rentable' : '❌ No rentable'}
+           {metrics.margin > 30 && ' - Margen excelente (> 30%)'}
+           {metrics.margin >= 20 && metrics.margin <= 30 && ' - Margen bueno (20-30%)'}
+           {metrics.margin < 20 && ' - Margen bajo (< 20%)'}
+         </p>
 
-      <div className="mb-6 p-4 border-2 rounded">
-        <h2 className="text-lg font-semibold mb-3">Rentabilidad de la Tienda - {getPeriodLabel()}</h2>
-        <p className="mb-4">
-          {metrics.isProfitable ? '✅ Rentable' : '❌ No rentable'}
-          {metrics.margin > 30 && ' - Margen excelente (> 30%)'}
-          {metrics.margin >= 20 && metrics.margin <= 30 && ' - Margen bueno (20-30%)'}
-          {metrics.margin < 20 && ' - Margen bajo (< 20%)'}
-        </p>
+         <div className="grid grid-cols-4 gap-4">
+           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+             <div className="text-sm text-gray-600 dark:text-gray-400">Ventas Totales</div>
+             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(metrics.totalSales)}</div>
+           </div>
 
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-600">Ventas Totales</div>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(metrics.totalSales)}</div>
-          </div>
+           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+             <div className="text-sm text-gray-600 dark:text-gray-400">Ganancia</div>
+             <div className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(metrics.netProfit)}</div>
+           </div>
 
-          <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-600">Ganancia</div>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(metrics.netProfit)}</div>
-          </div>
+           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+             <div className="text-sm text-gray-600 dark:text-gray-400">Número de Ventas</div>
+             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{metrics.numberOfSales}</div>
+           </div>
 
-          <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-600">Número de Ventas</div>
-            <div className="text-2xl font-bold text-purple-600">{metrics.numberOfSales}</div>
-          </div>
+           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+             <div className="text-sm text-gray-600 dark:text-gray-400">Margen</div>
+             <div className={`text-2xl font-bold ${
+               metrics.margin > 20
+                 ? 'text-green-600 dark:text-green-400'
+                 : metrics.margin >= 10
+                   ? 'text-yellow-600 dark:text-yellow-400'
+                   : 'text-red-600 dark:text-red-400'
+             }`}>
+               {metrics.margin.toFixed(1)}%
+             </div>
+           </div>
+         </div>
+       </div>
 
-          <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-600">Margen</div>
-            <div className={`text-2xl font-bold ${metrics.margin > 20 ? 'text-green-600' : metrics.margin >= 10 ? 'text-yellow-600' : 'text-red-600'}`}>
-              {metrics.margin.toFixed(1)}%
-            </div>
-          </div>
-        </div>
-      </div>
+       <div className="grid grid-cols-2 gap-6 mb-6">
+         <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg">
+           <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Ventas por Día</h2>
+           {dashboardData?.salesByDay && Object.keys(dashboardData.salesByDay).length > 0 ? (
+             <div className="space-y-2">
+               {Object.entries(dashboardData.salesByDay || {}).slice(-7).reverse().map(([date, sales]) => (
+                 <div key={date} className="flex justify-between">
+                   <span className="text-gray-600 dark:text-gray-400">{date}</span>
+                   <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(typeof sales === 'number' ? sales : 0)}</span>
+                 </div>
+               ))}
+             </div>
+           ) : (
+             <p className="text-gray-500 dark:text-gray-400">No hay datos de ventas</p>
+           )}
+         </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-lg font-semibold mb-4">Ventas por Día</h2>
-          {dashboardData?.salesByDay && Object.keys(dashboardData.salesByDay).length > 0 ? (
-            <div className="space-y-2">
-              {Object.entries(dashboardData.salesByDay || {}).slice(-7).reverse().map(([date, sales]) => (
-                <div key={date} className="flex justify-between">
-                  <span className="text-gray-600">{date}</span>
-                  <span className="font-semibold">{formatCurrency(typeof sales === 'number' ? sales : 0)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">No hay datos de ventas</p>
-          )}
-        </div>
+         <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg">
+           <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Ventas por Manager</h2>
+           {dashboardData?.managers && dashboardData.managers.length > 0 ? (
+             <div className="space-y-2">
+               {dashboardData.managers.map(manager => (
+                 <div key={manager.id} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                   <span className="font-medium text-gray-900 dark:text-white">{manager.name}</span>
+                   <span className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(manager.totalSales)}</span>
+                 </div>
+               ))}
+             </div>
+           ) : (
+             <p className="text-gray-500 dark:text-gray-400">No hay managers registrados</p>
+           )}
+         </div>
+       </div>
 
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-lg font-semibold mb-4">Ventas por Manager</h2>
-          {dashboardData?.managers && dashboardData.managers.length > 0 ? (
-            <div className="space-y-2">
-              {dashboardData.managers.map(manager => (
-                <div key={manager.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <span className="font-medium">{manager.name}</span>
-                  <span className="font-semibold text-blue-600">{formatCurrency(manager.totalSales)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">No hay managers registrados</p>
-          )}
-        </div>
-      </div>
+       <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow-lg">
+         <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Rendimiento de Managers - {getPeriodLabel()}</h2>
+         <p className="mb-4 text-gray-600 dark:text-gray-300">
+           Mejor Manager: {dashboardData?.managers?.[0]?.name || 'N/A'}
+           {' • '}
+           Peor Manager: {dashboardData?.managers?.[dashboardData.managers.length - 1]?.name || 'N/A'}
+         </p>
 
-      <div className="mb-6 p-4 border-2 rounded">
-        <h2 className="text-lg font-semibold mb-3">Rendimiento de Managers - {getPeriodLabel()}</h2>
-        <p className="mb-4">
-          Mejor Manager: {dashboardData?.managers?.[0]?.name || 'N/A'}
-          {' • '}
-          Peor Manager: {dashboardData?.managers?.[dashboardData.managers.length - 1]?.name || 'N/A'}
-        </p>
+         <div className="bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
+           <table className="w-full">
+             <thead className="bg-gray-100 dark:bg-gray-600">
+               <tr>
+                 <th className="px-4 py-3 text-left text-gray-900 dark:text-white">Nombre</th>
+                 <th className="px-4 py-3 text-right text-gray-900 dark:text-white">Ventas Totales</th>
+                 <th className="px-4 py-3 text-right text-gray-900 dark:text-white">Ganancia</th>
+                 <th className="px-4 py-3 text-right text-gray-900 dark:text-white">Núm. Gestores</th>
+               </tr>
+             </thead>
+             <tbody>
+               {dashboardData?.managers?.map(manager => (
+                 <tr key={manager.id} className="border-t border-gray-200 dark:border-gray-600">
+                   <td className="px-4 py-3 text-gray-900 dark:text-white">{manager.name}</td>
+                   <td className="px-4 py-3 text-right text-gray-900 dark:text-white">{formatCurrency(manager.totalSales)}</td>
+                   <td className={`px-4 py-3 text-right font-semibold ${
+                     manager.profit > 0
+                       ? 'text-green-600 dark:text-green-400'
+                       : 'text-red-600 dark:text-red-400'
+                   }`}>
+                     {formatCurrency(manager.profit)}
+                   </td>
+                   <td className="px-4 py-3 text-right text-gray-900 dark:text-white">{manager.numberOfGestors}</td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
+         </div>
+       </div>
 
-        <div className="bg-white rounded shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-3 text-left">Nombre</th>
-                <th className="px-4 py-3 text-right">Ventas Totales</th>
-                <th className="px-4 py-3 text-right">Ganancia</th>
-                <th className="px-4 py-3 text-right">Núm. Gestores</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dashboardData?.managers?.map(manager => (
-                <tr key={manager.id} className="border-t">
-                  <td className="px-4 py-3">{manager.name}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(manager.totalSales)}</td>
-                  <td className={`px-4 py-3 text-right font-semibold ${manager.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(manager.profit)}
-                  </td>
-                  <td className="px-4 py-3 text-right">{manager.numberOfGestors}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="flex gap-4 mb-6">
-        <button
-          onClick={() => setShowManagersTab(!showManagersTab)}
-          className="px-6 py-3 bg-gray-200 rounded font-medium"
-        >
-          {showManagersTab ? 'Ocultar' : 'Gestionar'} Managers
-        </button>
-      </div>
+       <div className="flex gap-4 mb-6">
+         <button
+           onClick={() => setShowManagersTab(!showManagersTab)}
+           className="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded font-medium text-gray-900 dark:text-white"
+         >
+           {showManagersTab ? 'Ocultar' : 'Gestionar'} Managers
+         </button>
+       </div>
 
       {showManagersTab && (
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-bold mb-4">Gestionar Managers</h2>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg">
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Gestionar Managers</h2>
 
-          <div className="mb-6 p-4 bg-gray-50 rounded">
-            <h3 className="font-semibold mb-3">Crear Nuevo Manager</h3>
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded">
+            <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Crear Nuevo Manager</h3>
             <div className="flex gap-4">
               <input
                 type="text"
                 placeholder="Nombre de usuario"
                 value={newManagerName}
                 onChange={e => setNewManagerName(e.target.value)}
-                className="flex-1 px-3 py-2 border rounded"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
               />
               <input
                 type="password"
                 placeholder="Contraseña"
                 value={newManagerPassword}
                 onChange={e => setNewManagerPassword(e.target.value)}
-                className="flex-1 px-3 py-2 border rounded"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
               />
               <button
                 onClick={handleCreateManager}
-                className="px-6 py-2 bg-blue-500 text-white rounded font-medium"
+                className="px-6 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded font-medium"
               >
                 Crear Manager
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded shadow overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-100">
+              <thead className="bg-gray-100 dark:bg-gray-600">
                 <tr>
-                  <th className="px-4 py-3 text-left">Nombre</th>
-                  <th className="px-4 py-3 text-center">Acciones</th>
+                  <th className="px-4 py-3 text-left text-gray-900 dark:text-white">Nombre</th>
+                  <th className="px-4 py-3 text-center text-gray-900 dark:text-white">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {db.users
                   .filter(user => user.role === Role.MANAGER && user.storeId === currentUser?.storeId)
                   .map(manager => (
-                    <tr key={manager.id} className="border-t">
-                      <td className="px-4 py-3">
+                    <tr key={manager.id} className="border-t border-gray-200 dark:border-gray-600">
+                      <td className="px-4 py-3 text-gray-900 dark:text-white">
                         {editingManager?.id === manager.id ? (
                           <input
                             type="text"
                             value={editingManagerName}
                             onChange={e => setEditingManagerName(e.target.value)}
-                            className="px-2 py-1 border rounded w-full"
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded w-full"
                           />
                         ) : (
                           manager.name
@@ -460,13 +474,13 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
                           <div className="flex gap-2 justify-center">
                             <button
                               onClick={handleUpdateManager}
-                              className="px-3 py-1 bg-green-500 text-white rounded text-sm"
+                              className="px-3 py-1 bg-green-500 dark:bg-green-600 text-white rounded text-sm"
                             >
                               Guardar
                             </button>
                             <button
                               onClick={cancelEditing}
-                              className="px-3 py-1 bg-gray-500 text-white rounded text-sm"
+                              className="px-3 py-1 bg-gray-500 dark:bg-gray-600 text-white rounded text-sm"
                             >
                               Cancelar
                             </button>
@@ -475,19 +489,19 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
                           <div className="flex gap-2 justify-center">
                             <button
                               onClick={() => startEditing(manager)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
+                              className="px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded text-sm"
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => openPasswordModal(manager)}
-                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm"
+                              className="px-3 py-1 bg-yellow-500 dark:bg-yellow-600 text-white rounded text-sm"
                             >
                               Contraseña
                             </button>
                             <button
                               onClick={() => handleDeleteManager(manager.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+                              className="px-3 py-1 bg-red-500 dark:bg-red-600 text-white rounded text-sm"
                             >
                               Eliminar
                             </button>
@@ -503,29 +517,29 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
       )}
 
       {showPasswordModal && passwordChangeManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Cambiar Contraseña - {passwordChangeManager.name}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Cambiar Contraseña - {passwordChangeManager.name}</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nueva Contraseña:</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nueva Contraseña:</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                 placeholder="Ingrese nueva contraseña"
               />
             </div>
             <div className="flex gap-4">
               <button
                 onClick={handleChangePassword}
-                className="flex-1 px-6 py-2 bg-blue-500 text-white rounded font-medium"
+                className="flex-1 px-6 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded font-medium"
               >
                 Cambiar
               </button>
               <button
                 onClick={closePasswordModal}
-                className="flex-1 px-6 py-2 bg-gray-300 rounded font-medium"
+                className="flex-1 px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded font-medium"
               >
                 Cancelar
               </button>
