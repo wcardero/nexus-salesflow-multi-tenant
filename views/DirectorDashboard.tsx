@@ -4,9 +4,10 @@ import { MockDB, Role, User } from '../types';
 interface DirectorDashboardProps {
   db: MockDB;
   refreshDb: () => Promise<void>;
+  currentUser: User;
 }
 
-const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) => {
+const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, currentUser }) => {
   const [newManagerName, setNewManagerName] = useState('');
   const [newManagerPassword, setNewManagerPassword] = useState('');
   const [editingManager, setEditingManager] = useState<User | null>(null);
@@ -17,7 +18,9 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb }) 
 
   // Get the director's store
   const directorStore = db.stores.find(store =>
-    db.users.some(user => user.id === store.directorId)
+    store.id === currentUser?.storeId
+  ) || db.stores.find(store =>
+    store.directorId === currentUser?.id
   );
 
   // Get managers for the director's store

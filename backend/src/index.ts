@@ -372,9 +372,20 @@ app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: 
     const { oldPassword, password, newPassword } = req.body;
     const requestingUser = (req as any).user;
 
-    // Only allow users to change their own password or admins to change any password
+    // Only allow users to change their own password or admins/directors to change managers' passwords
     if (requestingUser.id !== id && requestingUser.role !== 'Admin') {
-        return res.status(403).json({ message: 'Access denied. You can only change your own password.' });
+        if (requestingUser.role === 'Director') {
+            const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
+            if (targetUser.rows.length === 0) {
+                return res.status(404).json({ message: 'User not found.' });
+            }
+            const user = targetUser.rows[0];
+            if (user.role !== 'Manager' || user.storeId !== requestingUser.storeId) {
+                return res.status(403).json({ message: 'Access denied. Directors can only change managers\' passwords from their store.' });
+            }
+        } else {
+            return res.status(403).json({ message: 'Access denied. You can only change your own password.' });
+        }
     }
 
     // Accept both 'password' and 'newPassword' field names for compatibility
@@ -452,6 +463,40 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
             // Update gestor name
             await db.query('UPDATE "User" SET name = $1 WHERE id = $2', [name.trim(), id]);
             res.status(200).json({ message: 'Gestor updated successfully.' });
+            return;
+        }
+
+        // Directors can only update managers from their store
+        if (requestingUser.role === 'Director') {
+            const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
+            if (targetUser.rows.length === 0) {
+                return res.status(404).json({ message: 'User not found.' });
+            }
+            const userToUpdate = targetUser.rows[0];
+
+            // Directors can only update managers from their store
+            if (userToUpdate.role !== 'Manager') {
+                return res.status(403).json({ message: 'Directors can only update managers.' });
+            }
+
+            // Directors cannot change role or storeId
+            if (role || storeId) {
+                return res.status(403).json({ message: 'Directors cannot change role or storeId.' });
+            }
+
+            // Manager must belong to director's store
+            if (userToUpdate.storeId !== requestingUser.storeId) {
+                return res.status(403).json({ message: 'Manager does not belong to your store.' });
+            }
+
+            // Directors can only update name
+            if (!name) {
+                return res.status(400).json({ message: 'Name is required.' });
+            }
+
+            // Update manager name
+            await db.query('UPDATE "User" SET name = $1 WHERE id = $2', [name.trim(), id]);
+            res.status(200).json({ message: 'Manager updated successfully.' });
             return;
         }
 
@@ -841,9 +886,56 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
     const { id } = req.params;
     const requestingUser = (req as any).user;
 
-    // Only admins can delete users
+    // Only admins can delete users, except directors can delete managers from their store
     if (requestingUser.role !== 'Admin') {
-        return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
+        if (requestingUser.role === 'Director') {
+            // Directors can only delete managers from their store
+            const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
+            if (targetUser.rows.length === 0) {
+                return res.status(404).json({ message: 'User not found.' });
+            }
+            const userToDelete = targetUser.rows[0];
+
+            // Directors can only delete managers
+            if (userToDelete.role !== 'Manager') {
+                return res.status(403).json({ message: 'Directors can only delete managers.' });
+            }
+
+            // Manager must belong to director's store
+            if (userToDelete.storeId !== requestingUser.storeId) {
+                return res.status(403).json({ message: 'Manager does not belong to your store.' });
+            }
+
+            // Check if manager has assigned inventory to any gestor
+            const assignedInventoryCheck = await db.query(
+                'SELECT COUNT(*) FROM "AssignedInventory" WHERE "productId" IN (SELECT id FROM "Product" WHERE "storeId" = $1)',
+                [requestingUser.storeId]
+            );
+            const hasAssignedInventory = parseInt(assignedInventoryCheck.rows[0].count) > 0;
+
+            if (hasAssignedInventory) {
+                return res.status(400).json({ message: 'No puedes eliminar este manager porque tiene inventario asignado a gestores. Primero debes eliminar los gestores asociados.' });
+            }
+
+            // Check if manager has any gestors assigned to this store
+            const gestorsCheck = await db.query(
+                'SELECT COUNT(*) FROM "User" WHERE role = $1 AND "storeId" = $2',
+                ['Gestor', requestingUser.storeId]
+            );
+            const hasGestors = parseInt(gestorsCheck.rows[0].count) > 0;
+
+            if (hasGestors) {
+                return res.status(400).json({ message: 'No puedes eliminar este manager mientras tenga gestores asignados. Primero debes eliminar los gestores asociados.' });
+            }
+
+            // Delete gestors that belong to this manager's store (as per user request)
+            await db.query(
+                'DELETE FROM "User" WHERE role = $1 AND "storeId" = $2',
+                ['Gestor', requestingUser.storeId]
+            );
+        } else {
+            return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
+        }
     }
 
     // Prevent admin from deleting themselves
@@ -1439,6 +1531,12 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       } else if (requestingUser.role === 'Manager') {
         condition = `WHERE ic."managerid" = $1`;
         params.push(requestingUser.id);
+      } else if (requestingUser.role === 'Director') {
+        condition = `WHERE ic."managerid" IN (
+          SELECT u.id FROM "User" u
+          WHERE u."storeId" = $1
+        )`;
+        params.push(requestingUser.storeId);
       } else if (requestingUser.role === 'Gestor') {
         condition = `WHERE ic."gestorid" = $1`;
         params.push(requestingUser.id);

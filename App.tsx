@@ -284,7 +284,7 @@ const App: React.FC = () => {
             return <AdminDashboard db={db} refreshDb={refreshDb} />;
           case Role.DIRECTOR:
             if (!activeStore) return <div>Error: Director sin tienda asignada.</div>;
-            return <DirectorDashboard />;
+            return <DirectorDashboard db={db} refreshDb={refreshDb} currentUser={currentUser} />;
            case Role.MANAGER:
              if (!activeStore) return <div>Error: Manager sin tienda asignada.</div>;
              return <ManagerDashboard user={currentUser} store={activeStore} db={db} setDb={setDb} refreshDb={refreshDb} currentView={currentView} />;
@@ -312,13 +312,13 @@ const App: React.FC = () => {
           default:
             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
         }
-       case 'managers':
-         switch (role) {
-           case Role.DIRECTOR:
-             return <DirectorDashboard db={db} refreshDb={refreshDb} />;
-           default:
-             return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
-         }
+        case 'managers':
+          switch (role) {
+            case Role.DIRECTOR:
+              return <DirectorDashboard db={db} refreshDb={refreshDb} currentUser={currentUser} />;
+            default:
+              return <div className="p-4">Acceso denegado. Rol no reconocido.</div>;
+          }
        case 'report-ventas':
          switch (role) {
            case Role.MANAGER:
