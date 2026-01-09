@@ -127,19 +127,23 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
     }
   };
 
+  const showTabs = !currentView || currentView === 'dashboard';
+  
   return (
     <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow w-full">
-      <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
-        <nav className="-mb-px flex space-x-4 md:space-x-6 min-w-max" aria-label="Tabs">
-           <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
-           <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
-           <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Tipo de Cambio" tab="rate" activeTab={activeTab} onClick={setActiveTab} />
-        </nav>
-      </div>
+      {showTabs && (
+        <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <nav className="-mb-px flex space-x-4 md:space-x-6 min-w-max" aria-label="Tabs">
+             <TabButton name="Cierres Pendientes" tab="closings" activeTab={activeTab} onClick={setActiveTab} />
+             <TabButton name="Conflictos" tab="conflicts" activeTab={activeTab} onClick={setActiveTab} />
+             <TabButton name="Stock Inicial" tab="stock" activeTab={activeTab} onClick={setActiveTab} />
+            <TabButton name="Asignar Inventario" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
+            <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
+            <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
+            <TabButton name="Tipo de Cambio" tab="rate" activeTab={activeTab} onClick={setActiveTab} />
+          </nav>
+        </div>
+      )}
       <div className="py-4 md:py-6">
         {renderContent()}
       </div>
