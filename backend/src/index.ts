@@ -1595,20 +1595,36 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
     const pricePerUnit = assigned.priceMN;
     const commissionRate = assigned.commissionRate || 0;
 
+    const costUSD = assigned.currency === 'USD' ? (assigned.costUSD || 0) : 0;
+    const costMN = assigned.currency === 'MN' ? (assigned.costMN || 0) : 0;
+
+    let exchangeRateUsed = 0;
+    if (assigned.currency === 'USD' && assigned.costUSD) {
+      const storeResult = await db.query('SELECT * FROM "Store" WHERE id = $1', [requestingUser.storeId]);
+      if (storeResult.rows.length > 0) {
+        const exchangeRateResult = await db.query(
+          'SELECT * FROM "ExchangeRate" WHERE "storeId" = $1 AND "endDate" IS NULL',
+          [requestingUser.storeId]
+        );
+        exchangeRateUsed = exchangeRateResult.rows.length > 0 ? exchangeRateResult.rows[0].rate : 0;
+      }
+    }
+
     const sales = [];
     const now = Date.now();
     for (let i = 0; i < quantity; i++) {
       const saleId = `sale-${now}-${i}`;
       const inventoryItemId = `inv-${now}-${i}-${Math.random().toString(36).substr(2, 9)}`;
       const sale = await db.query(
-        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
+        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "costMN", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
         [
           saleId,
           inventoryItemId,
           requestingUser.id,
           new Date(),
-          0,
-          assigned.costUSD || 0,
+          exchangeRateUsed,
+          costUSD,
+          costMN,
           assigned.margin || 0,
           0,
           pricePerUnit * (1 - commissionRate),
@@ -2121,11 +2137,35 @@ CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
   }
 }
 
+// Auto-execute sale costMN migration on startup
+const autoExecuteSaleCostMNMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Sale' AND column_name = 'costMN'
+    `);
+    
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding costMN column to Sale table...');
+      await db.query('ALTER TABLE "Sale" ADD COLUMN "costMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
+      console.log('[auto-migration] Sale costMN column added successfully');
+    } else {
+      console.log('[auto-migration] costMN column already exists in Sale table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding costMN column:', error);
+  }
+};
+
 // Start Server
 try {
   db.connect().then(async () => {
     // Initialize database tables on startup
     await initializeDatabase();
+    
+    // Execute auto-migrations
+    await autoExecuteSaleCostMNMigration();
 
 // Temporary endpoint to execute migration
 app.post('/api/admin/migrate-inventory-status', authenticateToken, async (req: Request, res: Response) => {
@@ -2169,6 +2209,55 @@ app.post('/api/admin/migrate-product-columns', authenticateToken, async (req: Re
     res.json({ success: true, message: 'Migration executed successfully' });
   } catch (error: any) {
     console.error('[migration] Error executing migration:', error);
+    res.status(500).json({ message: 'Migration failed', error: String(error) });
+  }
+});
+
+// Temporary endpoint to execute sale costMN migration
+app.post('/api/admin/migrate-sale-costmn', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Only admins can execute migrations.' });
+  }
+
+  try {
+    await db.query('ALTER TABLE "Sale" ADD COLUMN IF NOT EXISTS "costMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
+
+    console.log('[migration] Sale costMN column migration executed successfully');
+    res.json({ success: true, message: 'Migration executed successfully' });
+  } catch (error: any) {
+    console.error('[migration] Error executing migration:', error);
+    res.status(500).json({ message: 'Migration failed', error: String(error) });
+  }
+});
+
+// Endpoint to update existing sales costMN values
+app.post('/api/admin/update-sales-costmn', authenticateToken, async (req: Request, res: Response) => {
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Admin') {
+    return res.status(403).json({ message: 'Only admins can execute this migration.' });
+  }
+
+  try {
+    const { rows } = await db.query(`
+      UPDATE "Sale"
+      SET "costMN" = CASE
+        WHEN "costMN" = 0 OR "costMN" IS NULL THEN
+          CASE
+            WHEN margin > 0 THEN (finalMN - commission) / (1 + margin)
+            ELSE finalMN - commission
+          END
+        ELSE "costMN"
+      END
+      RETURNING id, "costMN", finalMN, commission, margin
+    `);
+
+    console.log(`[migration] Updated costMN for ${rows.length} sales`);
+    res.json({ success: true, message: `Updated costMN for ${rows.length} sales`, updated: rows });
+  } catch (error: any) {
+    console.error('[migration] Error updating sales costMN:', error);
     res.status(500).json({ message: 'Migration failed', error: String(error) });
   }
 });

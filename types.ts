@@ -133,6 +133,7 @@ export interface Sale {
   // Congela los valores al momento de la venta
   exchangeRateUsed: number;
   costUSD: number;
+  costMN: number;
   margin: number;
   // Cálculos congelados
   saleUSD: number;

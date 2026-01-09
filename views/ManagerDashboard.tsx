@@ -1638,10 +1638,15 @@ const ClosingsReportView: React.FC<{
       const gestorName = usersById[closing.gestorId]?.name || 'Desconocido';
       
       const costoProductosMN = closing.sales.reduce((sum, sale) => {
-        if (sale.costUSD) {
+        if (sale.costUSD && sale.costUSD > 0 && sale.exchangeRateUsed > 0) {
           return sum + (sale.costUSD * sale.exchangeRateUsed);
         }
-        return sum + (sale.costMN || 0);
+        if (sale.costMN && sale.costMN > 0) {
+          return sum + sale.costMN;
+        }
+        const baseMN = sale.finalMN - sale.commission;
+        const calculatedCost = sale.margin > 0 ? baseMN / (1 + sale.margin) : baseMN;
+        return sum + calculatedCost;
       }, 0);
       
       const gananciaTiendaMN = closing.totalFinalMN - costoProductosMN - closing.totalCommission;
