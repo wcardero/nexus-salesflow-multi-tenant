@@ -342,8 +342,8 @@ app.post('/api/users', async (req: Request, res: Response, next: any) => {
         console.log('[create-user] Creating user:', { name, role, storeId, finalStoreId, storeIdToUse });
         
         const result = await db.query(
-            'INSERT INTO "User" (id, name, password, role, "storeId") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, role, "storeId"',
-            [newUserId, name, hashedPassword, role, storeIdToUse]
+            'INSERT INTO "User" (id, name, password, role, "storeId", "createdBy") VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, role, "storeId", "createdBy"',
+            [newUserId, name, hashedPassword, role, storeIdToUse, requestingUser ? requestingUser.id : null]
         );
 
         console.log('[create-user] User created:', result.rows[0]);
@@ -588,7 +588,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   // Only admins can see all users
   if (requestingUser.role === 'Admin') {
     // Admins can see all users
-    const { rows } = await db.query('SELECT id, name, role, "storeId" FROM "User"');
+    const { rows } = await db.query('SELECT id, name, role, "storeId", "createdBy" FROM "User"');
     console.log('[get-users] Returning all users for Admin:', { count: rows.length });
     return res.json(rows);
   }
@@ -614,7 +614,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'You must be assigned to a store.' });
     }
     const { rows } = await db.query(
-      'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
+      'SELECT id, name, role, "storeId", "createdBy" FROM "User" WHERE role = $1 AND "storeId" = $2',
       ['Manager', storeIdToUse]
     );
     console.log('[get-users] Returning Managers for store:', { storeId: storeIdToUse, count: rows.length });
@@ -627,7 +627,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'You must be assigned to a store.' });
     }
     const { rows } = await db.query(
-      'SELECT id, name, role, "storeId" FROM "User" WHERE role = $1 AND "storeId" = $2',
+      'SELECT id, name, role, "storeId", "createdBy" FROM "User" WHERE role = $1 AND "storeId" = $2',
       ['Gestor', storeIdToUse]
     );
     console.log('[get-users] Returning Gestores for store:', { storeId: storeIdToUse, count: rows.length });
@@ -636,7 +636,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
   // Gestors can see only themselves (needed for user update in frontend)
   const { rows } = await db.query(
-    'SELECT id, name, role, "storeId" FROM "User" WHERE id = $1',
+    'SELECT id, name, role, "storeId", "createdBy" FROM "User" WHERE id = $1',
     [requestingUser.id]
   );
   console.log('[get-users] Returning single user for Gestor:', rows[0]);
@@ -917,10 +917,10 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
                 return res.status(400).json({ message: 'No puedes eliminar este manager porque tiene inventario asignado a gestores. Primero debes eliminar los gestores asociados.' });
             }
 
-            // Check if manager has any gestors assigned to this store
+            // Check if manager has any gestors assigned to this store (created by this manager)
             const gestorsCheck = await db.query(
-                'SELECT COUNT(*) FROM "User" WHERE role = $1 AND "storeId" = $2',
-                ['Gestor', requestingUser.storeId]
+                'SELECT COUNT(*) FROM "User" WHERE role = $1 AND "storeId" = $2 AND "createdBy" = $3',
+                ['Gestor', requestingUser.storeId, id]
             );
             const hasGestors = parseInt(gestorsCheck.rows[0].count) > 0;
 
@@ -928,11 +928,12 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
                 return res.status(400).json({ message: 'No puedes eliminar este manager mientras tenga gestores asignados. Primero debes eliminar los gestores asociados.' });
             }
 
-            // Delete gestors that belong to this manager's store (as per user request)
-            await db.query(
-                'DELETE FROM "User" WHERE role = $1 AND "storeId" = $2',
-                ['Gestor', requestingUser.storeId]
+            // Delete gestors that were created by this manager
+            const deletedGestors = await db.query(
+                'DELETE FROM "User" WHERE role = $1 AND "storeId" = $2 AND "createdBy" = $3 RETURNING id',
+                ['Gestor', requestingUser.storeId, id]
             );
+            console.log(`[delete-manager] Deleted ${deletedGestors.rows.length} gestors created by manager ${id}`);
         } else {
             return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
         }
@@ -2103,13 +2104,15 @@ CREATE TABLE "Store" (
     CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
-CREATE TABLE "User" (
+ CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "password" TEXT NOT NULL, -- Added password field
     "role" TEXT NOT NULL CHECK (role IN ('Admin', 'Director', 'Manager', 'Gestor')),
     "storeId" TEXT,
-    CONSTRAINT "User_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
+    "createdBy" TEXT,
+    CONSTRAINT "User_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "User_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE "ExchangeRate" (
@@ -2243,7 +2246,7 @@ const autoExecuteSaleCostMNMigration = async () => {
       FROM information_schema.columns
       WHERE table_name = 'Sale' AND column_name = 'costMN'
     `);
-    
+
     if (result.rows.length === 0) {
       console.log('[auto-migration] Adding costMN column to Sale table...');
       await db.query('ALTER TABLE "Sale" ADD COLUMN "costMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
@@ -2256,6 +2259,29 @@ const autoExecuteSaleCostMNMigration = async () => {
   }
 };
 
+// Auto-execute createdBy column migration on startup
+const autoExecuteCreatedByMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'User' AND column_name = 'createdBy'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding createdBy column to User table...');
+      await db.query('ALTER TABLE "User" ADD COLUMN "createdBy" TEXT');
+      console.log('[auto-migration] Adding createdBy foreign key...');
+      await db.query('ALTER TABLE "User" ADD CONSTRAINT "User_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE');
+      console.log('[auto-migration] User createdBy column added successfully');
+    } else {
+      console.log('[auto-migration] createdBy column already exists in User table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding createdBy column:', error);
+  }
+};
+
 // Start Server
 try {
   db.connect().then(async () => {
@@ -2264,6 +2290,7 @@ try {
     
     // Execute auto-migrations
     await autoExecuteSaleCostMNMigration();
+    await autoExecuteCreatedByMigration();
 
 // Temporary endpoint to execute migration
 app.post('/api/admin/migrate-inventory-status', authenticateToken, async (req: Request, res: Response) => {
