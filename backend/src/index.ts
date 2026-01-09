@@ -896,9 +896,6 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
     const requestingUser = (req as any).user;
 
     console.log('[delete-user] DELETE request received:', { id, requestingUser: { id: requestingUser.id, name: requestingUser.name, role: requestingUser.role, storeId: requestingUser.storeId } });
-
-    // Only admins can delete users, except directors can delete managers from their store
-    console.log('[delete-user] Request:', { requestingUser: { id: requestingUser.id, role: requestingUser.role, storeId: requestingUser.storeId }, targetId: id });
     if (requestingUser.role !== 'Admin') {
         if (requestingUser.role === 'Director') {
             // Directors can only delete managers from their store
