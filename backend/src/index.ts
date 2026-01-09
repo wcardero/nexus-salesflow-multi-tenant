@@ -432,8 +432,10 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
 
     // Admins can update any user
     if (requestingUser.role !== 'Admin') {
+        console.log('[update-user] Non-admin user attempting update:', { role: requestingUser.role, targetId: id });
         // Managers can only update gestors (not themselves or other roles)
         if (requestingUser.role === 'Manager') {
+            console.log('[update-user] Manager attempting update, checking gestor permissions...');
             const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
             if (targetUser.rows.length === 0) {
                 return res.status(404).json({ message: 'User not found.' });
@@ -887,6 +889,7 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
     const requestingUser = (req as any).user;
 
     // Only admins can delete users, except directors can delete managers from their store
+    console.log('[delete-user] Request:', { requestingUser: { id: requestingUser.id, role: requestingUser.role, storeId: requestingUser.storeId }, targetId: id });
     if (requestingUser.role !== 'Admin') {
         if (requestingUser.role === 'Director') {
             // Directors can only delete managers from their store
@@ -934,6 +937,9 @@ app.delete('/api/users/:id', authenticateToken, async (req: Request, res: Respon
                 ['Gestor', requestingUser.storeId, id]
             );
             console.log(`[delete-manager] Deleted ${deletedGestors.rows.length} gestors created by manager ${id}`);
+
+            // Continue with manager deletion below
+            return;
         } else {
             return res.status(403).json({ message: 'Access denied. Only admins can delete users.' });
         }
