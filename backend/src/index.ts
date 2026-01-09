@@ -1570,6 +1570,106 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     }
   });
 
+  // Director Dashboard metrics
+  app.get('/api/director/metrics', authenticateToken, async (req: Request, res: Response) => {
+    const requestingUser = (req as any).user;
+    const { period } = req.query;
+
+    if (requestingUser.role !== 'Director') {
+      return res.status(403).json({ message: 'Access denied. Directors only.' });
+    }
+
+    if (!requestingUser.storeId) {
+      return res.status(400).json({ message: 'You must be assigned to a store.' });
+    }
+
+    try {
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate: Date;
+
+      if (period === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      } else if (period === '7days') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (period === '30days') {
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // Default to 7 days
+      }
+
+      // Get all sales for the store in the period
+      const salesQuery = `
+        SELECT s.*, u.name as "gestorName", p.name as "productName"
+        FROM "Sale" s
+        JOIN "User" u ON s."gestorId" = u.id
+        JOIN "InventoryItem" ii ON s."inventoryItemId" = ii.id
+        JOIN "Product" p ON ii."productId" = p.id
+        WHERE u."storeId" = $1 AND s."soldAt" >= $2
+      `;
+      const { rows: sales } = await db.query(salesQuery, [requestingUser.storeId, startDate]);
+
+      // Calculate metrics
+      const totalSales = sales.reduce((sum, sale) => sum + (sale.finalMN || 0), 0);
+      const totalCost = sales.reduce((sum, sale) => {
+        const cost = sale.costMN || (sale.costUSD && sale.exchangeRateUsed ? sale.costUSD * sale.exchangeRateUsed : 0);
+        return sum + cost;
+      }, 0);
+      const totalCommission = sales.reduce((sum, sale) => sum + (sale.commission || 0), 0);
+      const netProfit = totalSales - totalCost - totalCommission;
+      const margin = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0;
+      const numberOfSales = sales.length;
+
+      // Sales per day
+      const salesByDay: { [key: string]: number } = {};
+      sales.forEach(sale => {
+        const date = new Date(sale.soldAt).toISOString().split('T')[0];
+        salesByDay[date] = (salesByDay[date] || 0) + sale.finalMN;
+      });
+
+      // Sales by manager
+      const managersQuery = `
+        SELECT u.id, u.name, COUNT(DISTINCT s.id) as "numberOfSales",
+               COALESCE(SUM(s."finalMN"), 0) as "totalSales",
+               COALESCE(SUM(s."costMN"), 0) as "totalCost",
+               COALESCE(SUM(s."commission"), 0) as "totalCommission",
+               COUNT(DISTINCT u2.id) as "numberOfGestors"
+        FROM "User" u
+        LEFT JOIN "User" u2 ON u.id = u2."createdBy" AND u2.role = 'Gestor'
+        LEFT JOIN "Sale" s ON s."gestorId" IN (
+          SELECT u3.id FROM "User" u3 WHERE u3."createdBy" = u.id AND u3."storeId" = $1
+        ) AND s."soldAt" >= $2
+        WHERE u.role = 'Manager' AND u."storeId" = $1
+        GROUP BY u.id, u.name
+        ORDER BY "totalSales" DESC
+      `;
+      const { rows: managers } = await db.query(managersQuery, [requestingUser.storeId, startDate]);
+
+      res.json({
+        period,
+        metrics: {
+          totalSales,
+          netProfit,
+          numberOfSales,
+          margin: Math.round(margin * 100) / 100,
+          isProfitable: netProfit > 0
+        },
+        salesByDay,
+        managers: managers.map(m => ({
+          id: m.id,
+          name: m.name,
+          numberOfSales: m.numberOfSales,
+          totalSales: m.totalSales,
+          profit: Math.round((m.totalSales - m.totalCost - m.totalCommission) * 100) / 100,
+          numberOfGestors: m.numberOfGestors
+        }))
+      });
+    } catch (error: any) {
+      console.error('Director metrics error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
    app.get('/api/products', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
 
