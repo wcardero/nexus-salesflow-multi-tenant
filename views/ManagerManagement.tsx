@@ -38,7 +38,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': \`Bearer \${localStorage.getItem('token')}\`
         },
         body: JSON.stringify({
           name: newManagerName.trim(),
@@ -59,7 +59,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       alert('Manager creado exitosamente.');
     } catch (error: any) {
       console.error('Error creating manager:', error);
-      alert(`Error al crear el manager: ${error.message}`);
+      alert(\`Error al crear el manager: \${error.message}\`);
     }
   };
 
@@ -70,11 +70,11 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${editingManager.id}`, {
+      const response = await fetch(\`http://localhost:3001/api/users/\${editingManager.id}\`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': \`Bearer \${localStorage.getItem('token')}\`
         },
         body: JSON.stringify({
           name: editingManagerName.trim()
@@ -92,7 +92,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       alert('Manager actualizado exitosamente.');
     } catch (error: any) {
       console.error('Error updating manager:', error);
-      alert(`Error al actualizar el manager: ${error.message}`);
+      alert(\`Error al actualizar el manager: \${error.message}\`);
     }
   };
 
@@ -111,11 +111,11 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const url = `http://localhost:3001/api/users/${managerId}`;
+      const url = \`http://localhost:3001/api/users/\${managerId}\`;
       const response = await fetch(url, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': \`Bearer \${token}\`
         }
       });
 
@@ -128,7 +128,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       alert('Manager eliminado exitosamente.');
     } catch (error: any) {
       console.error('Error deleting manager:', error);
-      alert(`Error al eliminar el manager: ${error.message}`);
+      alert(\`Error al eliminar el manager: \${error.message}\`);
     }
   };
 
@@ -139,11 +139,11 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${passwordChangeManager.id}/password`, {
+      const response = await fetch(\`http://localhost:3001/api/users/\${passwordChangeManager.id}/password\`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': \`Bearer \${localStorage.getItem('token')}\`
         },
         body: JSON.stringify({
           password: newPassword.trim()
@@ -161,7 +161,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       alert('Contraseña actualizada exitosamente.');
     } catch (error: any) {
       console.error('Error changing password:', error);
-      alert(`Error al cambiar contraseña: ${error.message}`);
+      alert(\`Error al cambiar contraseña: \${error.message}\`);
     }
   };
 
