@@ -371,25 +371,61 @@ app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: 
     const { id } = req.params;
     const { oldPassword, password, newPassword } = req.body;
     const requestingUser = (req as any).user;
+    console.log('[change-password] Request:', {
+        requestingUserId: requestingUser.id,
+        requestingUserRole: requestingUser.role,
+        requestingUserStoreId: requestingUser.storeId,
+        targetUserId: id,
+        hasOldPassword: !!oldPassword,
+        hasPassword: !!password,
+        hasNewPassword: !!newPassword
+    });
 
     // Only allow users to change their own password or admins/directors to change managers' passwords
+    const isSelf = requestingUser.id === id;
+    const isAdmin = requestingUser.role === 'Admin';
+    const isDirector = requestingUser.role === 'Director';
+    const isManager = requestingUser.role === 'Manager';
+
+    console.log('[change-password] Role check:', { 
+        isSelf, 
+        isAdmin, 
+        isDirector, 
+        isManager,
+        requestingUserRole: requestingUser.role,
+        requestingRoleType: typeof requestingUser.role,
+        adminComparison: requestingUser.role === 'Admin',
+        directorComparison: requestingUser.role === 'Director'
+    });
+
     if (requestingUser.id !== id && requestingUser.role !== 'Admin') {
+        console.log('[change-password] Checking Director permissions...');
         if (requestingUser.role === 'Director') {
             const targetUser = await db.query('SELECT * FROM "User" WHERE id = $1', [id]);
             if (targetUser.rows.length === 0) {
                 return res.status(404).json({ message: 'User not found.' });
             }
             const user = targetUser.rows[0];
+            console.log('[change-password] Target user:', { id: user.id, name: user.name, role: user.role, storeId: user.storeId });
             if (user.role !== 'Manager' || user.storeId !== requestingUser.storeId) {
+                console.log('[change-password] Permission denied:', {
+                    targetRole: user.role,
+                    expectedRole: 'Manager',
+                    targetStoreId: user.storeId,
+                    requestingStoreId: requestingUser.storeId
+                });
                 return res.status(403).json({ message: 'Access denied. Directors can only change managers\' passwords from their store.' });
             }
+            console.log('[change-password] Director permission granted');
         } else {
+            console.log('[change-password] Not a Director, access denied');
             return res.status(403).json({ message: 'Access denied. You can only change your own password.' });
         }
     }
 
     // Accept both 'password' and 'newPassword' field names for compatibility
     const targetPassword = newPassword || password;
+    console.log('[change-password] targetPassword:', !!targetPassword);
 
     if (!targetPassword) {
         return res.status(400).json({ message: 'New password is required.' });
@@ -415,7 +451,9 @@ app.put('/api/users/:id/password', authenticateToken, async (req: Request, res: 
         // For admin changing other user's password, no old password check needed
 
         const hashedNewPassword = await bcrypt.hash(targetPassword, 10);
-        await db.query('UPDATE "User" SET password = $1 WHERE id = $2', [hashedNewPassword, id]);
+        console.log('[change-password] Hashed password, updating user:', id);
+        const updateResult = await db.query('UPDATE "User" SET password = $1 WHERE id = $2', [hashedNewPassword, id]);
+        console.log('[change-password] Update result:', updateResult.rowCount);
         res.status(200).json({ message: 'Password updated successfully.' });
     } catch (error) {
         console.error('Password update error:', error);
