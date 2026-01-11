@@ -17,7 +17,7 @@ interface GestorDashboardProps {
   refreshDb: () => Promise<void>;
 }
 
-type Tabs = 'inventory' | 'sales' | 'reports';
+type Tabs = 'inventory' | 'sales' | 'pending-closings' | 'reports';
 
 const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
   console.log('[GestorDashboard] Component mounted - user.id:', user.id);
@@ -140,6 +140,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   const gestorSales = useMemo(() => db.sales.filter(sale => sale.gestorId === user.id), [db.sales, user.id]);
   const gestorClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id), [db.closings, user.id]);
+  const pendingClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id && c.status === ClosingStatus.PENDING), [db.closings, user.id]);
 
   const renderContent = () => {
     console.log('[GestorDashboard] renderContent called, activeTab:', activeTab);
@@ -168,7 +169,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
             onReject={handleRejectInventory}
           />
         );
-      case 'sales':
+       case 'sales':
         console.log('[GestorDashboard] Rendering sales tab');
         return (
           <SalesView
@@ -182,6 +183,12 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
             currentRate={currentRate}
             groupedInventory={groupedInventory}
             refreshDb={refreshDb}
+          />
+        );
+      case 'pending-closings':
+        return (
+          <PendingClosingsView
+            pendingClosings={pendingClosings}
           />
         );
       case 'reports':
@@ -199,10 +206,11 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm w-full">
-      <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+       <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
         <nav className="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
           <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Inventario y Ventas" tab="sales" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Cierres Pendientes" tab="pending-closings" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Mis Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
       </div>
@@ -272,6 +280,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         soldAt: new Date(),
         exchangeRateUsed: exchangeRate?.rate || 0,
         costUSD: product.costUSD,
+        costMN: exchangeRate ? (product.costUSD || 0) * exchangeRate.rate : (product.costMN || 0),
         margin: product.margin,
         ...prices
       };
@@ -778,10 +787,97 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                 </button>
             </div>
           </div>
+     </div>
+       )}
+     </div>
+   );
+ };
+
+// --- PENDING CLOSINGS VIEW ---
+interface PendingClosingsViewProps {
+  pendingClosings: Closing[];
+}
+
+const PendingClosingsView: React.FC<PendingClosingsViewProps> = ({ pendingClosings }) => {
+  const totalClosings = pendingClosings.length;
+  const totalSales = pendingClosings.reduce((sum, c) => sum + c.sales.length, 0);
+  const totalRecaudado = pendingClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
+  const totalEntregado = pendingClosings.reduce((sum, c) => sum + c.totalBaseMN, 0);
+  const totalComision = pendingClosings.reduce((sum, c) => sum + c.totalCommission, 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-warning-50 dark:bg-warning-900/20 p-4 rounded-lg">
+          <h3 className="text-sm font-medium text-warning-800 dark:text-warning-200">Cierres Pendientes</h3>
+          <p className="text-2xl font-bold text-warning-900 dark:text-warning-100">{totalClosings}</p>
         </div>
-      )}
+        <div className="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg">
+          <h3 className="text-sm font-medium text-primary-800 dark:text-primary-200">Ventas Totales</h3>
+          <p className="text-2xl font-bold text-primary-900 dark:text-primary-100">{totalSales}</p>
+        </div>
+        <div className="bg-success-50 dark:bg-success-900/20 p-4 rounded-lg">
+          <h3 className="text-sm font-medium text-success-800 dark:text-success-200">Monto Recaudado</h3>
+          <p className="text-xl font-bold text-success-900 dark:text-success-100">{formatCurrency(totalRecaudado)}</p>
+        </div>
+        <div className="bg-info-50 dark:bg-info-900/20 p-4 rounded-lg">
+          <h3 className="text-sm font-medium text-info-800 dark:text-info-200">Comisión</h3>
+          <p className="text-xl font-bold text-info-900 dark:text-info-100">{formatCurrency(totalComision)}</p>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg md:text-xl font-bold mb-4">Detalle de Cierres Pendientes</h3>
+        {pendingClosings.length === 0 ? (
+          <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">check_circle</span>
+            <p className="text-slate-500 dark:text-slate-400">No tienes cierres pendientes de validación.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-warning-100 dark:bg-warning-900/50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Fecha</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Ventas</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Monto Entregado</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Total Recaudado</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Comisión</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                {pendingClosings.map(closing => (
+                  <tr key={closing.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                      {formatDate(new Date(closing.initiatedAt))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
+                      {closing.sales.length}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
+                      {formatCurrency(closing.totalBaseMN)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
+                      {formatCurrency(closing.totalFinalMN)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
+                      {formatCurrency(closing.totalCommission)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-warning-100 dark:bg-warning-900/50 text-warning-800 dark:text-warning-200">
+                        Pendiente de Validación
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default GestorDashboard;
+ export default GestorDashboard;
