@@ -285,15 +285,16 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
   const handleExportPDF = () => {
     const data = [
-      { Metrica: 'Ventas Totales', Valor: metrics.totalSales },
-      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit },
-      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales },
-      { Metrica: 'Margen (%)', Valor: metrics.margin },
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales, Periodo: getPeriodLabel() },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit, Periodo: getPeriodLabel() },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales, Periodo: getPeriodLabel() },
+      { Metrica: 'Margen (%)', Valor: metrics.margin, Periodo: getPeriodLabel() },
       ...dashboardData?.managers.map(m => ({
         Manager: m.name,
         Ventas: m.totalSales,
         Ganancia: m.profit,
-        Gestores: m.numberOfGestors
+        Gestores: m.numberOfGestors,
+        Periodo: getPeriodLabel()
       })) || []
     ];
     exportToPDF(data, `Reporte Director - ${activeStore?.name || 'Tienda'} (${getPeriodLabel()})`, `director-metrics-${activeStore?.name || 'tienda'}`);

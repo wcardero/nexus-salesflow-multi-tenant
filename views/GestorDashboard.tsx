@@ -576,13 +576,18 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
   const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
   const totalEntregado = filteredClosings.reduce((sum, c) => sum + c.totalBaseMN, 0);
 
+  const getPeriodLabel = () => {
+    return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
+  };
+
   const handleExportCSV = () => {
     const data = filteredClosings.map(c => ({
       Fecha: formatDate(new Date(c.completedAt!)),
       Ventas: c.sales.length,
       TotalRecaudado: c.totalFinalMN,
       MontoEntregado: c.totalBaseMN,
-      MiComision: c.totalCommission
+      MiComision: c.totalCommission,
+      Periodo: getPeriodLabel()
     }));
     exportToCSV(data, `reporte_gestor_${formatDate(new Date())}`);
   };
@@ -593,7 +598,8 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
       Ventas: c.sales.length,
       Total: c.totalFinalMN,
       Entregado: c.totalBaseMN,
-      Comisión: c.totalCommission
+      Comisión: c.totalCommission,
+      Periodo: getPeriodLabel()
     }));
     exportToPDF(data, 'Reporte de Cierres - Gestor', `reporte_gestor_${formatDate(new Date())}`);
   };
@@ -604,7 +610,8 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
       Ventas: c.sales.length,
       TotalRecaudado: c.totalFinalMN,
       MontoEntregado: c.totalBaseMN,
-      MiComision: c.totalCommission
+      MiComision: c.totalCommission,
+      Periodo: getPeriodLabel()
     }));
     exportToExcel(data, 'Cierres', `reporte_gestor_${formatDate(new Date())}`);
   };

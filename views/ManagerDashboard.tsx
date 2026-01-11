@@ -261,13 +261,18 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
 
   const topGestors = salesByGestor.slice(0, 5);
 
+  const getPeriodLabel = () => {
+    return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
+  };
+
   const handleExportCSV = () => {
     const data = salesByGestor.map(g => ({
       Gestor: g.gestorName,
       Ventas: g.totalSales,
       TotalVendido: g.totalFinalMN,
       BaseAPagar: g.totalBaseMN,
-      Comision: g.totalCommission
+      Comision: g.totalCommission,
+      Periodo: getPeriodLabel()
     }));
     exportToCSV(data, `reporte_manager_${formatDate(new Date())}`);
   };
@@ -278,7 +283,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       Ventas: g.totalSales,
       Total: g.totalFinalMN,
       Base: g.totalBaseMN,
-      Comisión: g.totalCommission
+      Comisión: g.totalCommission,
+      Periodo: getPeriodLabel()
     }));
     exportToPDF(data, 'Reporte de Ventas por Gestor', `reporte_manager_${formatDate(new Date())}`);
   };
@@ -289,7 +295,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       Ventas: g.totalSales,
       TotalVendido: g.totalFinalMN,
       BaseAPagar: g.totalBaseMN,
-      Comision: g.totalCommission
+      Comision: g.totalCommission,
+      Periodo: getPeriodLabel()
     }));
     exportToExcel(data, 'Ventas por Gestor', `reporte_manager_${formatDate(new Date())}`);
   };
@@ -1726,8 +1733,12 @@ const ClosingsReportView: React.FC<{
     }).sort((a, b) => b.gananciaTiendaMN - a.gananciaTiendaMN);
   }, [closingMetrics]);
 
+  const getPeriodLabel = () => {
+    return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
+  };
+
   const handleExportCSV = () => {
-    const data = viewMode === 'por-cierre' 
+    const data = viewMode === 'por-cierre'
       ? closingMetrics.map(m => ({
           Fecha: formatDate(new Date(m.closing.completedAt!)),
           Gestor: m.gestorName,
@@ -1736,7 +1747,8 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
+          Periodo: getPeriodLabel()
         }))
       : metricsByGestor.map(m => ({
           Gestor: m.gestorName,
@@ -1746,13 +1758,14 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
+          Periodo: getPeriodLabel()
         }));
     exportToCSV(data, `reporte_cierres_${formatDate(new Date())}`);
   };
 
   const handleExportPDF = () => {
-    const data = viewMode === 'por-cierre' 
+    const data = viewMode === 'por-cierre'
       ? closingMetrics.map(m => ({
           Fecha: formatDate(new Date(m.closing.completedAt!)),
           Gestor: m.gestorName,
@@ -1761,7 +1774,8 @@ const ClosingsReportView: React.FC<{
           Ganancia: m.gananciaTiendaMN,
           Comisión: m.comisionGestorMN,
           Total: m.totalVendidoMN,
-          Margen: m.margenPorcentaje.toFixed(2) + '%'
+          Margen: m.margenPorcentaje.toFixed(2) + '%',
+          Periodo: getPeriodLabel()
         }))
       : metricsByGestor.map(m => ({
           Gestor: m.gestorName,
@@ -1771,13 +1785,14 @@ const ClosingsReportView: React.FC<{
           Ganancia: m.gananciaTiendaMN,
           Comisión: m.comisionGestorMN,
           Total: m.totalVendidoMN,
-          Margen: m.margenPorcentaje.toFixed(2) + '%'
+          Margen: m.margenPorcentaje.toFixed(2) + '%',
+          Periodo: getPeriodLabel()
         }));
     exportToPDF(data, 'Reporte de Cierres', `reporte_cierres_${formatDate(new Date())}`);
   };
 
   const handleExportExcel = () => {
-    const data = viewMode === 'por-cierre' 
+    const data = viewMode === 'por-cierre'
       ? closingMetrics.map(m => ({
           Fecha: formatDate(new Date(m.closing.completedAt!)),
           Gestor: m.gestorName,
@@ -1786,7 +1801,8 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
+          Periodo: getPeriodLabel()
         }))
       : metricsByGestor.map(m => ({
           Gestor: m.gestorName,
@@ -1796,7 +1812,8 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
+          Periodo: getPeriodLabel()
         }));
     exportToExcel(data, 'Cierres', `reporte_cierres_${formatDate(new Date())}`);
   };
