@@ -271,10 +271,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       Ventas: g.totalSales,
       TotalVendido: g.totalFinalMN,
       BaseAPagar: g.totalBaseMN,
-      Comision: g.totalCommission,
-      Periodo: getPeriodLabel()
+      Comision: g.totalCommission
     }));
-    exportToCSV(data, `reporte_manager_${formatDate(new Date())}`);
+    exportToCSV(data, `reporte_manager_${getPeriodLabel()}`);
   };
 
   const handleExportPDF = () => {
@@ -283,10 +282,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       Ventas: g.totalSales,
       Total: g.totalFinalMN,
       Base: g.totalBaseMN,
-      Comisión: g.totalCommission,
-      Periodo: getPeriodLabel()
+      Comisión: g.totalCommission
     }));
-    exportToPDF(data, 'Reporte de Ventas por Gestor', `reporte_manager_${formatDate(new Date())}`);
+    exportToPDF(data, `Reporte de Ventas por Gestor (${getPeriodLabel()})`, `reporte_manager_${getPeriodLabel()}`);
   };
 
   const handleExportExcel = () => {
@@ -295,10 +293,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       Ventas: g.totalSales,
       TotalVendido: g.totalFinalMN,
       BaseAPagar: g.totalBaseMN,
-      Comision: g.totalCommission,
-      Periodo: getPeriodLabel()
+      Comision: g.totalCommission
     }));
-    exportToExcel(data, 'Ventas por Gestor', `reporte_manager_${formatDate(new Date())}`);
+    exportToExcel(data, 'Ventas por Gestor', `reporte_manager_${getPeriodLabel()}`);
   };
 
   return (
@@ -1747,8 +1744,7 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
-          Periodo: getPeriodLabel()
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
         }))
       : metricsByGestor.map(m => ({
           Gestor: m.gestorName,
@@ -1758,10 +1754,9 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
-          Periodo: getPeriodLabel()
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
         }));
-    exportToCSV(data, `reporte_cierres_${formatDate(new Date())}`);
+    exportToCSV(data, `reporte_cierres_${getPeriodLabel()}`);
   };
 
   const handleExportPDF = () => {
@@ -1774,8 +1769,7 @@ const ClosingsReportView: React.FC<{
           Ganancia: m.gananciaTiendaMN,
           Comisión: m.comisionGestorMN,
           Total: m.totalVendidoMN,
-          Margen: m.margenPorcentaje.toFixed(2) + '%',
-          Periodo: getPeriodLabel()
+          Margen: m.margenPorcentaje.toFixed(2) + '%'
         }))
       : metricsByGestor.map(m => ({
           Gestor: m.gestorName,
@@ -1785,10 +1779,9 @@ const ClosingsReportView: React.FC<{
           Ganancia: m.gananciaTiendaMN,
           Comisión: m.comisionGestorMN,
           Total: m.totalVendidoMN,
-          Margen: m.margenPorcentaje.toFixed(2) + '%',
-          Periodo: getPeriodLabel()
+          Margen: m.margenPorcentaje.toFixed(2) + '%'
         }));
-    exportToPDF(data, 'Reporte de Cierres', `reporte_cierres_${formatDate(new Date())}`);
+    exportToPDF(data, `Reporte de Cierres (${getPeriodLabel()})`, `reporte_cierres_${getPeriodLabel()}`);
   };
 
   const handleExportExcel = () => {
@@ -1801,8 +1794,7 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
-          Periodo: getPeriodLabel()
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
         }))
       : metricsByGestor.map(m => ({
           Gestor: m.gestorName,
@@ -1812,10 +1804,9 @@ const ClosingsReportView: React.FC<{
           GananciaTiendaMN: m.gananciaTiendaMN,
           ComisionGestorMN: m.comisionGestorMN,
           TotalVendidoMN: m.totalVendidoMN,
-          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%',
-          Periodo: getPeriodLabel()
+          MargenPorcentaje: m.margenPorcentaje.toFixed(2) + '%'
         }));
-    exportToExcel(data, 'Cierres', `reporte_cierres_${formatDate(new Date())}`);
+    exportToExcel(data, 'Cierres', `reporte_cierres_${getPeriodLabel()}`);
   };
 
   return (

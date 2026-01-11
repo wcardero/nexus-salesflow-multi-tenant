@@ -268,53 +268,50 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
   const handleExportCSV = () => {
     const data = [
-      { Metrica: 'Ventas Totales', Valor: metrics.totalSales, Periodo: getPeriodLabel() },
-      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit, Periodo: getPeriodLabel() },
-      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales, Periodo: getPeriodLabel() },
-      { Metrica: 'Margen (%)', Valor: metrics.margin, Periodo: getPeriodLabel() },
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales },
+      { Metrica: 'Margen (%)', Valor: metrics.margin },
       ...dashboardData?.managers.map(m => ({
         Metrica: `Manager: ${m.name}`,
         Ventas: m.totalSales,
         Ganancia: m.profit,
-        Gestores: m.numberOfGestors,
-        Periodo: getPeriodLabel()
+        Gestores: m.numberOfGestors
       })) || []
     ];
-    exportToCSV(data, `director-metrics-${activeStore?.name || 'tienda'}`);
+    exportToCSV(data, `director-metrics-${activeStore?.name || 'tienda'}-${getPeriodLabel()}`);
   };
 
   const handleExportPDF = () => {
     const data = [
-      { Metrica: 'Ventas Totales', Valor: metrics.totalSales, Periodo: getPeriodLabel() },
-      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit, Periodo: getPeriodLabel() },
-      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales, Periodo: getPeriodLabel() },
-      { Metrica: 'Margen (%)', Valor: metrics.margin, Periodo: getPeriodLabel() },
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales },
+      { Metrica: 'Margen (%)', Valor: metrics.margin },
       ...dashboardData?.managers.map(m => ({
         Manager: m.name,
         Ventas: m.totalSales,
         Ganancia: m.profit,
-        Gestores: m.numberOfGestors,
-        Periodo: getPeriodLabel()
+        Gestores: m.numberOfGestors
       })) || []
     ];
-    exportToPDF(data, `Reporte Director - ${activeStore?.name || 'Tienda'} (${getPeriodLabel()})`, `director-metrics-${activeStore?.name || 'tienda'}`);
+    exportToPDF(data, `Reporte Director - ${activeStore?.name || 'Tienda'} (${getPeriodLabel()})`, `director-metrics-${activeStore?.name || 'tienda'}-${getPeriodLabel()}`);
   };
 
   const handleExportExcel = () => {
     const data = [
-      { Metrica: 'Ventas Totales', Valor: metrics.totalSales, Periodo: getPeriodLabel() },
-      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit, Periodo: getPeriodLabel() },
-      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales, Periodo: getPeriodLabel() },
-      { Metrica: 'Margen (%)', Valor: metrics.margin, Periodo: getPeriodLabel() },
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales },
+      { Metrica: 'Margen (%)', Valor: metrics.margin },
       ...dashboardData?.managers.map(m => ({
         Manager: m.name,
         Ventas: m.totalSales,
         Ganancia: m.profit,
-        Gestores: m.numberOfGestors,
-        Periodo: getPeriodLabel()
+        Gestores: m.numberOfGestors
       })) || []
     ];
-    exportToExcel(data, 'Métricas', `director-metrics-${activeStore?.name || 'tienda'}`);
+    exportToExcel(data, 'Métricas', `director-metrics-${activeStore?.name || 'tienda'}-${getPeriodLabel()}`);
   };
 
   if (loading && !dashboardData) {

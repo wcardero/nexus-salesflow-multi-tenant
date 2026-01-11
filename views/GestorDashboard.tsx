@@ -586,10 +586,9 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
       Ventas: c.sales.length,
       TotalRecaudado: c.totalFinalMN,
       MontoEntregado: c.totalBaseMN,
-      MiComision: c.totalCommission,
-      Periodo: getPeriodLabel()
+      MiComision: c.totalCommission
     }));
-    exportToCSV(data, `reporte_gestor_${formatDate(new Date())}`);
+    exportToCSV(data, `reporte_gestor_${getPeriodLabel()}`);
   };
 
   const handleExportPDF = () => {
@@ -598,10 +597,9 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
       Ventas: c.sales.length,
       Total: c.totalFinalMN,
       Entregado: c.totalBaseMN,
-      Comisión: c.totalCommission,
-      Periodo: getPeriodLabel()
+      Comisión: c.totalCommission
     }));
-    exportToPDF(data, 'Reporte de Cierres - Gestor', `reporte_gestor_${formatDate(new Date())}`);
+    exportToPDF(data, `Reporte de Cierres - Gestor (${getPeriodLabel()})`, `reporte_gestor_${getPeriodLabel()}`);
   };
 
   const handleExportExcel = () => {
@@ -610,10 +608,9 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
       Ventas: c.sales.length,
       TotalRecaudado: c.totalFinalMN,
       MontoEntregado: c.totalBaseMN,
-      MiComision: c.totalCommission,
-      Periodo: getPeriodLabel()
+      MiComision: c.totalCommission
     }));
-    exportToExcel(data, 'Cierres', `reporte_gestor_${formatDate(new Date())}`);
+    exportToExcel(data, 'Cierres', `reporte_gestor_${getPeriodLabel()}`);
   };
 
   return (
