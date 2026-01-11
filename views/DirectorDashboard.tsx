@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MockDB, Role, User } from '../types';
+import DateRangeSelector from '../components/DateRangeSelector';
+import ExportButton from '../components/ExportButton';
+import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
+import { formatDate } from '../dateUtils';
 
 interface DirectorDashboardProps {
   db: MockDB;
@@ -32,7 +36,17 @@ interface DashboardData {
 }
 
 const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, currentUser }) => {
-  const [period, setPeriod] = useState('7days');
+  const activeStore = useMemo(() => {
+    if (currentUser?.storeId && db) {
+      return db.stores.find(s => s.id === currentUser.storeId);
+    }
+    return undefined;
+  }, [currentUser, db]);
+
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)),
+    end: new Date()
+  });
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showManagersTab, setShowManagersTab] = useState(false);
@@ -47,12 +61,14 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
   useEffect(() => {
     fetchDashboardMetrics();
-  }, [period]);
+  }, [dateRange]);
 
   const fetchDashboardMetrics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/director/metrics?period=${period}`, {
+      const startDate = dateRange.start.toISOString();
+      const endDate = dateRange.end.toISOString();
+      const response = await fetch(`http://localhost:3001/api/director/metrics?startDate=${startDate}&endDate=${endDate}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -247,12 +263,57 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
   };
 
   const getPeriodLabel = () => {
-    switch (period) {
-      case 'today': return 'Hoy';
-      case '7days': return 'Últimos 7 días';
-      case '30days': return 'Últimos 30 días';
-      default: return 'Últimos 7 días';
-    }
+    return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
+  };
+
+  const handleExportCSV = () => {
+    const data = [
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales, Periodo: getPeriodLabel() },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit, Periodo: getPeriodLabel() },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales, Periodo: getPeriodLabel() },
+      { Metrica: 'Margen (%)', Valor: metrics.margin, Periodo: getPeriodLabel() },
+      ...dashboardData?.managers.map(m => ({
+        Metrica: `Manager: ${m.name}`,
+        Ventas: m.totalSales,
+        Ganancia: m.profit,
+        Gestores: m.numberOfGestors,
+        Periodo: getPeriodLabel()
+      })) || []
+    ];
+    exportToCSV(data, `director-metrics-${activeStore?.name || 'tienda'}`);
+  };
+
+  const handleExportPDF = () => {
+    const data = [
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales },
+      { Metrica: 'Margen (%)', Valor: metrics.margin },
+      ...dashboardData?.managers.map(m => ({
+        Manager: m.name,
+        Ventas: m.totalSales,
+        Ganancia: m.profit,
+        Gestores: m.numberOfGestors
+      })) || []
+    ];
+    exportToPDF(data, `Reporte Director - ${activeStore?.name || 'Tienda'} (${getPeriodLabel()})`, `director-metrics-${activeStore?.name || 'tienda'}`);
+  };
+
+  const handleExportExcel = () => {
+    const data = [
+      { Metrica: 'Ventas Totales', Valor: metrics.totalSales, Periodo: getPeriodLabel() },
+      { Metrica: 'Ganancia Neta', Valor: metrics.netProfit, Periodo: getPeriodLabel() },
+      { Metrica: 'Número de Ventas', Valor: metrics.numberOfSales, Periodo: getPeriodLabel() },
+      { Metrica: 'Margen (%)', Valor: metrics.margin, Periodo: getPeriodLabel() },
+      ...dashboardData?.managers.map(m => ({
+        Manager: m.name,
+        Ventas: m.totalSales,
+        Ganancia: m.profit,
+        Gestores: m.numberOfGestors,
+        Periodo: getPeriodLabel()
+      })) || []
+    ];
+    exportToExcel(data, 'Métricas', `director-metrics-${activeStore?.name || 'tienda'}`);
   };
 
   if (loading && !dashboardData) {
@@ -266,32 +327,29 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
  
    const metrics = dashboardData?.metrics || { totalSales: 0, netProfit: 0, numberOfSales: 0, margin: 0, isProfitable: false };
 
-   return (
-     <div className="p-8">
-       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Panel de Director</h1>
+    return (
+      <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Panel de Director</h1>
+          {activeStore && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">Tienda: {activeStore.name}</p>
+          )}
+        </div>
 
-       <div className="mb-6">
-         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período:</label>
-         <div className="flex gap-2">
-           {[
-             { value: 'today', label: 'Hoy' },
-             { value: '7days', label: '7 días' },
-             { value: '30days', label: '30 días' }
-           ].map(p => (
-             <button
-               key={p.value}
-               onClick={() => setPeriod(p.value)}
-               className={`px-4 py-2 rounded ${
-                 period === p.value
-                   ? 'bg-blue-500 dark:bg-blue-600 text-white'
-                   : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-               }`}
-             >
-               {p.label}
-             </button>
-           ))}
-         </div>
-       </div>
+        <div className="mb-6 flex items-center gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período:</label>
+            <DateRangeSelector value={dateRange} onChange={setDateRange} />
+          </div>
+          <div className="ml-auto">
+            <ExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              onExportExcel={handleExportExcel}
+              filename={`director-metrics-${activeStore?.name || 'tienda'}`}
+            />
+          </div>
+        </div>
 
        <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow-lg">
          <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Rentabilidad de la Tienda - {getPeriodLabel()}</h2>

@@ -1611,7 +1611,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
   // Director Dashboard metrics
   app.get('/api/director/metrics', authenticateToken, async (req: Request, res: Response) => {
     const requestingUser = (req as any).user;
-    const { period } = req.query;
+    const { period, startDate: reqStartDate, endDate: reqEndDate } = req.query;
 
     if (requestingUser.role !== 'Director') {
       return res.status(403).json({ message: 'Access denied. Directors only.' });
@@ -1622,18 +1622,27 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
     }
 
     try {
-      // Calculate date range based on period
+      // Calculate date range based on period or custom dates
       const now = new Date();
       let startDate: Date;
+      let endDate: Date;
 
-      if (period === 'today') {
+      if (reqStartDate && reqEndDate) {
+        startDate = new Date(reqStartDate as string);
+        endDate = new Date(reqEndDate as string);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'today') {
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       } else if (period === '7days') {
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        endDate = now;
       } else if (period === '30days') {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        endDate = now;
       } else {
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // Default to 7 days
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        endDate = now;
       }
 
       // Get all sales for the store in the period
@@ -1643,9 +1652,9 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         JOIN "User" u ON s."gestorId" = u.id
         JOIN "InventoryItem" ii ON s."inventoryItemId" = ii.id
         JOIN "Product" p ON ii."productId" = p.id
-        WHERE u."storeId" = $1 AND s."soldAt" >= $2
+        WHERE u."storeId" = $1 AND s."soldAt" >= $2 AND s."soldAt" <= $3
       `;
-      const { rows: sales } = await db.query(salesQuery, [requestingUser.storeId, startDate]);
+      const { rows: sales } = await db.query(salesQuery, [requestingUser.storeId, startDate, endDate]);
 
       // Calculate metrics
       const totalSales = sales.reduce((sum, sale) => sum + (sale.finalMN || 0), 0);
@@ -1676,15 +1685,17 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         LEFT JOIN "User" u2 ON u.id = u2."createdBy" AND u2.role = 'Gestor'
         LEFT JOIN "Sale" s ON s."gestorId" IN (
           SELECT u3.id FROM "User" u3 WHERE u3."createdBy" = u.id AND u3."storeId" = $1
-        ) AND s."soldAt" >= $2
+        ) AND s."soldAt" >= $2 AND s."soldAt" <= $3
         WHERE u.role = 'Manager' AND u."storeId" = $1
         GROUP BY u.id, u.name
         ORDER BY "totalSales" DESC
       `;
-      const { rows: managers } = await db.query(managersQuery, [requestingUser.storeId, startDate]);
+      const { rows: managers } = await db.query(managersQuery, [requestingUser.storeId, startDate, endDate]);
 
       res.json({
         period,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         metrics: {
           totalSales,
           netProfit,
