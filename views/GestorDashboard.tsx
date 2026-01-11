@@ -807,14 +807,14 @@ const PendingClosingsView: React.FC<PendingClosingsViewProps> = ({ pendingClosin
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-warning-50 dark:bg-warning-900/20 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-warning-800 dark:text-warning-200">Cierres Pendientes</h3>
           <p className="text-2xl font-bold text-warning-900 dark:text-warning-100">{totalClosings}</p>
         </div>
-        <div className="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-primary-800 dark:text-primary-200">Ventas Totales</h3>
-          <p className="text-2xl font-bold text-primary-900 dark:text-primary-100">{totalSales}</p>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Ventas Totales</h3>
+          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalSales}</p>
         </div>
         <div className="bg-success-50 dark:bg-success-900/20 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-success-800 dark:text-success-200">Monto Recaudado</h3>
