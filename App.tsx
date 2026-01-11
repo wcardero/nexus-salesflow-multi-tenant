@@ -6,7 +6,7 @@ import GestorDashboard from './views/GestorDashboard';
 import Login from './views/Login';
 import { Layout } from './components/Layout';
 import DirectorDashboard from './views/DirectorDashboard';
-import { ManagerManagement } from './views/ManagerManagement';
+import ManagerManagement from './views/ManagerManagement';
 import StoreManagement from './views/StoreManagement';
 import UserManagement from './views/UserManagement';
 

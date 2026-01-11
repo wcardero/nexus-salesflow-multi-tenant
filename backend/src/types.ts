@@ -97,12 +97,15 @@ export interface Sale {
   // Congela los valores al momento de la venta
   exchangeRateUsed: number;
   costUSD: number;
+  costMN: number;
   margin: number;
   // Cálculos congelados
   saleUSD: number;
   baseMN: number;
   commission: number;
   finalMN: number;
+  paymentStatus: SalePaymentStatus;
+  customerName?: string;
 }
 
 /**
@@ -111,6 +114,14 @@ export interface Sale {
 export enum ClosingStatus {
   PENDING = 'PENDING', // El gestor ya cerró, pendiente de entrega de dinero
   COMPLETED = 'COMPLETED', // El manager confirmó la recepción del dinero
+}
+
+/**
+ * Estados de pago de una venta.
+ */
+export enum SalePaymentStatus {
+  PAID = 'PAID', // Pago al contado
+  PENDING = 'PENDING' // Venta al crédito
 }
 
 /**

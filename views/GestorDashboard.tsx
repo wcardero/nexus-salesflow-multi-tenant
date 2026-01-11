@@ -1,6 +1,6 @@
 // views/GestorDashboard.tsx
 import React, { useState, useMemo } from 'react';
-import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate } from '../types';
+import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate, SalePaymentStatus } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
 import SellModal from '../components/SellModal';
 import DateRangeSelector from '../components/DateRangeSelector';
@@ -262,7 +262,33 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     setIsSellModalOpen(false);
   };
 
-  const performSale = (quantity: number, group: InventoryGroup, product: Product, exchangeRate: ExchangeRate | undefined) => {
+  const handleMarkAsPaid = async (saleId: string) => {
+    if (!window.confirm('¿Confirmas que esta venta ha sido pagada? Ahora podrá incluirse en un cierre.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Venta marcada como pagada exitosamente.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error marking sale as paid:', error);
+      alert('Error al marcar la venta como pagada.');
+    }
+  };
+
+  const performSale = (quantity: number, group: InventoryGroup, product: Product, exchangeRate: ExchangeRate | undefined, paymentStatus: SalePaymentStatus, customerName?: string) => {
     const prices = calculateProductPrices(product, exchangeRate);
 
     const newSales: Sale[] = [];
@@ -282,10 +308,12 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         costUSD: product.costUSD,
         costMN: exchangeRate ? (product.costUSD || 0) * exchangeRate.rate : (product.costMN || 0),
         margin: product.margin,
-        ...prices
+        ...prices,
+        paymentStatus,
+        customerName: paymentStatus === SalePaymentStatus.PENDING ? customerName : undefined
       };
       newSales.push(newSale);
-      
+
       // Mark the specific inventory item as sold
       updatedInventoryItems.push({
         ...soldItem,
@@ -311,7 +339,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     });
   };
 
-  const handleSell = async (quantity: number) => {
+  const handleSell = async (quantity: number, paymentStatus: SalePaymentStatus, customerName?: string) => {
     if (!selectedGroup) {
       alert('Error: No se pudo completar la venta. Faltan datos.');
       return;
@@ -335,7 +363,9 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         },
         body: JSON.stringify({
           assignedInventoryId: selectedGroup.assignedInventoryId,
-          quantity
+          quantity,
+          paymentStatus,
+          customerName: paymentStatus === SalePaymentStatus.PENDING ? customerName : undefined
         })
       });
 
@@ -354,18 +384,20 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   };
   
   const handleExecuteClosing = async () => {
-    if (gestorSalesSinceLastClosing.length === 0) {
-      alert('No hay ventas nuevas para cerrar.');
+    const paidSales = gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID);
+
+    if (paidSales.length === 0) {
+      alert('No hay ventas pagadas para cerrar. Solo las ventas con "Pago al contado" pueden incluirse en el cierre.');
       return;
     }
 
-    const totalBaseMN = gestorSalesSinceLastClosing.reduce((sum, sale) => sum + sale.baseMN, 0);
-    const totalCommission = gestorSalesSinceLastClosing.reduce((sum, sale) => sum + sale.commission, 0);
-    const totalFinalMN = gestorSalesSinceLastClosing.reduce((sum, sale) => sum + sale.finalMN, 0);
+    const totalBaseMN = paidSales.reduce((sum, sale) => sum + sale.baseMN, 0);
+    const totalCommission = paidSales.reduce((sum, sale) => sum + sale.commission, 0);
+    const totalFinalMN = paidSales.reduce((sum, sale) => sum + sale.finalMN, 0);
 
     const summary = `
       Resumen del Cierre:
-      - Artículos Vendidos: ${gestorSalesSinceLastClosing.length}
+      - Artículos Vendidos: ${paidSales.length}
       - Total Recaudado: ${formatCurrency(totalFinalMN)}
       - Tu Comisión: ${formatCurrency(totalCommission)}
       - Monto a Entregar: ${formatCurrency(totalBaseMN)}
@@ -385,7 +417,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          saleIds: gestorSalesSinceLastClosing.map(s => s.id)
+          saleIds: paidSales.map(s => s.id)
         })
       });
 
@@ -406,6 +438,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     const groups: { [key: string]: { quantity: number; total: number; gestorGain: number; storeGain: number } } = {};
 
     gestorSalesSinceLastClosing.forEach(sale => {
+      if (sale.paymentStatus !== SalePaymentStatus.PAID) return;
+
       const assignedInventory = db.assignedInventory.find(ai => ai.gestorId === user.id && sale.inventoryItemId.startsWith(ai.id));
       if (assignedInventory) {
         const key = assignedInventory.productId;
@@ -425,6 +459,28 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   const totalSalesAmount = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.total || 0), 0);
   const totalGestorGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.gestorGain || 0), 0);
   const totalStoreGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.storeGain || 0), 0);
+
+  const pendingSales = useMemo(() => {
+    return gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PENDING);
+  }, [gestorSalesSinceLastClosing]);
+
+  const pendingSalesByProduct = useMemo(() => {
+    const groups: { [key: string]: { sales: Sale[]; total: number } } = {};
+
+    pendingSales.forEach(sale => {
+      const assignedInventory = db.assignedInventory.find(ai => ai.gestorId === user.id && sale.inventoryItemId.startsWith(ai.id));
+      if (assignedInventory) {
+        const key = assignedInventory.productId;
+        if (!groups[key]) {
+          groups[key] = { sales: [], total: 0 };
+        }
+        groups[key].sales.push(sale);
+        groups[key].total += sale.finalMN;
+      }
+    });
+
+    return groups;
+  }, [pendingSales, db.assignedInventory, user.id]);
 
   return (
     <>
@@ -527,20 +583,62 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
           </div>
         )}
 
+        {/* Ventas al Crédito Pendientes */}
+        {Object.keys(pendingSalesByProduct).length > 0 && (
+          <div className="lg:col-span-2 bg-warning-50 dark:bg-warning-900/20 p-4 md:p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">Ventas al Crédito Pendientes</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-warning-200 dark:divide-warning-700">
+                <thead className="bg-warning-100 dark:bg-warning-900/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Producto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Cantidad</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Cliente</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Monto</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-warning-200 dark:divide-warning-700">
+                  {(Object.entries(pendingSalesByProduct) as [string, { sales: Sale[]; total: number }][]).map(([productId, data]) => {
+                    const product = productsById[productId];
+                    if (!product) return null;
+                    return data.sales.map((sale) => (
+                      <tr key={sale.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">1</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sale.customerName || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(sale.finalMN)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            onClick={() => handleMarkAsPaid(sale.id)}
+                            className="bg-success-700 hover:bg-success-800 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
+                          >
+                            Marcar como Pagada
+                          </button>
+                        </td>
+                      </tr>
+                    ));
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Columna de Cierre de Caja */}
         <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm h-fit">
           <h2 className="text-lg md:text-xl font-bold mb-4">Cierre de Caja</h2>
           <div className="space-y-4">
               <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                  <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas desde último cierre</h3>
-                  <p className="text-2xl font-bold text-info-600 dark:text-info-400">{gestorSalesSinceLastClosing.length}</p>
+                  <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas pagadas desde último cierre</h3>
+                  <p className="text-2xl font-bold text-info-600 dark:text-info-400">{Object.keys(salesByProduct).length}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Total recaudado: {formatCurrency(gestorSalesSinceLastClosing.reduce((sum, s) => sum + s.finalMN, 0))}
+                    Total recaudado: {formatCurrency(totalSalesAmount)}
                   </p>
               </div>
-            <button 
+            <button
               onClick={handleExecuteClosing}
-              disabled={gestorSalesSinceLastClosing.length === 0}
+              disabled={Object.keys(salesByProduct).length === 0}
               className="w-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Ejecutar Cierre

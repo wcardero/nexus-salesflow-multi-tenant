@@ -1818,10 +1818,14 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
     return res.status(403).json({ message: 'Only Gestors can create sales.' });
   }
 
-  const { assignedInventoryId, quantity } = req.body;
+  const { assignedInventoryId, quantity, paymentStatus = 'PAID', customerName } = req.body;
 
   if (!assignedInventoryId || !quantity || quantity < 1) {
     return res.status(400).json({ message: 'Assigned inventory ID and quantity are required.' });
+  }
+
+  if (paymentStatus === 'PENDING' && !customerName) {
+    return res.status(400).json({ message: 'Customer name is required for credit sales.' });
   }
 
   try {
@@ -1873,7 +1877,7 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
       const saleId = `sale-${now}-${i}`;
       const inventoryItemId = `inv-${now}-${i}-${Math.random().toString(36).substr(2, 9)}`;
       const sale = await db.query(
-        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "costMN", "margin", "saleUSD", "baseMN", commission, "finalMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
+        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "costMN", "margin", "saleUSD", "baseMN", commission, "finalMN", "paymentStatus", "customerName") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
         [
           saleId,
           inventoryItemId,
@@ -1886,7 +1890,9 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
           0,
           pricePerUnit * (1 - commissionRate),
           pricePerUnit * commissionRate,
-          pricePerUnit
+          pricePerUnit,
+          paymentStatus,
+          paymentStatus === 'PENDING' ? customerName : null
         ]
       );
       sales.push(sale.rows[0]);
@@ -1912,6 +1918,51 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
   } catch (error: any) {
     await db.query('ROLLBACK');
     console.error('Create sales error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.patch('/api/sales/:saleId/mark-as-paid', authenticateToken, async (req: Request, res: Response) => {
+  const { saleId } = req.params;
+  const requestingUser = (req as any).user;
+
+  if (requestingUser.role !== 'Gestor') {
+    return res.status(403).json({ message: 'Only Gestors can mark sales as paid.' });
+  }
+
+  try {
+    const saleResult = await db.query(
+      'SELECT * FROM "Sale" WHERE id = $1 AND "gestorId" = $2',
+      [saleId, requestingUser.id]
+    );
+
+    if (saleResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Sale not found or you do not have permission to update it.' });
+    }
+
+    const sale = saleResult.rows[0];
+
+    if (sale.paymentStatus === 'PAID') {
+      return res.status(400).json({ message: 'Sale is already paid.' });
+    }
+
+    const updatedSale = await db.query(
+      'UPDATE "Sale" SET "paymentStatus" = $1 WHERE id = $2 AND "gestorId" = $3 RETURNING *',
+      ['PAID', saleId, requestingUser.id]
+    );
+
+    await createAuditLog(
+      requestingUser.id,
+      'UPDATE_SALE_STATUS',
+      'Sale',
+      saleId,
+      { oldStatus: sale.paymentStatus, newStatus: 'PAID' },
+      requestingUser.storeId
+    );
+
+    res.status(200).json(updatedSale.rows[0]);
+  } catch (error: any) {
+    console.error('Mark sale as paid error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -1987,13 +2038,18 @@ app.post('/api/closings', authenticateToken, async (req: Request, res: Response)
     const closingId = `closing-${Date.now()}`;
 
     const salesResult = await db.query(
-      'SELECT * FROM "Sale" WHERE id = ANY($1) AND "gestorId" = $2',
-      [saleIds, requestingUser.id]
+      'SELECT * FROM "Sale" WHERE id = ANY($1) AND "gestorId" = $2 AND "paymentStatus" = $3',
+      [saleIds, requestingUser.id, 'PAID']
     );
 
     if (salesResult.rows.length === 0) {
       await db.query('ROLLBACK');
-      return res.status(404).json({ message: 'No valid sales found for this gestor.' });
+      return res.status(404).json({ message: 'No valid sales found for this gestor. Only paid sales can be included in closings.' });
+    }
+
+    if (salesResult.rows.length < saleIds.length) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ message: 'Some sales cannot be included in the closing. Only paid sales are allowed.' });
     }
 
     const totalBaseMN = salesResult.rows.reduce((sum, sale) => sum + parseFloat(sale.baseMN), 0);

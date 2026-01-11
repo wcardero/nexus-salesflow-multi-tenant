@@ -1,6 +1,6 @@
 // store.ts
 
-import { MockDB, Role, User, Store, Product, InventoryItem, ClosingStatus } from './types';
+import { MockDB, Role, User, Store, Product, InventoryItem, ClosingStatus, SalePaymentStatus } from './types';
 
 // ====================================================================================
 // IDs para mantener consistencia
@@ -99,11 +99,13 @@ export let mockDB: MockDB = {
       soldAt: new Date('2023-10-10'),
       exchangeRateUsed: 305,
       costUSD: 50,
+      costMN: 15250,
       margin: 0.20,
-      saleUSD: 60, // 50 * 1.20
-      baseMN: 18300, // 60 * 305
-      commission: 2196, // 18300 * 0.12
-      finalMN: 20496, // 18300 + 2196
+      saleUSD: 60,
+      baseMN: 18300,
+      commission: 2196,
+      finalMN: 20496,
+      paymentStatus: SalePaymentStatus.PAID
     }
   ],
   

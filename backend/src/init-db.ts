@@ -20,6 +20,9 @@ CREATE TYPE "InventoryStatus" AS ENUM ('Available', 'Sold');
 DROP TYPE IF EXISTS "ClosingStatus";
 CREATE TYPE "ClosingStatus" AS ENUM ('PENDING', 'COMPLETED');
 
+DROP TYPE IF EXISTS "SalePaymentStatus";
+CREATE TYPE "SalePaymentStatus" AS ENUM ('PAID', 'PENDING');
+
 
 -- Create Tables
 CREATE TABLE "Store" (
@@ -110,6 +113,8 @@ CREATE TABLE "Sale" (
     "finalMN" DOUBLE PRECISION NOT NULL,
     "inventoryItemId" TEXT NOT NULL UNIQUE,
     "gestorId" TEXT NOT NULL,
+    "paymentStatus" "SalePaymentStatus" NOT NULL DEFAULT 'PAID',
+    "customerName" TEXT,
     CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
