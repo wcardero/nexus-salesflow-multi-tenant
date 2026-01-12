@@ -49,8 +49,14 @@ export interface Product {
   id: string;
   storeId: string;
   name: string;
-  costUSD: number; // compra_usd
+  costUSD?: number; // compra_usd
+  costMN?: number; // compra_mn
   margin: number; // margen_pct (e.g., 0.30 for 30%)
+  commissionRate?: number; // Comisión específica para este producto (opcional)
+  createdBy?: string; // ID del usuario que creó el producto
+  currency?: 'USD' | 'MN'; // Moneda del costo
+  priceMN?: number; // Precio final calculado en MN (incluye margen)
+  gestorCommissionMN?: number; // Comisión del gestor en MN calculada
 }
 
 /**

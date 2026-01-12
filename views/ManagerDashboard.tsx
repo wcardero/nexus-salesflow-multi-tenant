@@ -810,12 +810,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     let priceMN: number;
     let gestorCommissionMN: number;
 
-    if (!commission.trim()) {
-      alert('La comisión es obligatoria.');
-      return;
-    }
-
-    const commissionRate = parseFloat(commission) / 100;
+    const SYSTEM_DEFAULT_COMMISSION = 0;
+    const commissionRate = commission.trim() ? parseFloat(commission) / 100 : SYSTEM_DEFAULT_COMMISSION;
  
     if (currency === 'MN') {
       const costMN = parseFloat(cost);
@@ -898,7 +894,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           costUSD: editingCurrency === 'USD' ? parseFloat(editingCost) : undefined,
           costMN: editingCurrency === 'MN' ? parseFloat(editingCost) : undefined,
           margin: parseFloat(editingMargin) / 100,
-          commissionRate: editingCommission.trim() ? parseFloat(editingCommission) / 100 : undefined,
+          commissionRate: editingCommission.trim() ? parseFloat(editingCommission) / 100 : 0,
           currency: editingCurrency
         }),
       });
@@ -1034,7 +1030,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   min="0"
                   max="100"
                   step="0.1"
-                  placeholder="Dejar vacío para usar por defecto"
+                  placeholder="Comisión gestor % (default: 0%)"
                   className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
                 />
               </div>
@@ -1066,7 +1062,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           <input
             value={commission}
             onChange={e => setCommission(e.target.value)}
-            placeholder="Comisión gestor %"
+            placeholder="Comisión gestor % (default: 0%)"
             type="number"
             min="0"
             max="100"

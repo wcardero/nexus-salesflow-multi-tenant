@@ -17,12 +17,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'nexus_salesflow_secret';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Rate limiting middleware (increased limits)
+// Rate limiting middleware (increased limits) - DISABLED for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs (increased from 100)
+  max: 10000, // Very high limit for development
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  skip: (req: Request) => {
+    // Skip rate limiting for all requests during development
+    return true;
+  },
   handler: (req: Request, res: any) => {
     res.status(429).json({ message: 'Too many requests from this IP, please try again later.' });
   }
@@ -31,7 +35,7 @@ const limiter = rateLimit({
 // Login rate limiting (more restrictive but increased)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 login requests per windowMs (increased from 5)
+  max: 50, // Limit each IP to 50 login requests per windowMs (increased from 10)
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: any) => {
@@ -42,6 +46,9 @@ const loginLimiter = rateLimit({
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// DISABLED rate limiting for development - comment this back in for production
+// app.use(limiter);
 
 // Public endpoint to check if any users exist (for initial setup) - exempt from rate limiting
 app.get('/api/users/exists', async (req: Request, res: Response) => {
@@ -2473,6 +2480,153 @@ const autoExecuteSaleCostMNMigration = async () => {
   }
 };
 
+// Auto-execute product costMN migration on startup
+const autoExecuteProductCostMNMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'costMN'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding costMN column to Product table...');
+      await db.query('ALTER TABLE "Product" ADD COLUMN "costMN" DOUBLE PRECISION');
+      console.log('[auto-migration] Product costMN column added successfully');
+    } else {
+      console.log('[auto-migration] costMN column already exists in Product table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Product costMN column:', error);
+  }
+};
+
+// Auto-execute product costUSD nullable migration on startup
+const autoExecuteProductCostUSDNullableMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'costUSD'
+    `);
+
+    if (result.rows.length > 0 && result.rows[0].is_nullable === 'NO') {
+      console.log('[auto-migration] Making costUSD nullable in Product table...');
+      await db.query('ALTER TABLE "Product" ALTER COLUMN "costUSD" DROP NOT NULL');
+      console.log('[auto-migration] Product costUSD column is now nullable');
+    } else {
+      console.log('[auto-migration] costUSD column already nullable or does not exist');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error making Product costUSD nullable:', error);
+  }
+};
+
+// Auto-execute product commissionRate migration on startup
+const autoExecuteProductCommissionRateMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'commissionRate'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding commissionRate column to Product table...');
+      await db.query('ALTER TABLE "Product" ADD COLUMN "commissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0');
+      console.log('[auto-migration] Product commissionRate column added successfully');
+    } else {
+      console.log('[auto-migration] commissionRate column already exists in Product table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Product commissionRate column:', error);
+  }
+};
+
+// Auto-execute product priceMN migration on startup
+const autoExecuteProductPriceMNMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'priceMN'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding priceMN column to Product table...');
+      await db.query('ALTER TABLE "Product" ADD COLUMN "priceMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
+      console.log('[auto-migration] Product priceMN column added successfully');
+    } else {
+      console.log('[auto-migration] priceMN column already exists in Product table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Product priceMN column:', error);
+  }
+};
+
+// Auto-execute product gestorCommissionMN migration on startup
+const autoExecuteProductGestorCommissionMNMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'gestorCommissionMN'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding gestorCommissionMN column to Product table...');
+      await db.query('ALTER TABLE "Product" ADD COLUMN "gestorCommissionMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
+      console.log('[auto-migration] Product gestorCommissionMN column added successfully');
+    } else {
+      console.log('[auto-migration] gestorCommissionMN column already exists in Product table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Product gestorCommissionMN column:', error);
+  }
+};
+
+// Auto-execute product createdBy migration on startup
+const autoExecuteProductCreatedByMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'createdBy'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding createdBy column to Product table...');
+      await db.query('ALTER TABLE "Product" ADD COLUMN "createdBy" VARCHAR(255) REFERENCES "User"(id) ON DELETE SET NULL');
+      console.log('[auto-migration] Product createdBy column added successfully');
+    } else {
+      console.log('[auto-migration] createdBy column already exists in Product table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Product createdBy column:', error);
+  }
+};
+
+// Auto-execute product currency migration on startup
+const autoExecuteProductCurrencyMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Product' AND column_name = 'currency'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding currency column to Product table...');
+      await db.query('ALTER TABLE "Product" ADD COLUMN currency VARCHAR(10) NOT NULL DEFAULT \'USD\'');
+      console.log('[auto-migration] Product currency column added successfully');
+    } else {
+      console.log('[auto-migration] currency column already exists in Product table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Product currency column:', error);
+  }
+};
+
 // Auto-execute createdBy column migration on startup
 const autoExecuteCreatedByMigration = async () => {
   try {
@@ -2504,6 +2658,13 @@ try {
     
     // Execute auto-migrations
     await autoExecuteSaleCostMNMigration();
+    await autoExecuteProductCostMNMigration();
+    await autoExecuteProductCostUSDNullableMigration();
+    await autoExecuteProductCommissionRateMigration();
+    await autoExecuteProductPriceMNMigration();
+    await autoExecuteProductGestorCommissionMNMigration();
+    await autoExecuteProductCreatedByMigration();
+    await autoExecuteProductCurrencyMigration();
     await autoExecuteCreatedByMigration();
 
 // Temporary endpoint to execute migration
@@ -2616,7 +2777,7 @@ const validateProduct = [
   body('costUSD').optional().isFloat({ min: 0.01 }).withMessage('Cost USD must be a positive number'),
   body('costMN').optional().isFloat({ min: 0.01 }).withMessage('Cost MN must be a positive number'),
   body('margin').isFloat({ min: 0, max: 1 }).withMessage('Margin must be between 0 and 100%'),
-  body('commissionRate').isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be entre 0 y 100%'),
+  body('commissionRate').optional().isFloat({ min: 0, max: 1 }).withMessage('Commission rate must be entre 0 y 100%'),
   body('storeId').optional().isUUID().withMessage('Store ID must be a valid UUID'),
   body('currency').optional().isIn(['USD', 'MN']).withMessage('Currency must be USD or MN'),
 ];
@@ -2638,29 +2799,13 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     return res.status(400).json({ message: 'Cost (USD or MN) is required.' });
   }
 
-  if (costUSD && costMN) {
-    return res.status(400).json({ message: 'Please specify cost in either USD or MN, not both.' });
-  }
+    if (costUSD && costMN) {
+      return res.status(400).json({ message: 'Please specify cost in either USD or MN, not both.' });
+    }
 
-  if (costMN && !currency) {
-    return res.status(400).json({ message: 'Currency is required when cost is in MN.' });
-  }
+    const finalStoreId = storeId || requestingUser.storeId;
 
-  if (currency && currency !== 'USD' && currency !== 'MN') {
-    return res.status(400).json({ message: 'Currency must be either USD or MN.' });
-  }
-
-  if (!commissionRate) {
-    return res.status(400).json({ message: 'Commission rate is required.' });
-  }
-
-  const finalStoreId = storeId || requestingUser.storeId;
-
-  if (requestingUser.role === 'Director' && !finalStoreId) {
-    return res.status(400).json({ message: 'Directors must provide their store ID when creating products.' });
-  }
-
-  try {
+    try {
     // Get store for exchange rate
     const storeResult = await db.query('SELECT * FROM "Store" WHERE id = $1', [finalStoreId]);
     if (storeResult.rows.length === 0) {
@@ -2680,10 +2825,11 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     }
 
     const parsedMargin = parseFloat(margin);
-    let priceMN: number;
-    let gestorCommissionMN: number;
+    let priceMN: number = 0;
+    let gestorCommissionMN: number = 0;
 
-    const parsedCommissionRate = parseFloat(commissionRate);
+    const SYSTEM_DEFAULT_COMMISSION = 0;
+    const parsedCommissionRate = commissionRate !== undefined && commissionRate !== null && commissionRate !== '' ? parseFloat(commissionRate) : SYSTEM_DEFAULT_COMMISSION;
 
     // Calculate prices based on currency
     if (currency === 'MN') {
@@ -2721,7 +2867,7 @@ app.post('/api/products', authenticateToken, validateProduct, async (req: Reques
     const finalCostMN = currency === 'MN' ? costMN : null;
     const result = await db.query(
       'INSERT INTO "Product" (id, name, "costUSD", "costMN", margin, "commissionRate", "storeId", "createdBy", currency, "priceMN", "gestorCommissionMN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
-      [productId, name, finalCostUSD, finalCostMN, parsedMargin, commissionRate ? parsedCommissionRate : null, finalStoreId, requestingUser.id, currency || 'USD', priceMN, gestorCommissionMN]
+      [productId, name, finalCostUSD, finalCostMN, parsedMargin, parsedCommissionRate, finalStoreId, requestingUser.id, currency || 'USD', priceMN, gestorCommissionMN]
     );
 
     console.log('[create-product] Product created:', result.rows[0]);
@@ -2762,10 +2908,6 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
       return res.status(400).json({ message: 'Cost (USD or MN) is required.' });
     }
 
-    if (!commissionRate) {
-      return res.status(400).json({ message: 'Commission rate is required.' });
-    }
-
     try {
       const existingProduct = await db.query('SELECT * FROM "Product" WHERE id = $1', [id]);
       if (existingProduct.rows.length === 0) {
@@ -2802,11 +2944,13 @@ app.put('/api/products/:id', authenticateToken, validateProduct, async (req: Req
     const finalCostUSD = costUSD !== undefined ? costUSD : product.costUSD;
     const finalCostMN = costMN !== undefined ? costMN : product.costMN;
     const parsedMargin = parseFloat(margin);
-    const parsedCommissionRate = parseFloat(commissionRate);
+    let priceMN: number = 0;
+    let gestorCommissionMN: number = 0;
+
+    const SYSTEM_DEFAULT_COMMISSION = 0;
+    const parsedCommissionRate = commissionRate !== undefined && commissionRate !== null && commissionRate !== '' ? parseFloat(commissionRate) : SYSTEM_DEFAULT_COMMISSION;
 
     // Recalculate prices
-    let priceMN: number;
-    let gestorCommissionMN: number;
 
     if (finalCurrency === 'MN') {
       if (!finalCostMN) {
