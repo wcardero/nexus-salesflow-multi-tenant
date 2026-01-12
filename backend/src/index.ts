@@ -2627,6 +2627,90 @@ const autoExecuteProductCurrencyMigration = async () => {
   }
 };
 
+// Auto-execute assignedInventory status migration on startup
+const autoExecuteAssignedInventoryStatusMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'AssignedInventory' AND column_name = 'status'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding status column to AssignedInventory table...');
+      await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT \'Pending\'');
+      console.log('[auto-migration] AssignedInventory status column added successfully');
+    } else {
+      console.log('[auto-migration] status column already exists in AssignedInventory table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding AssignedInventory status column:', error);
+  }
+};
+
+// Auto-execute assignedInventory confirmedAt migration on startup
+const autoExecuteAssignedInventoryConfirmedAtMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'AssignedInventory' AND column_name = 'confirmedAt'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding confirmedAt column to AssignedInventory table...');
+      await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN "confirmedAt" TIMESTAMP');
+      console.log('[auto-migration] AssignedInventory confirmedAt column added successfully');
+    } else {
+      console.log('[auto-migration] confirmedAt column already exists in AssignedInventory table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding AssignedInventory confirmedAt column:', error);
+  }
+};
+
+// Auto-execute assignedInventory rejectionReason migration on startup
+const autoExecuteAssignedInventoryRejectionReasonMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'AssignedInventory' AND column_name = 'rejectionReason'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding rejectionReason column to AssignedInventory table...');
+      await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN "rejectionReason" TEXT');
+      console.log('[auto-migration] AssignedInventory rejectionReason column added successfully');
+    } else {
+      console.log('[auto-migration] rejectionReason column already exists in AssignedInventory table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding AssignedInventory rejectionReason column:', error);
+  }
+};
+
+// Auto-execute assignedInventory priceMN migration on startup
+const autoExecuteAssignedInventoryPriceMNMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'AssignedInventory' AND column_name = 'priceMN'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding priceMN column to AssignedInventory table...');
+      await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN "priceMN" DOUBLE PRECISION');
+      console.log('[auto-migration] AssignedInventory priceMN column added successfully');
+    } else {
+      console.log('[auto-migration] priceMN column already exists in AssignedInventory table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding AssignedInventory priceMN column:', error);
+  }
+};
+
 // Auto-execute createdBy column migration on startup
 const autoExecuteCreatedByMigration = async () => {
   try {
@@ -2665,6 +2749,10 @@ try {
     await autoExecuteProductGestorCommissionMNMigration();
     await autoExecuteProductCreatedByMigration();
     await autoExecuteProductCurrencyMigration();
+    await autoExecuteAssignedInventoryStatusMigration();
+    await autoExecuteAssignedInventoryConfirmedAtMigration();
+    await autoExecuteAssignedInventoryRejectionReasonMigration();
+    await autoExecuteAssignedInventoryPriceMNMigration();
     await autoExecuteCreatedByMigration();
 
 // Temporary endpoint to execute migration

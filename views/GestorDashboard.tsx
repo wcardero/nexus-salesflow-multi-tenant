@@ -515,7 +515,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                         {group.items.length > 0 && (
                           <button
                             onClick={() => handleOpenSellModal(group)}
-                            className="bg-success-700 hover:bg-success-800 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
+                            className="bg-success-500 hover:bg-success-600 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
                           >
                             Vender
                           </button>
@@ -611,7 +611,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <button
                             onClick={() => handleMarkAsPaid(sale.id)}
-                            className="bg-success-700 hover:bg-success-800 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
+                            className="bg-success-500 hover:bg-success-600 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
                           >
                             Marcar como Pagada
                           </button>
@@ -842,13 +842,13 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => onConfirm(ai.id)}
-                        className="bg-success-700 hover:bg-success-800 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs mr-2 shadow-md transition-all"
+                        className="bg-green-600 hover:bg-green-700 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs mr-2 shadow-md transition-all"
                       >
                         Aceptar
                       </button>
                       <button
                         onClick={() => setRejecting(ai.id)}
-                        className="bg-danger-700 hover:bg-danger-800 dark:bg-danger-600 dark:hover:bg-danger-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
+                        className="bg-red-600 hover:bg-red-700 dark:bg-danger-600 dark:hover:bg-danger-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
                       >
                         Rechazar
                       </button>
@@ -879,7 +879,7 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
               </button>
                 <button
                   onClick={() => handleReject(rejecting)}
-                  className="px-4 py-2 bg-danger-700 hover:bg-danger-800 dark:bg-danger-600 dark:hover:bg-danger-700 text-white rounded-md shadow-md transition-all"
+                  className="px-4 py-2 bg-danger-500 hover:bg-danger-600 dark:bg-danger-600 dark:hover:bg-danger-700 text-white rounded-md shadow-md transition-all"
                 >
                   Confirmar Rechazo
                 </button>
