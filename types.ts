@@ -142,6 +142,7 @@ export interface Sale {
   finalMN: number;
   paymentStatus: SalePaymentStatus;
   customerName?: string;
+  productId?: string;
 }
 
 /**

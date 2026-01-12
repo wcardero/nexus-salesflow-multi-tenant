@@ -1422,7 +1422,8 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
       const product = productResult.rows[0];
 
-      if (!product.commissionRate) {
+      // commissionRate can be 0 (default) - only check if it's null or undefined
+      if (product.commissionRate === null || product.commissionRate === undefined) {
         return res.status(400).json({ message: 'Product does not have a commission rate set.' });
       }
 
@@ -1884,7 +1885,7 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
       const saleId = `sale-${now}-${i}`;
       const inventoryItemId = `inv-${now}-${i}-${Math.random().toString(36).substr(2, 9)}`;
       const sale = await db.query(
-        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "costMN", "margin", "saleUSD", "baseMN", commission, "finalMN", "paymentStatus", "customerName") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
+        'INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "soldAt", "exchangeRateUsed", "costUSD", "costMN", "margin", "saleUSD", "baseMN", commission, "finalMN", "paymentStatus", "customerName", "productId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) ON CONFLICT ("inventoryItemId") DO UPDATE SET id = $1 RETURNING *',
         [
           saleId,
           inventoryItemId,
@@ -1899,7 +1900,8 @@ app.post('/api/sales', authenticateToken, async (req: Request, res: Response) =>
           pricePerUnit * commissionRate,
           pricePerUnit,
           paymentStatus,
-          paymentStatus === 'PENDING' ? customerName : null
+          paymentStatus === 'PENDING' ? customerName : null,
+          assigned.productId
         ]
       );
       sales.push(sale.rows[0]);
@@ -2711,6 +2713,90 @@ const autoExecuteAssignedInventoryPriceMNMigration = async () => {
   }
 };
 
+// Auto-execute drop Sale inventoryItemId FK migration on startup
+const autoExecuteDropSaleInventoryItemIdFkMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT constraint_name
+      FROM information_schema.table_constraints
+      WHERE table_name = 'Sale' AND constraint_name = 'Sale_inventoryItemId_fkey'
+    `);
+
+    if (result.rows.length > 0) {
+      console.log('[auto-migration] Dropping Sale_inventoryItemId_fkey foreign key...');
+      await db.query('ALTER TABLE "Sale" DROP CONSTRAINT "Sale_inventoryItemId_fkey"');
+      console.log('[auto-migration] Sale_inventoryItemId_fkey dropped successfully');
+    } else {
+      console.log('[auto-migration] Sale_inventoryItemId_fkey constraint does not exist');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error dropping Sale_inventoryItemId_fkey:', error);
+  }
+};
+
+// Auto-execute Sale paymentStatus migration on startup
+const autoExecuteSalePaymentStatusMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Sale' AND column_name = 'paymentStatus'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding paymentStatus column to Sale table...');
+      await db.query('ALTER TABLE "Sale" ADD COLUMN "paymentStatus" VARCHAR(20) NOT NULL DEFAULT \'PAID\'');
+      console.log('[auto-migration] Sale paymentStatus column added successfully');
+    } else {
+      console.log('[auto-migration] paymentStatus column already exists in Sale table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Sale paymentStatus column:', error);
+  }
+};
+
+// Auto-execute Sale customerName migration on startup
+const autoExecuteSaleCustomerNameMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Sale' AND column_name = 'customerName'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding customerName column to Sale table...');
+      await db.query('ALTER TABLE "Sale" ADD COLUMN "customerName" TEXT');
+      console.log('[auto-migration] Sale customerName column added successfully');
+    } else {
+      console.log('[auto-migration] customerName column already exists in Sale table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Sale customerName column:', error);
+  }
+};
+
+// Auto-execute Sale productId migration on startup
+const autoExecuteSaleProductIdMigration = async () => {
+  try {
+    const result = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'Sale' AND column_name = 'productId'
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('[auto-migration] Adding productId column to Sale table...');
+      await db.query('ALTER TABLE "Sale" ADD COLUMN "productId" TEXT');
+      console.log('[auto-migration] Sale productId column added successfully');
+    } else {
+      console.log('[auto-migration] productId column already exists in Sale table');
+    }
+  } catch (error: any) {
+    console.error('[auto-migration] Error adding Sale productId column:', error);
+  }
+};
+
 // Auto-execute createdBy column migration on startup
 const autoExecuteCreatedByMigration = async () => {
   try {
@@ -2742,6 +2828,9 @@ try {
     
     // Execute auto-migrations
     await autoExecuteSaleCostMNMigration();
+    await autoExecuteSalePaymentStatusMigration();
+    await autoExecuteSaleCustomerNameMigration();
+    await autoExecuteSaleProductIdMigration();
     await autoExecuteProductCostMNMigration();
     await autoExecuteProductCostUSDNullableMigration();
     await autoExecuteProductCommissionRateMigration();
@@ -2753,6 +2842,7 @@ try {
     await autoExecuteAssignedInventoryConfirmedAtMigration();
     await autoExecuteAssignedInventoryRejectionReasonMigration();
     await autoExecuteAssignedInventoryPriceMNMigration();
+    await autoExecuteDropSaleInventoryItemIdFkMigration();
     await autoExecuteCreatedByMigration();
 
 // Temporary endpoint to execute migration

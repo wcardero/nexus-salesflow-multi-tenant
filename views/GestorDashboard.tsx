@@ -17,7 +17,7 @@ interface GestorDashboardProps {
   refreshDb: () => Promise<void>;
 }
 
-type Tabs = 'inventory' | 'sales' | 'pending-closings' | 'reports';
+type Tabs = 'inventory' | 'sales' | 'debts' | 'pending-closings' | 'reports';
 
 const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
   console.log('[GestorDashboard] Component mounted - user.id:', user.id);
@@ -185,6 +185,17 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
             refreshDb={refreshDb}
           />
         );
+      case 'debts':
+        return (
+          <DebtsView
+            gestorSales={gestorSales}
+            gestorClosings={gestorClosings}
+            db={db}
+            productsById={productsById}
+            refreshDb={refreshDb}
+            user={user}
+          />
+        );
       case 'pending-closings':
         return (
           <PendingClosingsView
@@ -210,6 +221,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
         <nav className="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
           <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Inventario y Ventas" tab="sales" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton name="Deudas Pendientes" tab="debts" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Cierres Pendientes" tab="pending-closings" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton name="Mis Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
@@ -436,13 +448,12 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
   const salesByProduct = useMemo(() => {
     const groups: { [key: string]: { quantity: number; total: number; gestorGain: number; storeGain: number } } = {};
-
+ 
     gestorSalesSinceLastClosing.forEach(sale => {
       if (sale.paymentStatus !== SalePaymentStatus.PAID) return;
 
-      const assignedInventory = db.assignedInventory.find(ai => ai.gestorId === user.id && sale.inventoryItemId.startsWith(ai.id));
-      if (assignedInventory) {
-        const key = assignedInventory.productId;
+      if (sale.productId) {
+        const key = sale.productId;
         if (!groups[key]) {
           groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0 };
         }
@@ -452,9 +463,9 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         groups[key].storeGain += sale.baseMN;
       }
     });
-
+ 
     return groups;
-  }, [gestorSalesSinceLastClosing, db.assignedInventory, user.id]);
+  }, [gestorSalesSinceLastClosing]);
 
   const totalSalesAmount = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.total || 0), 0);
   const totalGestorGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.gestorGain || 0), 0);
@@ -890,6 +901,182 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
      </div>
    );
  };
+
+// --- DEBTS VIEW ---
+interface DebtsViewProps {
+  gestorSales: Sale[];
+  gestorClosings: Closing[];
+  db: MockDB;
+  productsById: { [key: string]: Product };
+  refreshDb: () => Promise<void>;
+  user: User;
+}
+
+const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, productsById, refreshDb, user }) => {
+  const pendingSales = useMemo(() => {
+    return gestorSales.filter(sale =>
+      sale.paymentStatus === 'PENDING' &&
+      !gestorClosings.some(c => c.sales?.some(s => s.id === sale.id))
+    );
+  }, [gestorSales, gestorClosings]);
+
+  const debtsByGroup = useMemo(() => {
+    const groups: { [key: string]: {
+      sales: Sale[];
+      totalQuantity: number;
+      totalAmount: number;
+      dateString: string;
+      date: Date;
+    } } = {};
+
+    pendingSales.forEach(sale => {
+      if (!sale.productId) return;
+
+      const customerName = sale.customerName || 'Sin nombre';
+      const saleDate = new Date(sale.soldAt);
+      const dateString = saleDate.toISOString().split('T')[0];
+      const groupKey = `${sale.productId}_${customerName}_${dateString}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = { sales: [], totalQuantity: 0, totalAmount: 0, dateString, date: saleDate };
+      }
+
+      groups[groupKey].sales.push(sale);
+      groups[groupKey].totalQuantity += 1;
+      groups[groupKey].totalAmount += sale.finalMN;
+    });
+
+    return Object.values(groups).sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [pendingSales]);
+
+  const formatDates = (date: Date) => {
+    return new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  const handleLiquidateDeuda = async (group: {
+    sales: Sale[];
+    totalQuantity: number;
+    totalAmount: number;
+    dateString: string;
+    date: Date;
+  }) => {
+    const product = group.sales[0].productId ? productsById[group.sales[0].productId] : null;
+    const customerName = group.sales[0].customerName || 'Sin nombre';
+    const productName = product ? product.name : 'producto(s)';
+    const confirmationMessage = `¿Liquidar ${group.totalQuantity} ${productName} del cliente ${customerName} del ${formatDates(group.date)} por ${formatCurrency(group.totalAmount)}?`;
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
+
+    try {
+      for (const sale of group.sales) {
+        const response = await fetch(`http://localhost:3001/api/sales/${sale.id}/mark-as-paid`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Error al liquidar deuda');
+        }
+      }
+
+      await refreshDb();
+      alert(`Deuda liquidada exitosamente: ${group.totalQuantity} ${productName} por ${formatCurrency(group.totalAmount)}`);
+    } catch (error: any) {
+      console.error('Error liquidating debt:', error);
+      alert(`Error al liquidar la deuda: ${error.message}`);
+    }
+  };
+
+  if (debtsByGroup.length === 0) {
+    return (
+      <div className="bg-warning-50 dark:bg-warning-900/20 p-6 rounded-lg shadow-sm">
+        <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
+          Deudas Pendientes
+        </h2>
+        <p className="text-sm text-warning-600 dark:text-warning-400">
+          No hay deudas pendientes de cobro.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-warning-50 dark:bg-warning-900/20 p-4 md:p-6 rounded-lg shadow-sm">
+      <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
+        Deudas Pendientes
+      </h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-warning-200 dark:divide-warning-700">
+          <thead className="bg-warning-100 dark:bg-warning-900/50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
+                Fecha
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
+                Producto
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
+                Cantidad
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
+                Deudor
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
+                Monto Total
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
+                Acción
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-warning-200 dark:divide-warning-700">
+            {debtsByGroup.map((group, index) => {
+              const product = group.sales[0].productId ? productsById[group.sales[0].productId] : null;
+              const customerName = group.sales[0].customerName || 'Sin nombre';
+
+              return (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
+                    {formatDates(group.date)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
+                    {product ? product.name : '<Producto eliminado>'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
+                    {group.totalQuantity}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
+                    {customerName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
+                    {formatCurrency(group.totalAmount)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => handleLiquidateDeuda(group)}
+                      className="bg-success-500 hover:bg-success-600 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
+                    >
+                      Liquidar Todo
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 // --- PENDING CLOSINGS VIEW ---
 interface PendingClosingsViewProps {
