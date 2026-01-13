@@ -1,353 +1,875 @@
-# DISEÑO DE APLICACIÓN WEB MULTI-TENANT: GESTIÓN DE VENTAS
+# Nexus SalesFlow
 
-## CONTEXTO
-Sistema multi-tenant para gestión de ventas con jerarquía Admin → Manager → Gestor,
-inventario asignado y proceso de cierres (consolidación de ventas).
+Sistema multi-tenant de gestión de ventas con jerarquía de roles, control de inventario, seguimiento de deudas y cierre de caja automatizado.
 
-## REGLAS DE NEGOCIO (SIMPLIFICADAS)
-- **Moneda**: Única moneda nacional (MN)
-- **Tipo de cambio**: Factor X (USD→MN) GLOBAL por tienda, variable en el tiempo, **PERSISTENTE**
-- **Historial de ventas**: Cada venta congela el tipo de cambio X utilizado (no retroactivo)
-- **Precios**: Gestores no pueden aplicar descuentos (precio fijo)
-- **Comisión**: Configurable por Manager (10% por defecto) sobre precio MN base
-- **Flujo de dinero**: Gestores solo entregan dinero mediante proceso de cierre
-- **Devoluciones**: No permitidas (fase 1)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql)
+![Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=for-the-badge&logo=tailwindcss)
+![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)
 
-## CÁLCULOS POR PRODUCTO
-### Configuración por Manager:
-- compra_usd (costo en USD)
-- margen_pct (porcentaje de ganancia)
+## 📋 Tabla de Contenidos
 
-### Cálculos automáticos (con X vigente):
-- venta_usd = compra_usd × (1 + margen_pct)
-- mn_base = venta_usd × X
-- comision = mn_base × (porcentaje configurado por manager)
-- mn_final = mn_base + comision
+- [Descripción](#descripción)
+- [Características](#características)
+- [Arquitectura](#arquitectura)
+- [Instalación](#instalación)
+- [Configuración](#configuración)
+- [Uso](#uso)
+- [Flujos de Negocio](#flujos-de-negocio)
+- [API Endpoints](#api-endpoints)
+- [Base de Datos](#base-de-datos)
+- [Desarrollo](#desarrollo)
+- [Estructura del Proyecto](#estructura-del-proyecto)
 
-## ROLES Y RESPONSABILIDADES
+## 🎯 Descripción
 
-### ADMINISTRADOR
-- ✅ Crear tiendas
-- ✅ Asignar directores a tiendas (uno o ninguno por tienda)
-- ✅ Asignar managers a tiendas (múltiples por tienda)
-- ✅ CRUD de tiendas, directores y managers (incluyendo gestión de contraseñas)
-- ❌ No accede a datos de inventario, ventas o cierres.
-- ✅ Auditoría de todas las operaciones del sistema
+Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples tiendas (multi-tenant) con:
 
-### DIRECTOR (por tienda)
-- ✅ Rol opcional, uno por tienda.
-- ✅ Asignado por el Administrador.
-- ✅ Gestión de managers de su tienda (crear/eliminar, gestión de contraseñas).
-- ✅ Visualización de reportes totales de su tienda (inventario, ventas, etc.).
-- ✅ CRUD productos (compra_usd, margen_pct)
-- ✅ Configuración de tipo de cambio X (histórico con vigencia)
+- **Jerarquía de 4 roles**: Admin → Director → Manager → Gestor
+- **Control de inventario**: Asignación, confirmación y seguimiento
+- **Ventas al contado y crédito**: Con seguimiento de deudas
+- **Cierre de caja**: Automatizado con cálculos de comisiones
+- **Tipo de cambio persistente**: Historial de cambios por tienda
+- **Auditoría completa**: Registro de todas las operaciones
+- **Exportación de reportes**: CSV, PDF y Excel
+
+## ✨ Características
+
+### Gestión Multi-Tenant
+- Múltiples tiendas independientes
+- Múltiples managers por tienda
+- Aislamiento completo de datos por tienda
+
+### Roles y Permisos
+
+#### 🛡️ Administrador
+- ✅ Crear y gestionar tiendas
+- ✅ Crear Directores y Managers
+- ✅ Asignar roles y permisos
+- ✅ Auditoría global del sistema
+- ❌ No accede a inventario, ventas o cierres
+
+#### 👔 Director (Rol Opcional)
+- ✅ Gestión de managers de su tienda
+- ✅ CRUD de productos (costo USD/MN, margen)
+- ✅ Configuración de tipo de cambio
 - ✅ Gestión de stock inicial por producto
-- ✅ Asignación de inventario cuantificado a gestores
-- ✅ Gestión de conflictos de inventario (reasignar o cancelar asignaciones rechazadas)
-- ✅ Visualización de cierres pendientes (ver cuánto dinero traerá cada gestor)
-- ✅ Confirmación de pago de cierres (marcar como "recibido" cuando gestor entrega dinero físico)
-- ✅ Auditoría de operaciones en su tienda
+- ✅ Asignación de inventario a gestores
+- ✅ Confirmación de pagos de cierres
+- ✅ Reportes de su tienda
 
-### MANAGER (por tienda)
-- ✅ Si no hay Director en la tienda, es gestionado por el Administrador.
-- ✅ Si hay Director, es gestionado por el Director.
-- ✅ Gestión de gestores (crear/eliminar).
-- ✅ Solo puede gestionar su propio stock asignado, no el inventario total de la tienda.
-- ✅ Visualización de cierres pendientes de sus gestores.
-- ✅ Confirmación de recepción de dinero de cierres (marcar como "recibido")
-- ✅ Gestión de conflictos de inventario (reasignar o cancelar asignaciones rechazadas)
-- ✅ Visualización de estado de asignaciones (Pending, Confirmed, Rejected)
-- ✅ Reportes de sus gestores.
-- ✅ Auditoría de operaciones de sus gestores.
+#### 👨‍💼 Manager
+- ✅ Gestión de gestores
+- ✅ Gestión de inventario asignado (no stock total)
+- ✅ Configuración de tipo de cambio (si no hay Director)
+- ✅ Gestión de productos (si no hay Director)
+- ✅ Confirmación de cierres pendientes
+- ✅ Resolución de conflictos de inventario
+- ✅ Reportes de sus gestores
 
-### GESTOR
-- ✅ Confirmar inventario asignado (verificar que coincide con inventario físico)
-- ✅ Rechazar inventario asignado (proporcionar razón para el rechazo)
-- ✅ Visualizar inventario asignado y precios MN (solo inventario confirmado)
-- ✅ Registrar ventas en lote (múltiples unidades de una vez)
-- ✅ Eliminar ventas pendientes (corregir errores antes del cierre)
-- ✅ Ejecutar cierre:
-  - Sistema muestra resumen (artículos vendidos vs total recaudado, comisión calculada)
-  - Gestor verifica y confirma ejecución
-  - Sistema actualiza datos del manager (existencia de productos)
-- ✅ Acceso limitado a auditoría de sus propias operaciones
+#### 💼 Gestor
+- ✅ Confirmación/rechazo de inventario asignado
+- ✅ Ventas al contado y crédito
+- ✅ Gestión de deudas pendientes
+- ✅ Eliminación de ventas antes de cierre
+- ✅ Ejecución de cierres de caja
+- ✅ Consulta de inventario disponible
 
-## CARACTERÍSTICAS IMPLEMENTADAS
+### Inventario y Productos
+- **Productos con moneda dual**: Costo en USD o MN
+- **Margen configurable**: Porcentaje de ganancia por producto
+- **Comisión variable**: Configurable por producto (usa default de tienda si no se especifica)
+- **Stock inicial**: Gestión de inventario por tienda y producto
+- **Asignación cuantificada**: Asignar cantidades específicas a gestores
+- **Flujo de aprobación**: Manager asigna → Gestor confirma/rechaza
+- **Conflictos de inventario**: Gestión automática de rechazos
 
-### 1. Soporte para múltiples managers por tienda
-- Sistema de relación muchos a muchos entre managers y tiendas
-- Los managers pueden tener acceso a múltiples tiendas
-- Cada tienda puede tener uno o más managers asignados
+### Ventas y Pagos
+- **Ventas al contado**: Pago inmediato (PAID)
+- **Ventas al crédito**: Registro de deuda (PENDING) con nombre del cliente
+- **Seguimiento de deudas**: Tabla "Deudas Pendientes" para créditos
+- **Pago de deudas**: Los gestores pueden registrar pagos de ventas al crédito
+- **Cálculo automático**: Precio base + comisión según tipo de cambio
 
-### 2. Gestión de inventario cuantificado
-- Sistema de stock inicial por producto y tienda
-- Asignación de cantidades específicas de productos a gestores
-- Control de disponibilidad y asignación de inventario
+### Cierre de Caja
+- **Ejecución de cierre**: Gestor agrupa ventas y genera resumen
+- **Cálculos automáticos**: Total base MN, total comisión, total final MN
+- **Estado del cierre**: PENDING (esperando dinero) → COMPLETED (dinero recibido)
+- **Confirmación de recepción**: Manager marca cuando recibe dinero físico
+- **Historial completo**: Todos los cierres con sus ventas asociadas
 
-### 3. Sistema de auditoría completo
-- Registro de todas las operaciones del sistema
-- Seguimiento de quién hizo qué, cuándo y en qué contexto
-- Visualización de auditoría por rol y nivel de acceso
+### Tipo de Cambio
+- **Persistente en base de datos**: Los cambios se guardan permanentemente
+- **Historial por tienda**: Registro de todos los cambios con fechas de vigencia
+- **Cálculo de precios**: Venta USD × Tipo de cambio = Precio MN
+- **Congelado por venta**: Cada venta guarda el tipo de cambio usado (no retroactivo)
 
-### 4. Seguridad y autenticación
-- Autenticación basada en JWT tokens
-- Control de acceso por roles y permisos
-- Protección contra acceso no autorizado a recursos
+### Auditoría y Seguridad
+- **Registro completo**: Toda operación se guarda en `AuditLog`
+- **Trazabilidad**: Quién, cuándo, qué acción, entidad afectada
+- **Valores old/new**: Compara estados antes y después
+- **Filtros por rol**: Cada rol ve su auditoría correspondiente
 
-### 5. API REST segura
-- Endpoints protegidos por autenticación
-- Control de acceso basado en roles
-- Validación de permisos por operación
+### Exportación de Reportes
+- **Formatos**: CSV, PDF, Excel
+- **Filtros por fecha**: Selector de rango de fechas
+- **Múltiples vistas**: Ventas, cierres, métricas por gestor
+- **Columnas personalizadas**: Periodo, tienda, gestor, montos calculados
 
-### 6. Gestión completa de tiendas y usuarios
-- **Administrador**: Puede crear, editar y eliminar tiendas y usuarios (directores, managers, gestores)
-- **Administrador**: Puede gestionar contraseñas de todos los usuarios
-- **Director**: Puede gestionar (crear, editar, eliminar) managers de su tienda
-- **Director**: Puede gestionar contraseñas de los managers de su tienda
-- **Menú lateral**: Navegación específica por rol (Tiendas, Usuarios para Admin; Managers para Director)
+## 🏗️ Arquitectura
 
-### 7. Gestión de tipo de cambio persistente
-- **Persistencia en base de datos**: Los cambios de tipo de cambio se guardan en la base de datos
-- **Endpoint API**: `POST /api/exchange-rates` permite a Managers y Directores configurar tipos de cambio
-- **Historial**: Se mantiene un historial completo de tipos de cambio por tienda (con fechas de vigencia)
-- **Auditoría**: Todos los cambios de tipo de cambio se registran en el log de auditoría
-- **Validación**: Solo Managers y Directores pueden cambiar tipos de cambio para sus tiendas
-
-### 8. Restricciones de edición/eliminación de productos
-- **Validación por asignación**: Los productos solo pueden editarse o eliminarse si NO están asignados a ningún gestor
-- **Stock inicial NO cuenta**: Productos en `ProductStock` pueden editarse/eliminarse (no están asignados)
-- **Asignación a gestor**: Solo `AssignedInventory` bloquea edición/eliminación
-- **Validación en frontend**: Botones de editar/eliminar deshabilitados para productos asignados
-- **Validación en backend**: Endpoints `PUT /api/products/:id` y `DELETE /api/products/:id` validan asignación
-- **Mensaje de error**: "El producto no puede ser editado ni eliminado porque se encuentra asignado a un gestor."
-- **Indicador visual**: Badge "Asignado a gestor" en productos que tienen asignación activa
-
-### 9. Edición y eliminación de stock inicial
-- **Corrección de errores**: Permite editar el stock inicial si se cometió un error (ej: 100 jabones en vez de 90 jamones)
-- **Validación por asignación**: El stock de un producto solo puede editarse/eliminarse si el producto NO está asignado a ningún gestor
-- **Endpoint DELETE**: `DELETE /api/product-stock/:stockId` permite eliminar registros de stock
-- **Indicador visual**: Badge "Asignado a gestor" en registros de stock que tienen asignación activa
-- **Validación en frontend**: Botones de Editar/Eliminar deshabilitados para stock de productos asignados
-- **Validación en backend**: Endpoint DELETE verifica `AssignedInventory` antes de permitir eliminación
-- **Modal de edición**: Permite cambiar la cantidad de stock directamente desde la tabla
-
-### 10. Edición y eliminación de gestores
-- **Corrección de errores**: Permite editar el nombre de un gestor o cambiar su contraseña
-- **Validación por asignación**: Los gestores solo pueden editarse/eliminarse si NO tienen inventario asignado
-- **Eliminación**: Permite eliminar gestores que ya no trabajan en la tienda
-- **Indicador visual**: Badge "Tiene inventario asignado" en gestores que tienen asignación activa
-- **Validación en frontend**: Botones de Editar/Eliminar deshabilitados para gestores con inventario
-- **Modal de edición**: Permite cambiar el nombre y opcionalmente la contraseña
-- **Mensaje de error**: "El gestor no puede ser editado ni eliminado porque tiene inventario asignado."
-
-### 11. Validación de asignación de inventario
-- **Validación completa**: Todos los campos deben estar llenos antes de asignar inventario
-- **Producto requerido**: Mensaje de error si no se selecciona un producto
-- **Gestor requerido**: Mensaje de error si no se selecciona un gestor
-- **Cantidad válida**: Mensaje de error si la cantidad es menor a 1
-- **Mensajes detallados**: Cada campo con error se muestra en una línea separada
-
-### 12. Confirmación de Inventario por Gestor
-- **Estado de aprobación**: `Pending` (pendiente), `Confirmed` (confirmado), `Rejected` (rechazado)
-- **Flujo de confirmación**: Manager asigna → Gestor revisa → Gestor acepta/rechaza
-- **Endpoint**: `POST /api/assigned-inventory/:id/confirm` para aceptar
-- **Endpoint**: `POST /api/assigned-inventory/:id/reject` para rechazar
-- **Validación**: Razón obligatoria al rechazar inventario
-- **Inventario disponible**: Solo inventario con estado `Confirmed` puede venderse
-
-### 13. Conflictos de Inventario
-- **Creación automática**: Cuando un gestor rechaza inventario, se crea un conflicto
-- **Gestión por Manager**: Revisa conflictos pendientes y decide acción
-- **Acciones disponibles**:
-  - Reasignar: Actualizar cantidad y volver a estado `Pending`
-  - Cancelar: Eliminar la asignación completamente
-- **Endpoint**: `GET /api/inventory-conflicts` para ver conflictos del manager
-- **Endpoint**: `POST /api/inventory-conflicts/:id/resolve` para resolver
-- **Notificaciones**: Conflictos aparecen en dashboard del manager
-
-### 14. Ventas en Lote
-- **Mejora de eficiencia**: Gestor puede registrar múltiples ventas de una vez
-- **Endpoint**: `POST /api/sales/batch` con productId y quantity
-- **Validación**: Inventario suficiente en `AssignedInventory` (estado `Confirmed`)
-- **Creación automática**: Se crean N registros de venta individualmente
-- **Reducción de inventario**: Cantidad se reduce automáticamente en `AssignedInventory`
-
-### 15. Edición de Ventas
-- **Corrección de errores**: Gestor puede eliminar ventas antes del cierre
-- **Restricción**: Solo ventas NO incluidas en cierres pueden eliminarse
-- **Restauración de inventario**: Al eliminar, cantidad se restaura en `AssignedInventory`
-- **Endpoint**: `DELETE /api/sales/:id` para eliminar ventas
-- **Validación**: Gestor solo puede eliminar sus propias ventas
-
-### 16. Confirmación de Pago de Cierres
-- **Confirmación explícita**: Manager marca cierre como completado cuando recibe dinero
-- **Endpoint**: `PUT /api/closings/:id/complete` para confirmar
-- **Advertencia**: Acción no reversible, requiere confirmación explícita
-- **Registro de fecha**: `completedAt` se registra al confirmar
-- **Flujo completo**: Gestor vende → Ejecuta cierre → Manager confirma pago
-
-## FLUJO DE CIERRE DETALLADO (ACTUALIZADO)
-1. **Manager asigna inventario** → estado `Pending`
-2. **Gestor revisa y confirma** → estado `Confirmed` (o rechaza → crea conflicto)
-3. **Gestor vende productos** → en lote usando `POST /api/sales/batch`
-4. **Gestor ejecuta cierre** → sistema muestra resumen con:
-     - Listado de artículos vendidos
-     - Total recaudado (mn_final)
-     - Comisión calculada (10% configurable)
-     - Monto a entregar al manager (mn_base)
-5. **Gestor verifica y confirma** → cierre se ejecuta y se actualizan:
-     - Datos del manager (existencia de productos)
-     - Estado del cierre (pendiente)
-6. **Manager ve cierre pendiente** → conoce monto a recibir
-7. **Gestor entrega dinero físico** → manager marca cierre como "recibido"
-8. **Manager confirma recepción** → cierre cambia a estado `Completed`
-
-## PERMISOS DE USUARIOS
-
-### Creación de Usuarios
-| Rol que crea | Admin | Director | Manager | Gestor | Requisitos |
-|---------------|--------|-----------|----------|---------|-------------|
-| **Admin** | ❌ (solo primero) | ✅ | ✅ | ❌ | Manager/Director deben tener tienda asignada |
-| **Director** | ❌ | ❌ | ✅ (su tienda) | ❌ | Manager se asigna automáticamente a tienda del Director |
-| **Manager** | ❌ | ❌ | ❌ | ✅ (su tienda) | Gestor se asigna automáticamente a tienda del Manager |
-| **Gestor** | ❌ | ❌ | ❌ | ❌ | No puede crear usuarios |
-
-### Edición de Usuarios
-| Rol | Puede editar | Restricciones |
-|------|--------------|----------------|
-| **Admin** | Nombre, Rol (otros), Tienda (otros) | No puede cambiar su propio rol |
-| **Admin** | | No puede asignarse tienda |
-| **Director** | Nombre | No puede cambiar rol ni tienda |
-| **Manager** | Nombre | No puede cambiar rol ni tienda |
-| **Gestor** | Nombre | No puede cambiar rol ni tienda |
-
-### Gestión de Contraseñas
-- **Admin**: Puede cambiar contraseña de cualquier usuario
-- **Director**: Puede cambiar contraseña de Managers de su tienda
-- **Manager**: Asigna contraseña al crear Gestores
-- **Usuarios**: Pueden cambiar su propia contraseña requiriendo la actual
-
-### Eliminación de Usuarios
-- **Admin**: Puede eliminar cualquier usuario excepto a sí mismo
-- **Director**: Puede eliminar Managers de su tienda
-- **Manager**: Puede eliminar Gestores de su tienda
-- **Gestor**: No puede eliminar usuarios
-- El botón de "Eliminar" está oculto para el admin que se edita a sí mismo
-
-## INFRAESTRURA DEL PROYECTO
+```
+nexus-salesflow-multi-tenant/
+├── frontend/                 # React + Vite + Tailwind
+│   ├── views/               # Componentes de vista por rol
+│   │   ├── Login.tsx
+│   │   ├── AdminDashboard.tsx
+│   │   ├── DirectorDashboard.tsx
+│   │   ├── ManagerDashboard.tsx
+│   │   └── GestorDashboard.tsx
+│   ├── components/          # Componentes reutilizables
+│   │   ├── Layout.tsx
+│   │   ├── SellModal.tsx
+│   │   ├── ExportButton.tsx
+│   │   ├── DateRangeSelector.tsx
+│   │   └── ReportCard.tsx
+│   ├── hooks/               # Custom hooks
+│   │   └── useApi.ts       # Hook centralizado de API
+│   ├── App.tsx              # Componente principal
+│   ├── types.ts             # Definiciones TypeScript
+│   ├── utils.ts             # Utilidades de cálculo
+│   └── exportUtils.ts       # Exportación de reportes
+│
+└── backend/                 # Express + TypeScript + PostgreSQL
+    ├── src/
+    │   ├── index.ts         # API principal y endpoints
+    │   ├── db.ts           # Conexión a PostgreSQL
+    │   ├── auth.ts         # Autenticación JWT
+    │   ├── middleware.ts   # Middlewares de seguridad
+    │   ├── types.ts        # Tipos TypeScript
+    │   ├── inventory.ts    # Lógica de inventario
+    │   ├── sales.ts        # Lógica de ventas
+    │   └── init-db.ts     # Inicialización de BD
+    ├── migrations/          # Migraciones de base de datos
+    ├── package.json
+    └── Dockerfile
+```
 
 ### Tecnologías
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS
-- **Backend**: Express + TypeScript + PostgreSQL
-- **Autenticación**: JWT (JSON Web Tokens)
-- **Base de datos**: PostgreSQL
 
-### Componentes Principales
-- `hooks/useApi.ts`: Hook centralizado para llamadas a la API
-- `views/UserManagement.tsx`: Gestión de usuarios (Admin)
-- `views/ManagerDashboard.tsx`: Panel del Manager
-- `views/DirectorDashboard.tsx`: Panel del Director
-- `views/GestorDashboard.tsx`: Panel del Gestor
+| Frontend | Backend | Base de Datos |
+|-----------|---------|---------------|
+| React 19.2 | Express 5.2 | PostgreSQL |
+| TypeScript 5.8 | TypeScript 5.9 | pg 8.16 |
+| Vite 6.2 | JWT 9.0 | - |
+| Tailwind CSS 4.1 | bcrypt 5.0 | - |
+| jsPDF 4.0 | express-validator 7.3 | - |
 
-### Variables de Entorno
-- `API_URL`: URL de la API backend (por defecto: `http://localhost:3001`)
-- Configurado en `vite.config.ts` y `.env`
+## 🚀 Instalación
 
-## ENTREGABLES REQUERIDOS
+### Prerrequisitos
+- Node.js 20+
+- PostgreSQL 14+
+- npm o yarn
 
-### 1. Requerimientos
-- Funcionales por rol
-- No funcionales (RBAC, auditoría, trazabilidad)
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/wcardero/nexus-salesflow-multi-tenant.git
+cd nexus-salesflow-multi-tenant
+```
 
-### 2. Modelo de Datos
-- Tablas, campos mínimos, relaciones, índices
+### 2. Configurar base de datos
 
-### 3. Reglas de Cierre
-- Lógica exacta del proceso de cuadre
+```bash
+# Crear base de datos
+createdb nexusdb
 
-### 4. API REST
-- Endpoints sugeridos + payloads de ejemplo
+# Ejecutar script de inicialización
+cd backend
+node init-db.js
+```
 
-### 5. UI/UX
-- Pantallas mínimas del flujo
+### 3. Configurar variables de entorno
 
-## EJEMPLO NUMÉRICO
-Producto: compra_usd = $10, margen = 30%, X = 300 MN/USD
-- Venta USD: $10 × 1.30 = $13
-- Precio MN base: $13 × 300 = 3,900 MN
-- Comisión: 3,900 × 0.10 = 390 MN
-- Precio final: 3,900 + 390 = 4,290 MN
+Crear `.env` en la raíz:
+```bash
+# Frontend
+VITE_API_URL=http://localhost:3001
+```
+
+Crear `.env` en `/backend`:
+```bash
+# Backend
+DATABASE_URL=postgresql://user:password@localhost:5432/nexusdb
+JWT_SECRET=tu_secreto_super_seguro
+PORT=3001
+```
+
+### 4. Instalar dependencias
+
+```bash
+# Instalar dependencias del frontend
+npm install
+
+# Instalar dependencias del backend
+cd backend
+npm install
+```
+
+### 5. Iniciar el proyecto
+
+```bash
+# Terminal 1: Iniciar backend
+cd backend
+npm run dev
+
+# Terminal 2: Iniciar frontend
+cd ..
+npm run dev
+```
+
+El frontend estará disponible en `http://localhost:5173`
+El backend estará disponible en `http://localhost:3001`
+
+## ⚙️ Configuración
+
+### Primer Usuario (Admin)
+1. Accede a `http://localhost:5173`
+2. El sistema detectará que no hay usuarios
+3. Crea el primer usuario con rol **Admin**
+4. Desde el admin podrás crear tiendas y otros usuarios
+
+### Crear Tienda
+1. Inicia sesión como Admin
+2. Ve a "Tiendas" → "Crear Tienda"
+3. Ingresa el nombre y comisión por defecto (ej: 10%)
+
+### Crear Usuarios
+1. **Director**: Admin crea y asigna a tienda
+2. **Manager**: Admin/Director crea y asigna a tienda
+3. **Gestor**: Manager crea (asignado automáticamente a su tienda)
+
+## 📖 Uso
+
+### Flujo Completo de Ventas
+
+#### 1. Configuración Inicial
+```
+Admin → Crea tienda → Crea Director/Manager
+Director/Manager → Configura tipo de cambio → Crea productos
+Director/Manager → Define stock inicial → Asigna inventario a gestores
+```
+
+#### 2. Ciclo de Ventas
+```
+Manager: Asigna inventario → Estado: Pending
+Gestor: Confrece inventario → Estado: Confirmed
+Gestor: Vende productos (contado/crédito)
+Gestor: Ejecuta cierre → Estado: PENDING
+Gestor: Entrega dinero físico
+Manager: Confirma recepción → Estado: COMPLETED
+```
+
+### Gestión de Inventario
+
+#### Asignar Inventario a Gestor
+1. Manager va a "Asignar Inventario"
+2. Selecciona producto y gestor
+3. Define cantidad
+4. Sistema valida disponibilidad
+5. Gestor recibe notificación
+
+#### Gestor Confirma/Rechaza
+1. Gestor ve inventario pendiente
+2. Compara con inventario físico
+3. **Confirma** → Inventario disponible para ventas
+4. **Rechaza** → Crea conflicto que Manager debe resolver
+
+### Ventas
+
+#### Venta al Contado
+1. Gestor selecciona producto
+2. Ingresas cantidad
+3. Selecciona "Pago al contado"
+4. Sistema calcula: Precio base + Comisión = Precio final
+5. Venta se registra inmediatamente
+
+#### Venta al Crédito
+1. Gestor selecciona producto
+2. Ingresas cantidad
+3. Selecciona "Venta al crédito"
+4. Ingresas nombre y apellidos del cliente
+5. Venta se registra como PENDING (deuda)
+6. Aparece en tab "Deudas Pendientes"
+
+#### Pagar Deuda
+1. Gestor va a "Deudas Pendientes"
+2. Busca venta al crédito
+3. Clic en "Marcar como pagada"
+4. Sistema actualiza estado a PAID
+
+### Cierre de Caja
+
+#### Ejecutar Cierre
+1. Gestor va a "Cierres Pendientes"
+2. Clic en "Ejecutar Cierre"
+3. Sistema muestra resumen:
+   - Productos vendidos
+   - Total base MN (sin comisión)
+   - Total comisión (10% configurable)
+   - Total final MN (base + comisión)
+4. Gestor confirma
+5. Cierre se crea con estado PENDING
+
+#### Confirmar Recepción
+1. Manager ve cierres PENDING
+2. Gestor entrega dinero físico
+3. Manager hace clic en "Validar Cierre"
+4. Sistema cambia estado a COMPLETED
+5. Dinero se registra como recibido
+
+## 🔄 Flujos de Negocio
+
+### Gestión de Tipo de Cambio
+
+```
+1. Director/Manager va a "Tipo de Cambio"
+2. Ingresas nuevo valor (ej: 300)
+3. Selecciona fecha de inicio
+4. Sistema guarda en historial
+5. Precio MN = Costo USD × (1 + Margen) × Tipo de Cambio
+```
+
+**Historial de Cambios:**
+- Cada cambio queda registrado en `ExchangeRate`
+- Productos guardan el tipo de cambio al momento de la venta
+- No hay efectos retroactivos
+
+### Conflictos de Inventario
+
+```
+Gestor: "Este inventario no coincide" → Rechaza
+↓
+Sistema: Crea conflicto en InventoryConflict
+↓
+Manager: Ve conflicto pendiente
+↓
+Manager: Acciones disponibles:
+  - Reasignar: Actualizar cantidad y poner Pending
+  - Cancelar: Eliminar asignación completamente
+↓
+Sistema: Conflicto pasa a "Resolved"
+```
+
+### Auditoría
+
+**Registro Automático:**
+- Creación/edición/eliminación de usuarios
+- Cambios de contraseñas
+- Asignación de inventario
+- Ventas y cierres
+- Cambios de tipo de cambio
+
+**Visualización:**
+- Admin: Ve toda la auditoría
+- Director: Auditoría de su tienda
+- Manager: Auditoría de sus gestores
+- Gestor: Auditoría de sus propias operaciones
+
+## 🔌 API Endpoints
+
+### Autenticación
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/login` | Iniciar sesión | ❌ |
+| GET | `/api/users/exists` | Verificar si existen usuarios | ❌ |
+
+### Usuarios
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/users` | Listar usuarios | ✅ |
+| POST | `/api/users` | Crear usuario | ✅* |
+| PUT | `/api/users/:id` | Editar usuario | ✅ |
+| DELETE | `/api/users/:id` | Eliminar usuario | ✅ |
+| PUT | `/api/users/:id/password` | Cambiar contraseña | ✅ |
+
+*Primer admin sin autenticación
+
+### Tiendas
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/stores` | Listar tiendas | ✅ |
+| GET | `/api/stores/public` | Listar tiendas públicas | ❌ |
+| POST | `/api/stores` | Crear tienda | ✅ |
+| PUT | `/api/stores/:id` | Editar tienda | ✅ |
+| DELETE | `/api/stores/:id` | Eliminar tienda | ✅ |
+
+### Productos
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/products` | Listar productos | ✅ |
+| POST | `/api/products` | Crear producto | ✅ |
+| PUT | `/api/products/:id` | Editar producto | ✅ |
+| DELETE | `/api/products/:id` | Eliminar producto | ✅ |
+
+### Inventario
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/inventory` | Listar inventario | ✅ |
+| GET | `/api/product-stock` | Listar stock inicial | ✅ |
+| POST | `/api/product-stock` | Crear stock inicial | ✅ |
+| PUT | `/api/product-stock/:id` | Editar stock | ✅ |
+| DELETE | `/api/product-stock/:id` | Eliminar stock | ✅ |
+| GET | `/api/assigned-inventory` | Listar asignaciones | ✅ |
+| POST | `/api/assigned-inventory` | Asignar inventario | ✅ |
+| POST | `/api/assigned-inventory/:id/confirm` | Confirmar asignación | ✅ |
+| POST | `/api/assigned-inventory/:id/reject` | Rechazar asignación | ✅ |
+
+### Ventas
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/sales` | Listar ventas | ✅ |
+| POST | `/api/sales/batch` | Crear venta en lote | ✅ |
+| DELETE | `/api/sales/:id` | Eliminar venta | ✅ |
+| POST | `/api/sales/:id/mark-paid` | Marcar venta al crédito como pagada | ✅ |
+
+### Cierres
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/closings` | Listar cierres | ✅ |
+| POST | `/api/closings` | Ejecutar cierre | ✅ |
+| PATCH | `/api/closings/:id/complete` | Validar cierre | ✅ |
+
+### Conflictos
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/inventory-conflicts` | Listar conflictos | ✅ |
+| POST | `/api/inventory-conflicts/:id/resolve` | Resolver conflicto | ✅ |
+
+### Tipo de Cambio
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/exchange-rates` | Crear tipo de cambio | ✅ |
+
+### Auditoría
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/audit-logs` | Listar auditoría | ✅ |
+
+### Reportes
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/director/metrics` | Métricas de director | ✅ |
+
+## 🗄️ Base de Datos
+
+### Tablas Principales
+
+#### User
+```sql
+- id (TEXT PK)
+- name (TEXT)
+- password (TEXT) - bcrypt hash
+- role (ENUM: Admin, Director, Manager, Gestor)
+- storeId (TEXT FK) - NULL para Admin
+- createdBy (TEXT FK) - Quién creó el usuario
+```
+
+#### Store
+```sql
+- id (TEXT PK)
+- name (TEXT UNIQUE)
+- defaultCommissionRate (DOUBLE PRECISION)
+- directorId (TEXT FK) - Director asignado (opcional)
+```
+
+#### Product
+```sql
+- id (TEXT PK)
+- name (TEXT)
+- costUSD (DOUBLE PRECISION)
+- costMN (DOUBLE PRECISION)
+- margin (DOUBLE PRECISION)
+- currency (ENUM: USD, MN)
+- priceMN (DOUBLE PRECISION) - Calculado
+- gestorCommissionMN (DOUBLE PRECISION) - Calculado
+- commissionRate (DOUBLE PRECISION) - Específico del producto
+- storeId (TEXT FK)
+- createdBy (TEXT FK)
+```
+
+#### ProductStock
+```sql
+- id (TEXT PK)
+- productId (TEXT FK)
+- storeId (TEXT FK)
+- quantity (INTEGER)
+```
+
+#### AssignedInventory
+```sql
+- id (TEXT PK)
+- productId (TEXT FK)
+- gestorId (TEXT FK)
+- quantity (INTEGER)
+- assignedAt (TIMESTAMP)
+- status (ENUM: Pending, Confirmed, Rejected)
+- confirmedAt (TIMESTAMP)
+- rejectionReason (TEXT)
+- priceMN (DOUBLE PRECISION)
+```
+
+#### Sale
+```sql
+- id (TEXT PK)
+- inventoryItemId (TEXT FK)
+- gestorId (TEXT FK)
+- productId (TEXT FK)
+- soldAt (TIMESTAMP)
+- exchangeRateUsed (DOUBLE PRECISION)
+- costUSD (DOUBLE PRECISION)
+- costMN (DOUBLE PRECISION)
+- margin (DOUBLE PRECISION)
+- saleUSD (DOUBLE PRECISION)
+- baseMN (DOUBLE PRECISION)
+- commission (DOUBLE PRECISION)
+- finalMN (DOUBLE PRECISION)
+- paymentStatus (ENUM: PAID, PENDING)
+- customerName (TEXT)
+```
+
+#### Closing
+```sql
+- id (TEXT PK)
+- gestorId (TEXT FK)
+- initiatedAt (TIMESTAMP)
+- completedAt (TIMESTAMP)
+- status (ENUM: PENDING, COMPLETED)
+- totalBaseMN (DOUBLE PRECISION)
+- totalCommission (DOUBLE PRECISION)
+- totalFinalMN (DOUBLE PRECISION)
+```
+
+#### InventoryConflict
+```sql
+- id (TEXT PK)
+- assignedInventoryId (TEXT FK)
+- gestorId (TEXT FK)
+- managerId (TEXT FK)
+- reason (TEXT)
+- status (ENUM: Pending, Resolved)
+- createdAt (TIMESTAMP)
+- resolvedAt (TIMESTAMP)
+```
+
+#### ExchangeRate
+```sql
+- id (TEXT PK)
+- rate (DOUBLE PRECISION)
+- startDate (TIMESTAMP)
+- endDate (TIMESTAMP)
+- storeId (TEXT FK)
+```
+
+#### AuditLog
+```sql
+- id (TEXT PK)
+- userId (TEXT FK)
+- action (TEXT)
+- entityType (TEXT)
+- entityId (TEXT)
+- oldValues (JSONB)
+- newValues (JSONB)
+- timestamp (TIMESTAMP)
+- storeId (TEXT FK)
+```
+
+### Relaciones Muchos a Muchos
+
+#### _StoreToUser
+```sql
+- A (TEXT FK → Store.id)
+- B (TEXT FK → User.id)
+```
+Permite asignar múltiples managers a una tienda.
+
+#### _ClosingToSale
+```sql
+- A (TEXT FK → Closing.id)
+- B (TEXT FK → Sale.id)
+```
+Relaciona ventas con su cierre correspondiente.
+
+## 🛠️ Desarrollo
+
+### Scripts Disponibles
+
+#### Frontend
+```bash
+npm run dev      # Inicia servidor de desarrollo
+npm run build    # Compila para producción
+npm run preview  # Previsualiza build de producción
+npm run test     # Ejecuta tests con Vitest
+```
+
+#### Backend
+```bash
+npm run dev      # Inicia servidor de desarrollo (ts-node-dev)
+npm run build    # Compila TypeScript
+npm run start    # Ejecuta build compilado
+```
+
+### Testing
+
+```bash
+# Frontend tests
+npm run test
+
+# Backend tests (cuando estén implementados)
+cd backend
+npm test
+```
+
+### Migraciones
+
+Las migraciones de base de datos se encuentran en `/backend/migrations/`:
+
+- `add_inventory_approval_flow.sql` - Flujo de aprobación de inventario
+- `add_product_additional_columns.sql` - Columnas adicionales de productos
+- `add_createdBy_to_user.sql` - Rastreo de creador de usuarios
+- `add_currency_to_product.sql` - Soporte de moneda dual
+- `add_commissionRate_to_product.sql` - Comisión específica por producto
+- `make_cost_columns_nullable.sql` - Columnas de costo opcionales
+
+Para ejecutar migraciones:
+
+```bash
+cd backend
+psql -U user -d nexusdb -f migrations/add_inventory_approval_flow.sql
+```
+
+### Docker
+
+```bash
+# Construir imagen
+docker build -t nexus-salesflow .
+
+# Ejecutar contenedor
+docker-compose up
+```
+
+## 📁 Estructura del Proyecto
+
+```
+nexus-salesflow-multi-tenant/
+├── frontend/
+│   ├── components/          # Componentes reutilizables
+│   │   ├── Layout.tsx       # Layout principal con sidebar
+│   │   ├── SellModal.tsx    # Modal de venta
+│   │   ├── ExportButton.tsx # Botón de exportación
+│   │   ├── DateRangeSelector.tsx
+│   │   └── ReportCard.tsx
+│   ├── views/               # Vistas por rol
+│   │   ├── Login.tsx
+│   │   ├── AdminDashboard.tsx
+│   │   ├── DirectorDashboard.tsx
+│   │   ├── ManagerDashboard.tsx
+│   │   ├── GestorDashboard.tsx
+│   │   ├── UserManagement.tsx
+│   │   ├── StoreManagement.tsx
+│   │   └── ManagerManagement.tsx
+│   ├── hooks/               # Custom hooks
+│   │   └── useApi.ts       # Hook centralizado de API
+│   ├── utils.ts             # Utilidades de cálculo
+│   ├── exportUtils.ts       # Exportación CSV/PDF/Excel
+│   ├── dateUtils.ts         # Utilidades de fecha
+│   ├── types.ts             # Definiciones TypeScript
+│   ├── App.tsx              # Componente principal
+│   ├── main.tsx             # Entry point
+│   ├── index.css            # Estilos globales
+│   ├── vite.config.ts       # Configuración de Vite
+│   ├── tailwind.config.js   # Configuración de Tailwind
+│   └── package.json
+│
+├── backend/
+│   ├── src/
+│   │   ├── index.ts         # API principal (1000+ líneas)
+│   │   ├── db.ts           # Conexión PostgreSQL
+│   │   ├── auth.ts         # Autenticación JWT
+│   │   ├── middleware.ts   # Middlewares
+│   │   ├── types.ts        # Tipos TypeScript
+│   │   ├── inventory.ts    # Lógica de inventario
+│   │   ├── sales.ts        # Lógica de ventas
+│   │   ├── init-db.ts      # Inicialización de BD
+│   │   └── store.ts       # Store simulado
+│   ├── migrations/         # Scripts de migración
+│   ├── db.sql             # Script SQL completo
+│   ├── init-db.js         # Inicializador de BD
+│   ├── Dockerfile
+│   └── package.json
+│
+├── .gitignore
+├── README.md
+├── LICENSE
+├── docker-compose.yml
+└── package.json
+```
+
+## 🧮 Cálculos
+
+### Precio de Producto
+
+**Para producto en USD:**
+```
+Venta USD = Costo USD × (1 + Margen)
+Precio MN Base = Venta USD × Tipo de Cambio
+Comisión = Precio MN Base × Tasa de Comisión
+Precio Final = Precio MN Base + Comisión
+```
+
+**Para producto en MN:**
+```
+Precio MN Base = Costo MN × (1 + Margen)
+Comisión = Precio MN Base × Tasa de Comisión
+Precio Final = Precio MN Base + Comisión
+```
+
+### Ejemplo Numérico
+
+Producto: Jabón
+- Costo: $10 USD
+- Margen: 30%
+- Tipo de cambio: 300 MN/USD
+- Comisión: 10%
+
+```
+Venta USD = $10 × 1.30 = $13
+Precio MN Base = $13 × 300 = 3,900 MN
+Comisión = 3,900 × 0.10 = 390 MN
+Precio Final = 3,900 + 390 = 4,290 MN
+```
+
+### Cierre de Caja
+
+```
+Total Base MN = Σ (Precio Base de todas las ventas)
+Total Comisión = Σ (Comisión de todas las ventas)
+Total Final MN = Σ (Precio Final de todas las ventas)
+
+Monto a entregar = Total Base MN
+Monto que se queda el gestor = Total Comisión
+```
+
+## 🔐 Seguridad
+
+### Autenticación
+- JWT tokens con expiración de 24 horas
+- Contraseñas hasheadas con bcrypt
+- Rate limiting en endpoints sensibles (login)
+
+### Autorización
+- Middleware `authenticateToken` en todos los endpoints protegidos
+- Validación de roles por endpoint
+- Filtrado de datos por tienda y usuario
+
+### Validaciones
+- `express-validator` para validación de inputs
+- Validaciones en frontend y backend
+- Sanitización de datos
+
+### Auditoría
+- Registro automático de todas las operaciones críticas
+- Traza completa de cambios (oldValues, newValues)
+- Índices optimizados para consultas de auditoría
+
+## 📊 Estadísticas y Reportes
+
+### Métricas Disponibles
+
+- Total de ventas por periodo
+- Ventas por gestor
+- Ventas por producto
+- Cierres por periodo
+- Ganancias netas
+- Comisiones pagadas
+- Deudas pendientes
+
+### Filtros
+
+- Rango de fechas
+- Por tienda
+- Por gestor
+- Por producto
+- Por estado de pago (contado/crédito)
+
+### Exportación
+
+**Columnas incluidas:**
+- Periodo
+- Tienda
+- Gestor
+- Producto
+- Fecha de venta
+- Cantidad
+- Precio base MN
+- Comisión
+- Precio final MN
+- Estado de pago
+- Nombre del cliente (si es crédito)
+
+## 🐛 Problemas Conocidos
+
+### Solucionados
+- ✅ Gestores no se listaban para Managers - Solucionado: Backend verifica _StoreToUser
+- ✅ Error "Access token required" al asignar inventario - Solucionado: Agregado header Authorization
+- ✅ Foreign Key Constraint al eliminar usuarios - Solucionado: Orden correcto de eliminación
+- ✅ Managers no pueden editar gestores - Solucionado: Permisos actualizados
+
+### Por Monitorear
+- Conexión a base de datos en producción
+- Performance con grandes volúmenes de datos
+- Rate limiting en endpoints de reportes
+
+## 🚀 Roadmap Futuro
+
+### Próximas Versiones
+- [ ] Dashboard de métricas en tiempo real
+- [ ] Notificaciones push para conflictos y cierres
+- [ ] Integración con pasarelas de pago
+- [ ] Reportes de tendencias y forecasting
+- [ ] Gestión de devoluciones
+- [ ] Multi-moneda completa
+- [ ] Aplicación móvil para gestores
+
+## 📝 Licencia
+
+Este proyecto está licenciado bajo la **MIT License** - ver el archivo [LICENSE](LICENSE) para más detalles.
+
+Copyright (c) 2026 wcardero
+
+## 👥 Contribuyentes
+
+- [wcardero](https://github.com/wcardero) - Desarrollador principal
+
+## 📧 Contacto
+
+Para reportar issues o solicitar features, por favor crea un issue en el [repositorio de GitHub](https://github.com/wcardero/nexus-salesflow-multi-tenant/issues).
 
 ---
 
-## OPTIMIZACIONES RECIENTES (Commit: dc1a185)
-
-### Limpieza de Proyecto
-- Eliminado directorio `coverage/` (~150MB de reportes de tests)
-- Eliminado directorio `Prototype de disenno/` (~5-10MB de prototipos)
-- Actualizado `.gitignore` para prevenir inclusión futura de estos archivos
-
-### Backend - Seguridad y Permisos
-- **Endpoint `PUT /api/users/:id`**: Crear y editar usuarios con validaciones:
-  - Solo admins pueden actualizar usuarios
-  - El admin no puede cambiar su propio rol ni asignarse tienda
-  - Protección contra creación múltiple de admins
-- **Endpoint `PUT /api/users/:id/password`**: Corregido para permitir cambio sin `oldPassword`:
-  - Admins pueden cambiar contraseña de cualquier usuario
-  - Usuarios deben proporcionar su contraseña actual para cambiarla
-  - Acepta tanto `password` como `newPassword` en el body
-- **Permisos de creación**:
-  - Admin: Puede crear Directores y Managers (requieren tienda)
-  - Director: Puede crear Managers (asignados a su tienda)
-  - Manager: Puede crear Gestores (asignados a su tienda)
-  - Gestor: No puede crear usuarios
-- **Validaciones**:
-  - Manager debe tener tienda asignada para crear Gestores
-  - Director debe tener tienda asignada para crear Managers
-  - Mensajes de error claros en español
-
-### Frontend - Mejoras de UX
-- **Ocultar campos sensibles**:
-  - Campo "Rol" oculto cuando admin se edita a sí mismo
-  - Campo "Tienda" oculto cuando admin se edita a sí mismo
-  - Botón "Eliminar" oculto para el admin que se edita a sí mismo
-- **Clarificación de etiquetas**: "Nombre" → "Nombre de usuario"
-- **Actualización de caché**: El usuario actual se actualiza con datos frescos del servidor en cada `refreshDb()`
-- **ManagerDashboard**: Gestores se crean vía API con contraseña asignada
-
-### Infraestructura
-- **Hook `useApi.ts`**: Centraliza todas las llamadas a la API (GET, POST, PUT, DELETE)
-- **Variables de entorno**: URL de API configurada en `vite.config.ts` con valor de `.env`
-
-### Estado del Proyecto
-- **Tamaño reducido**: De ~205MB a ~150MB después de limpiar archivos innecesarios
-- **TypeScript**: Sin errores en frontend ni backend
-- **Build**: Exitoso en ambos proyectos
-
-## PROBLEMAS CONOCIDOS RECIENTES
-
-### Gestores no se listan para Managers
-- **Problema**: Los Managers no podían ver sus gestores después de crear uno
-- **Causa 1**: El storeId estaba nulo en User table (asignados vía _StoreToUser)
-- **Causa 2**: `refreshDb()` no incluía 'users' para Managers/Directors
-- **Solución 1**: Backend verifica _StoreToUser cuando storeId es nulo
-- **Solución 2**: `App.tsx` ahora incluye 'users' para Managers y Directors
-- **Endpoints afectados**: POST /api/login, GET /api/users
-
-### Error "Access token required" al asignar inventario
-- **Problema**: Al asignar inventario a gestores, el navegador mostraba error de token
-- **Causa**: El frontend no enviaba header Authorization en POST /api/assigned-inventory
-- **Solución**: Agregar header Authorization con el token
-- **Archivo**: views/ManagerDashboard.tsx, función handleAssign en InventoryView
-
-### Foreign Key Constraint al eliminar usuarios
-- **Problema**: Los Admins no podían eliminar Managers con registros de auditoría
-- **Causa**: AuditLog tiene foreign key a User que impide eliminación directa
-- **Solución**: DELETE /api/users/:id elimina registros en orden: AuditLog → InventoryItem → _StoreToUser → User
-- **Endpoint**: backend/src/index.ts, línea 792
-
-### Managers no pueden editar gestores
-- **Problema**: PUT /api/users/:id solo permitía a Admins actualizar usuarios
-- **Causa**: Falta de lógica para permitir a Managers editar sus gestores
-- **Solución**: PUT /api/users/:id permite a Managers actualizar solo el nombre (no role ni storeId)
-- **Validación**: Gestor debe pertenecer a la tienda del Manager
+**Última actualización:** Enero 2026
+**Versión:** 1.0.0
+**Autor:** [wcardero](https://github.com/wcardero)
