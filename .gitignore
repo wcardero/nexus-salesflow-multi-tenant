@@ -48,3 +48,9 @@ prototypes/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Docker files (development only)
+Dockerfile
+docker-compose.yml
+docker-compose*.yml
+.dockerignore
