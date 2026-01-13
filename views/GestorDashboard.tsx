@@ -20,9 +20,6 @@ interface GestorDashboardProps {
 type Tabs = 'inventory' | 'sales' | 'debts' | 'pending-closings' | 'reports';
 
 const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
-  console.log('[GestorDashboard] Component mounted - user.id:', user.id);
-  console.log('[GestorDashboard] Component mounted - user.name:', user.name);
-  console.log('[GestorDashboard] Component mounted - user.role:', user.role);
 
   const [activeTab, setActiveTab] = useState<Tabs>('inventory');
   const [rejecting, setRejecting] = useState<string | null>(null);
@@ -34,9 +31,6 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   const pendingInventory = useMemo(() => {
     const pending = db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Pending');
-    console.log('[GestorDashboard] pendingInventory:', pending);
-    console.log('[GestorDashboard] user.id:', user.id);
-    console.log('[GestorDashboard] db.assignedInventory:', db.assignedInventory);
     return pending;
   }, [db.assignedInventory, user.id]);
 
@@ -133,8 +127,6 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
         }
       });
 
-    console.log('[GestorDashboard] groupedInventory - groups:', groups);
-    console.log('[GestorDashboard] groupedInventory - keys:', Object.keys(groups));
     return groups;
   }, [db.assignedInventory, user.id]);
 
@@ -143,14 +135,9 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
   const pendingClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id && c.status === ClosingStatus.PENDING), [db.closings, user.id]);
 
   const renderContent = () => {
-    console.log('[GestorDashboard] renderContent called, activeTab:', activeTab);
-    console.log('[GestorDashboard] groupedInventory keys:', Object.keys(groupedInventory));
-    console.log('[GestorDashboard] groupedInventory:', groupedInventory);
-    console.log('[GestorDashboard] db.products length:', db.products.length);
     
     // Si products no está cargado, mostrar estado de carga
     if (!db.products || db.products.length === 0) {
-      console.log('[GestorDashboard] Products not loaded yet, showing loading...');
       return (
         <div className="flex items-center justify-center min-h-screen bg-slate-900 text-slate-200">
           <p>Cargando inventario...</p>
@@ -160,7 +147,6 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
     
     switch (activeTab) {
       case 'inventory':
-        console.log('[GestorDashboard] Rendering inventory tab');
         return (
           <PendingInventoryView
             pendingInventory={pendingInventory}
@@ -170,7 +156,6 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
           />
         );
        case 'sales':
-        console.log('[GestorDashboard] Rendering sales tab');
         return (
           <SalesView
             user={user}

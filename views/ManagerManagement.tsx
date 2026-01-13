@@ -141,19 +141,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
 
     try {
       const url = 'http://localhost:3001/api/users/' + passwordChangeManager.id + '/password';
-      const token = localStorage.getItem('token');
-      console.log('[handleChangePassword] Request details:', {
-        url,
-        managerId: passwordChangeManager.id,
-        managerName: passwordChangeManager.name,
-        managerRole: passwordChangeManager.role,
-        managerStoreId: passwordChangeManager.storeId,
-        currentUserRole: currentUser.role,
-        currentUserStoreId: currentUser.storeId,
-        tokenExists: !!token,
-        tokenLength: token?.length,
-        newPasswordLength: newPassword.trim().length
-      });
+
 
       const response = await fetch(url, {
         method: 'PUT',
@@ -168,11 +156,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('[handleChangePassword] Response error:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        });
+
         throw new Error(errorData.message || 'Error cambiando contraseña.');
       }
 

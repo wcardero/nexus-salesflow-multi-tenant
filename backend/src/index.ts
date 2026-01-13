@@ -104,17 +104,14 @@ const authenticateToken = (req: Request, res: Response, next: any) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
-    console.log('[authenticateToken] No token found in request');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string; name: string; role: string; storeId: string };
-    console.log('[authenticateToken] Token decoded:', { id: decoded.id, name: decoded.name, role: decoded.role, storeId: decoded.storeId });
     (req as any).user = decoded;
     next();
   } catch (err) {
-    console.log('[authenticateToken] Token verification failed:', err);
     return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
@@ -156,7 +153,6 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
         let user = result.rows[0];
-        console.log('[login] User found:', { id: user.id, name: user.name, role: user.role, userStoreId: user.storeId, selectedStoreId: storeId });
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
@@ -173,13 +169,11 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
                     'SELECT "A" FROM "_StoreToUser" WHERE "B" = $1 AND "A" = $2',
                     [storeId, user.id]
                 );
-                console.log('[login] StoreToUser check:', { storeId, userId: user.id, found: storeToUserResult.rows.length > 0 });
                 if (storeToUserResult.rows.length === 0) {
                     return res.status(401).json({ message: 'El usuario no pertenece a esta tienda.' });
                 }
                 // User is assigned to store via _StoreToUser, update user object
                 user = { ...user, storeId };
-                console.log('[login] Updated user with storeId from _StoreToUser:', { userId: user.id, newStoreId: user.storeId });
             }
         }
 
@@ -189,7 +183,6 @@ app.post('/api/login', loginLimiter, validateLogin, async (req: Request, res: Re
             JWT_SECRET,
             { expiresIn: '24h' }
         );
-        console.log('[login] JWT created with storeId:', user.storeId);
 
         // Don't send password back to client
         delete user.password;
@@ -637,28 +630,23 @@ app.put('/api/users/:id', authenticateToken, async (req: Request, res: Response)
 // --- GET Endpoints ---
 app.get('/api/users', authenticateToken, async (req, res) => {
   const requestingUser = (req as any).user;
-  console.log('[get-users] Request:', { userId: requestingUser.id, role: requestingUser.role, storeId: requestingUser.storeId });
 
   // Only admins can see all users
   if (requestingUser.role === 'Admin') {
     // Admins can see all users
     const { rows } = await db.query('SELECT id, name, role, "storeId", "createdBy" FROM "User"');
-    console.log('[get-users] Returning all users for Admin:', { count: rows.length });
     return res.json(rows);
   }
 
   // For Directors and Managers, get their store ID from _StoreToUser if not in User
   let storeIdToUse = requestingUser.storeId;
-  console.log('[get-users] Initial storeId:', storeIdToUse);
   if (!storeIdToUse) {
     const storeResult = await db.query(
       'SELECT "A" as storeId FROM "_StoreToUser" WHERE "B" = $1 LIMIT 1',
       [requestingUser.id]
     );
-    console.log('[get-users] _StoreToUser query result:', storeResult.rows);
     if (storeResult.rows.length > 0) {
       storeIdToUse = storeResult.rows[0].storeId;
-      console.log('[get-users] Got storeId from _StoreToUser:', storeIdToUse);
     }
   }
 
@@ -671,7 +659,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       'SELECT id, name, role, "storeId", "createdBy" FROM "User" WHERE role = $1 AND "storeId" = $2',
       ['Manager', storeIdToUse]
     );
-    console.log('[get-users] Returning Managers for store:', { storeId: storeIdToUse, count: rows.length });
     return res.json(rows);
   }
 
@@ -684,7 +671,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       'SELECT id, name, role, "storeId", "createdBy" FROM "User" WHERE role = $1 AND "storeId" = $2',
       ['Gestor', storeIdToUse]
     );
-    console.log('[get-users] Returning Gestores for store:', { storeId: storeIdToUse, count: rows.length });
     return res.json(rows);
   }
 
@@ -693,7 +679,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
     'SELECT id, name, role, "storeId", "createdBy" FROM "User" WHERE id = $1',
     [requestingUser.id]
   );
-  console.log('[get-users] Returning single user for Gestor:', rows[0]);
   res.json(rows);
 });
 
@@ -1662,14 +1647,6 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         AND s."soldAt" >= $2 AND s."soldAt" <= $3
       `;
 
-      console.log('[director-metrics] Debug info:', {
-        requestingUserId: requestingUser.id,
-        requestingUserName: requestingUser.name,
-        requestingUserStoreId: requestingUser.storeId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      });
-
       // Debug: Check all users in the store
       const allUsersQuery = `
         SELECT id, name, role, "storeId", "createdBy"
@@ -1679,7 +1656,6 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         )
       `;
       const { rows: allUsers } = await db.query(allUsersQuery, [requestingUser.storeId]);
-      console.log('[director-metrics] All users in store:', JSON.stringify(allUsers, null, 2));
 
       // Debug: Check StoreToUser relations
       const storeToUserQuery = `
@@ -1687,7 +1663,6 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         WHERE "A" = $1
       `;
       const { rows: storeToUser } = await db.query(storeToUserQuery, [requestingUser.storeId]);
-      console.log('[director-metrics] StoreToUser relations:', JSON.stringify(storeToUser, null, 2));
 
       // Debug: Check all sales for the store (without date filter)
       const allSalesQuery = `
@@ -1696,12 +1671,8 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         JOIN "User" u ON s."gestorId" = u.id
       `;
       const { rows: allSales } = await db.query(allSalesQuery);
-      console.log('[director-metrics] All sales in database:', JSON.stringify(allSales, null, 2));
 
       const { rows: sales } = await db.query(salesQuery, [requestingUser.storeId, startDate, endDate]);
-
-      console.log('[director-metrics] Sales found:', sales.length);
-      console.log('[director-metrics] Sales data:', JSON.stringify(sales, null, 2));
 
       // Calculate metrics
       const totalSales = sales.reduce((sum, sale) => sum + (sale.finalMN || 0), 0);
@@ -1713,15 +1684,6 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       const netProfit = totalSales - totalCost - totalCommission;
       const margin = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0;
       const numberOfSales = sales.length;
-
-      console.log('[director-metrics] Calculated metrics:', {
-        totalSales,
-        totalCost,
-        totalCommission,
-        netProfit,
-        margin,
-        numberOfSales
-      });
 
       // Sales per day
       const salesByDay: { [key: string]: number } = {};
@@ -1748,10 +1710,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         GROUP BY u.id, u.name
         ORDER BY "totalSales" DESC
       `;
-      console.log('[director-metrics] Managers query:', managersQuery);
       const { rows: managers } = await db.query(managersQuery, [requestingUser.storeId, startDate, endDate]);
-      console.log('[director-metrics] Managers found:', managers.length);
-      console.log('[director-metrics] Managers data:', JSON.stringify(managers, null, 2));
 
       res.json({
         period,
@@ -2524,11 +2483,8 @@ const autoExecuteSaleCostMNMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding costMN column to Sale table...');
       await db.query('ALTER TABLE "Sale" ADD COLUMN "costMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
-      console.log('[auto-migration] Sale costMN column added successfully');
     } else {
-      console.log('[auto-migration] costMN column already exists in Sale table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding costMN column:', error);
@@ -2545,11 +2501,8 @@ const autoExecuteProductCostMNMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding costMN column to Product table...');
       await db.query('ALTER TABLE "Product" ADD COLUMN "costMN" DOUBLE PRECISION');
-      console.log('[auto-migration] Product costMN column added successfully');
     } else {
-      console.log('[auto-migration] costMN column already exists in Product table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Product costMN column:', error);
@@ -2566,11 +2519,8 @@ const autoExecuteProductCostUSDNullableMigration = async () => {
     `);
 
     if (result.rows.length > 0 && result.rows[0].is_nullable === 'NO') {
-      console.log('[auto-migration] Making costUSD nullable in Product table...');
       await db.query('ALTER TABLE "Product" ALTER COLUMN "costUSD" DROP NOT NULL');
-      console.log('[auto-migration] Product costUSD column is now nullable');
     } else {
-      console.log('[auto-migration] costUSD column already nullable or does not exist');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error making Product costUSD nullable:', error);
@@ -2587,11 +2537,8 @@ const autoExecuteProductCommissionRateMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding commissionRate column to Product table...');
       await db.query('ALTER TABLE "Product" ADD COLUMN "commissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0');
-      console.log('[auto-migration] Product commissionRate column added successfully');
     } else {
-      console.log('[auto-migration] commissionRate column already exists in Product table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Product commissionRate column:', error);
@@ -2608,11 +2555,8 @@ const autoExecuteProductPriceMNMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding priceMN column to Product table...');
       await db.query('ALTER TABLE "Product" ADD COLUMN "priceMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
-      console.log('[auto-migration] Product priceMN column added successfully');
     } else {
-      console.log('[auto-migration] priceMN column already exists in Product table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Product priceMN column:', error);
@@ -2629,11 +2573,8 @@ const autoExecuteProductGestorCommissionMNMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding gestorCommissionMN column to Product table...');
       await db.query('ALTER TABLE "Product" ADD COLUMN "gestorCommissionMN" DOUBLE PRECISION NOT NULL DEFAULT 0');
-      console.log('[auto-migration] Product gestorCommissionMN column added successfully');
     } else {
-      console.log('[auto-migration] gestorCommissionMN column already exists in Product table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Product gestorCommissionMN column:', error);
@@ -2650,11 +2591,8 @@ const autoExecuteProductCreatedByMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding createdBy column to Product table...');
       await db.query('ALTER TABLE "Product" ADD COLUMN "createdBy" VARCHAR(255) REFERENCES "User"(id) ON DELETE SET NULL');
-      console.log('[auto-migration] Product createdBy column added successfully');
     } else {
-      console.log('[auto-migration] createdBy column already exists in Product table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Product createdBy column:', error);
@@ -2671,11 +2609,8 @@ const autoExecuteProductCurrencyMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding currency column to Product table...');
       await db.query('ALTER TABLE "Product" ADD COLUMN currency VARCHAR(10) NOT NULL DEFAULT \'USD\'');
-      console.log('[auto-migration] Product currency column added successfully');
     } else {
-      console.log('[auto-migration] currency column already exists in Product table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Product currency column:', error);
@@ -2692,11 +2627,8 @@ const autoExecuteAssignedInventoryStatusMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding status column to AssignedInventory table...');
       await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT \'Pending\'');
-      console.log('[auto-migration] AssignedInventory status column added successfully');
     } else {
-      console.log('[auto-migration] status column already exists in AssignedInventory table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding AssignedInventory status column:', error);
@@ -2713,11 +2645,8 @@ const autoExecuteAssignedInventoryConfirmedAtMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding confirmedAt column to AssignedInventory table...');
       await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN "confirmedAt" TIMESTAMP');
-      console.log('[auto-migration] AssignedInventory confirmedAt column added successfully');
     } else {
-      console.log('[auto-migration] confirmedAt column already exists in AssignedInventory table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding AssignedInventory confirmedAt column:', error);
@@ -2734,11 +2663,8 @@ const autoExecuteAssignedInventoryRejectionReasonMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding rejectionReason column to AssignedInventory table...');
       await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN "rejectionReason" TEXT');
-      console.log('[auto-migration] AssignedInventory rejectionReason column added successfully');
     } else {
-      console.log('[auto-migration] rejectionReason column already exists in AssignedInventory table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding AssignedInventory rejectionReason column:', error);
@@ -2755,11 +2681,8 @@ const autoExecuteAssignedInventoryPriceMNMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding priceMN column to AssignedInventory table...');
       await db.query('ALTER TABLE "AssignedInventory" ADD COLUMN "priceMN" DOUBLE PRECISION');
-      console.log('[auto-migration] AssignedInventory priceMN column added successfully');
     } else {
-      console.log('[auto-migration] priceMN column already exists in AssignedInventory table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding AssignedInventory priceMN column:', error);
@@ -2776,11 +2699,8 @@ const autoExecuteDropSaleInventoryItemIdFkMigration = async () => {
     `);
 
     if (result.rows.length > 0) {
-      console.log('[auto-migration] Dropping Sale_inventoryItemId_fkey foreign key...');
       await db.query('ALTER TABLE "Sale" DROP CONSTRAINT "Sale_inventoryItemId_fkey"');
-      console.log('[auto-migration] Sale_inventoryItemId_fkey dropped successfully');
     } else {
-      console.log('[auto-migration] Sale_inventoryItemId_fkey constraint does not exist');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error dropping Sale_inventoryItemId_fkey:', error);
@@ -2797,11 +2717,8 @@ const autoExecuteSalePaymentStatusMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding paymentStatus column to Sale table...');
       await db.query('ALTER TABLE "Sale" ADD COLUMN "paymentStatus" VARCHAR(20) NOT NULL DEFAULT \'PAID\'');
-      console.log('[auto-migration] Sale paymentStatus column added successfully');
     } else {
-      console.log('[auto-migration] paymentStatus column already exists in Sale table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Sale paymentStatus column:', error);
@@ -2818,11 +2735,8 @@ const autoExecuteSaleCustomerNameMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding customerName column to Sale table...');
       await db.query('ALTER TABLE "Sale" ADD COLUMN "customerName" TEXT');
-      console.log('[auto-migration] Sale customerName column added successfully');
     } else {
-      console.log('[auto-migration] customerName column already exists in Sale table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Sale customerName column:', error);
@@ -2839,11 +2753,8 @@ const autoExecuteSaleProductIdMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding productId column to Sale table...');
       await db.query('ALTER TABLE "Sale" ADD COLUMN "productId" TEXT');
-      console.log('[auto-migration] Sale productId column added successfully');
     } else {
-      console.log('[auto-migration] productId column already exists in Sale table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding Sale productId column:', error);
@@ -2860,13 +2771,9 @@ const autoExecuteCreatedByMigration = async () => {
     `);
 
     if (result.rows.length === 0) {
-      console.log('[auto-migration] Adding createdBy column to User table...');
       await db.query('ALTER TABLE "User" ADD COLUMN "createdBy" TEXT');
-      console.log('[auto-migration] Adding createdBy foreign key...');
       await db.query('ALTER TABLE "User" ADD CONSTRAINT "User_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE');
-      console.log('[auto-migration] User createdBy column added successfully');
     } else {
-      console.log('[auto-migration] createdBy column already exists in User table');
     }
   } catch (error: any) {
     console.error('[auto-migration] Error adding createdBy column:', error);

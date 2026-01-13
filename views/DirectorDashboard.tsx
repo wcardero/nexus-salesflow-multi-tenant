@@ -164,7 +164,6 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     const currentUserId = currentUserData.id;
     const token = localStorage.getItem('token');
 
-    console.log('[handleDeleteManager] Attempting to delete manager:', { managerId, currentUserId, tokenExists: !!token });
 
     if (managerId === currentUserId) {
       alert('No puedes eliminar tu propia cuenta de director.');
@@ -177,7 +176,6 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
     try {
       const url = `http://localhost:3001/api/users/${managerId}`;
-      console.log('[handleDeleteManager] Fetch URL:', url);
 
       const response = await fetch(url, {
         method: 'DELETE',
@@ -186,8 +184,6 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
         }
       });
 
-      console.log('[handleDeleteManager] Response status:', response.status);
-      console.log('[handleDeleteManager] Response ok:', response.ok);
 
       if (!response.ok) {
         const errorData = await response.json();

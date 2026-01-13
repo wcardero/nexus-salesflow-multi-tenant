@@ -154,16 +154,11 @@ CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
 
 async function initDB() {
   try {
-    console.log('Connecting to database...');
     await pool.query('SELECT NOW()');
-    console.log('Connected to database successfully!');
     
-    console.log('Creating tables...');
     await pool.query(dbSchema);
-    console.log('Tables created successfully!');
     
     await pool.end();
-    console.log('Database initialization completed.');
   } catch (err) {
     console.error('Error initializing database:', err);
     process.exit(1);

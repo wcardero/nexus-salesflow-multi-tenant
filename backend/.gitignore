@@ -1,5 +1,21 @@
 node_modules
 # Keep environment variables out of version control
 .env
+.env.*
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.tmp
+*.temp
+
+# Test coverage
+coverage/
 
 /src/generated/prisma

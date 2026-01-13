@@ -36,12 +36,10 @@ const App: React.FC = () => {
     try {
       // Get the token from localStorage or wherever it's stored
       const token = localStorage.getItem('token');
-      console.log('refreshDb: token =', token ? 'EXISTS' : 'NULL');
 
       if (!token) {
         // If there's no token, don't show an error, just return
         // The user will be redirected to login via the rendering logic
-        console.log('refreshDb: No token found, returning early');
         return;
       }
 
@@ -66,17 +64,14 @@ const App: React.FC = () => {
             ? ['users', ...baseResources]
             : ['users', 'stores', 'products', 'inventory', 'product-stock', 'assigned-inventory', 'sales', 'closings', 'audit-logs'];
 
-      console.log('refreshDb: fetching resources:', resources);
       const results: [string, any][] = [];
       for (const resource of resources) {
-        console.log(`refreshDb: fetching ${resource}...`);
         try {
           const res = await fetch(`http://localhost:3001/api/${resource}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
           });
-          console.log(`refreshDb: ${resource} response status:`, res.status);
           if (!res.ok) {
             console.error(`refreshDb: Error fetching ${resource}:`, res.status, res.statusText);
             let errorData;
@@ -93,11 +88,8 @@ const App: React.FC = () => {
             }
             throw new Error(`HTTP error for ${resource}! status: ${res.status}`);
           }
-          console.log(`refreshDb: parsing ${resource} JSON...`);
           const data = await res.json();
-          console.log(`refreshDb: ${resource} data parsed, type:`, Array.isArray(data) ? 'array' : typeof data);
           results.push([resource, data] as const);
-          console.log(`refreshDb: ${resource} fetched successfully, total results:`, results.length);
         } catch (err) {
           console.error(`refreshDb: Failed to fetch ${resource}:`, err);
           throw err;
@@ -139,7 +131,6 @@ const App: React.FC = () => {
         data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
 
         // Convert dates in closings and their sales
-        console.log('[App.tsx] closings before processing:', data.closings);
         data.closings.forEach(c => {
           c.initiatedAt = new Date(c.initiatedAt);
           if (c.completedAt) c.completedAt = new Date(c.completedAt);
@@ -147,28 +138,20 @@ const App: React.FC = () => {
             c.sales.forEach(s => s.soldAt = new Date(s.soldAt));
           }
         });
-        console.log('[App.tsx] closings after processing:', data.closings);
 
       // Update current user from fresh database data to avoid stale cache issues
       const storedUserJson = localStorage.getItem('user');
-      console.log('[App.tsx] refreshDb - storedUserJson:', storedUserJson);
       if (storedUserJson) {
         const storedUser: User = JSON.parse(storedUserJson);
-        console.log('[App.tsx] refreshDb - storedUser.id:', storedUser.id);
-        console.log('[App.tsx] refreshDb - data.users:', data.users);
         const freshUser = data.users.find(u => u.id === storedUser.id);
-        console.log('[App.tsx] refreshDb - freshUser:', freshUser ? 'FOUND' : 'NOT FOUND');
         if (freshUser) {
           setCurrentUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
-          console.log('[App.tsx] refreshDb - user updated successfully');
         } else {
-          console.warn('[App.tsx] refreshDb - User not found in fresh data, keeping current user');
         }
       }
 
       setDb(data);
-      console.log('refreshDb: data loaded successfully');
     } catch (err: any) {
       console.error('refreshDb: error:', err);
       setError(`Failed to fetch data: ${err.message}`);
@@ -178,11 +161,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
-      console.log('[App.tsx] checkAuthAndLoadData called');
       const token = localStorage.getItem('token');
       const userJson = localStorage.getItem('user');
-      console.log('[App.tsx] checkAuthAndLoadData - token exists:', !!token);
-      console.log('[App.tsx] checkAuthAndLoadData - userJson exists:', !!userJson);
 
       if (token && userJson) {
         // If there's a token, try to load the database
@@ -198,12 +178,9 @@ const App: React.FC = () => {
 
            if (response.ok) {
              // Token is valid, load full database
-             console.log('[App.tsx] Token is valid, calling refreshDb');
              await refreshDb(user.role);
-             console.log('[App.tsx] refreshDb completed, current db state:', !!db);
            } else {
              // Token is invalid/expired, remove it and show login
-             console.log('[App.tsx] Token is invalid, calling handleLogout');
              handleLogout();
            }
         } catch (err) {
@@ -231,7 +208,6 @@ const App: React.FC = () => {
   };
 
    const handleLogout = () => {
-    console.log('[App.tsx] handleLogout called');
     setCurrentUser(null);
     setDb(null);
     setCurrentView('dashboard');
@@ -254,7 +230,6 @@ const App: React.FC = () => {
   if (!db) {
     // If database is still null after auth check, show loading or error
     if (error) {
-      console.log('[App.tsx] Error loading database:', error);
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
           <p className="text-danger-600 dark:text-danger-400 mb-4">Error: {error}</p>
@@ -267,7 +242,6 @@ const App: React.FC = () => {
         </div>
       );
     }
-    console.log('[App.tsx] db is null, showing Loading database...');
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
         <p>Loading database...</p>

@@ -94,13 +94,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   const storeClosings = db.closings.filter(c => storeGestores.some(g => g.id === c.gestorId));
   const storeSales = db.sales.filter(s => storeGestores.some(g => g.id === s.gestorId));
 
-  console.log('[ManagerDashboard] store.id:', store.id);
-  console.log('[ManagerDashboard] Total DB sales:', db.sales.length);
-  console.log('[ManagerDashboard] storeGestores:', storeGestores.map(g => ({ id: g.id, name: g.name })));
-  console.log('[ManagerDashboard] storeSales count:', storeSales.length);
-  console.log('[ManagerDashboard] storeSales sample:', storeSales.slice(0, 3).map(s => ({ id: s.id, gestorId: s.gestorId, soldAt: s.soldAt })));
-  console.log('[ManagerDashboard] All closings from DB:', db.closings.map(c => ({ id: c.id, gestorId: c.gestorId, status: c.status })));
-  console.log('[ManagerDashboard] storeClosings:', storeClosings);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -183,17 +176,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
     end: new Date()
   });
 
-  console.log('[ReportsView] Total sales received:', sales.length);
-  console.log('[ReportsView] Date range:', dateRange.start, 'to', dateRange.end);
-  console.log('[ReportsView] Gestores:', gestores.map(g => ({ id: g.id, name: g.name })));
 
   const salesInPeriod = useMemo(() => {
     const filtered = sales.filter(s => {
       const isInRange = s.soldAt >= dateRange.start && s.soldAt <= dateRange.end;
-      console.log('[ReportsView] Sale:', s.id, 'Date:', s.soldAt, 'In range:', isInRange);
       return isInRange;
     });
-    console.log('[ReportsView] Sales in period:', filtered.length);
     return filtered;
   }, [sales, dateRange]);
 
@@ -233,7 +221,6 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       };
     }).sort((a, b) => b.totalFinalMN - a.totalFinalMN);
 
-    console.log('[ReportsView] Sales by gestor:', result);
     return result;
   }, [gestores, salesInPeriod]);
 
@@ -450,10 +437,6 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
   const pendingClosings = closings.filter(c => c.status === ClosingStatus.PENDING);
   const usersById = Object.fromEntries(users.map(u => [u.id, u]));
 
-  console.log('[ClosingsView] All closings received:', closings.map(c => ({ id: c.id, status: c.status, gestorId: c.gestorId })));
-  console.log('[ClosingsView] ClosingStatus.PENDING:', ClosingStatus.PENDING);
-  console.log('[ClosingsView] pendingClosings after filter:', pendingClosings);
-  console.log('[ClosingsView] usersById keys:', Object.keys(usersById));
 
   return (
     <div>
