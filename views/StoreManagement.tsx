@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MockDB, Store } from '../types';
+import Button from '../components/Button';
 
 interface StoreManagementProps {
   db: MockDB;
@@ -139,12 +140,9 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
             onChange={e => setNewStoreName(e.target.value)} 
             className="flex-1 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
           />
-          <button 
-            onClick={handleCreateStore} 
-            className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
-          >
+          <Button variant="primary" onClick={handleCreateStore} size="md">
             Crear Tienda
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -164,18 +162,12 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
               className="flex-1 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
             />
             <div className="flex gap-2">
-              <button 
-                onClick={handleUpdateStore} 
-                className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
-              >
+              <Button variant="primary" onClick={handleUpdateStore} size="md">
                 Guardar Cambios
-              </button>
-              <button 
-                onClick={cancelEditing} 
-                className="bg-gray-500 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-gray-600 transition-colors"
-              >
+              </Button>
+              <Button variant="neutral" onClick={cancelEditing} size="md">
                 Cancelar
-              </button>
+              </Button>
             </div>
           </div>
         </div>

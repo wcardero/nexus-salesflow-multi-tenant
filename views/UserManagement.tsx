@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MockDB, User, Role } from '../types';
+import Button from '../components/Button';
 
 interface UserManagementProps {
   db: MockDB;
@@ -265,12 +266,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
           </div>
         </div>
         <div className="flex justify-end">
-          <button 
-            onClick={handleCreateUser} 
-            className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
-          >
+          <Button variant="primary" onClick={handleCreateUser}>
             Crear Usuario
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -328,18 +326,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
             )}
           </div>
           <div className="flex gap-2 justify-end">
-            <button 
-              onClick={handleUpdateUser} 
-              className="bg-primary text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-blue-600 transition-colors"
-            >
+            <Button variant="primary" onClick={handleUpdateUser}>
               Guardar Cambios
-            </button>
-            <button 
-              onClick={cancelEditing} 
-              className="bg-gray-500 text-white rounded-md py-2 px-4 text-sm font-bold hover:bg-gray-600 transition-colors"
-            >
+            </Button>
+            <Button variant="neutral" onClick={cancelEditing}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -418,18 +410,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <button
-                onClick={closePasswordModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-              >
+              <Button variant="neutral" onClick={closePasswordModal}>
                 Cancelar
-              </button>
-              <button
-                onClick={handleChangePassword}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-md"
-              >
+              </Button>
+              <Button variant="primary" onClick={handleChangePassword}>
                 Guardar Contraseña
-              </button>
+              </Button>
             </div>
           </div>
         </div>

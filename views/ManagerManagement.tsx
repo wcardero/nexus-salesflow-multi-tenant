@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MockDB, Role, User } from '../types';
+import Button from '../components/Button';
 
 interface ManagerManagementProps {
   db: MockDB;
@@ -228,12 +229,9 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
             onChange={e => setNewManagerPassword(e.target.value)}
             className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded'
           />
-          <button
-            onClick={handleCreateManager}
-            className='px-6 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded font-medium'
-          >
+          <Button variant="primary" onClick={handleCreateManager} size="md">
             Crear Manager
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -265,39 +263,24 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
                   <td className='px-4 py-3 text-center'>
                     {editingManager?.id === manager.id ? (
                       <div className='flex gap-2 justify-center'>
-                        <button
-                          onClick={handleUpdateManager}
-                          className='px-3 py-1 bg-green-500 dark:bg-green-600 text-white rounded text-sm'
-                        >
+                        <Button variant="success" onClick={handleUpdateManager} size="xs">
                           Guardar
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          className='px-3 py-1 bg-gray-500 dark:bg-gray-600 text-white rounded text-sm'
-                        >
+                        </Button>
+                        <Button variant="neutral" onClick={cancelEditing} size="xs">
                           Cancelar
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div className='flex gap-2 justify-center'>
-                        <button
-                          onClick={() => startEditing(manager)}
-                          className='px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded text-sm'
-                        >
+                        <Button variant="primary" onClick={() => startEditing(manager)} size="xs">
                           Editar
-                        </button>
-                        <button
-                          onClick={() => openPasswordModal(manager)}
-                          className='px-3 py-1 bg-yellow-500 dark:bg-yellow-600 text-white rounded text-sm'
-                        >
+                        </Button>
+                        <Button variant="warning" onClick={() => openPasswordModal(manager)} size="xs">
                           Contraseña
-                        </button>
-                        <button
-                          onClick={() => handleDeleteManager(manager.id)}
-                          className='px-3 py-1 bg-red-500 dark:bg-red-600 text-white rounded text-sm'
-                        >
+                        </Button>
+                        <Button variant="danger" onClick={() => handleDeleteManager(manager.id)} size="xs">
                           Eliminar
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </td>
@@ -325,18 +308,12 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
               />
             </div>
             <div className='flex gap-4'>
-              <button
-                onClick={handleChangePassword}
-                className='flex-1 px-6 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded font-medium'
-              >
+              <Button variant="primary" onClick={handleChangePassword} fullWidth>
                 Cambiar
-              </button>
-              <button
-                onClick={closePasswordModal}
-                className='flex-1 px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded font-medium'
-              >
+              </Button>
+              <Button variant="neutral" onClick={closePasswordModal} fullWidth>
                 Cancelar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
