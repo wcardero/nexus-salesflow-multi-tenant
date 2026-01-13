@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Role } from '../types';
+import Button from '../components/Button';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -183,13 +184,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </select>
             </div>
           )}
-          <button
+          <Button
             type="submit"
-            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2.5 md:py-3 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
-            disabled={loading}
+            variant="primary"
+            size="lg"
+            fullWidth
+            isLoading={loading}
           >
-            {loading ? 'Cargando...' : buttonText}
-          </button>
+            {buttonText}
+          </Button>
         </form>
       </div>
     </div>
