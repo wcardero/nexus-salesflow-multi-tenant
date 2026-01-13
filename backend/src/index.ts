@@ -1660,7 +1660,11 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         JOIN "User" u ON s."gestorId" = u.id
         JOIN "InventoryItem" ii ON s."inventoryItemId" = ii.id
         JOIN "Product" p ON ii."productId" = p.id
-        WHERE u."storeId" = $1 AND s."soldAt" >= $2 AND s."soldAt" <= $3
+        WHERE (
+          u."storeId" = $1
+            OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u.id)
+        )
+        AND s."soldAt" >= $2 AND s."soldAt" <= $3
       `;
       const { rows: sales } = await db.query(salesQuery, [requestingUser.storeId, startDate, endDate]);
 
@@ -1682,7 +1686,7 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         salesByDay[date] = (salesByDay[date] || 0) + sale.finalMN;
       });
 
-      // Sales by manager
+      // Sales by manager (include managers assigned via _StoreToUser)
       const managersQuery = `
         SELECT u.id, u.name, COUNT(DISTINCT s.id) as "numberOfSales",
                COALESCE(SUM(s."finalMN"), 0) as "totalSales",
@@ -1692,9 +1696,18 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         FROM "User" u
         LEFT JOIN "User" u2 ON u.id = u2."createdBy" AND u2.role = 'Gestor'
         LEFT JOIN "Sale" s ON s."gestorId" IN (
-          SELECT u3.id FROM "User" u3 WHERE u3."createdBy" = u.id AND u3."storeId" = $1
+          SELECT u3.id FROM "User" u3
+          WHERE u3."createdBy" = u.id
+            AND (
+              u3."storeId" = $1
+              OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u3.id)
+            )
         ) AND s."soldAt" >= $2 AND s."soldAt" <= $3
-        WHERE u.role = 'Manager' AND u."storeId" = $1
+        WHERE u.role = 'Manager'
+          AND (
+            u."storeId" = $1
+            OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u.id)
+          )
         GROUP BY u.id, u.name
         ORDER BY "totalSales" DESC
       `;
