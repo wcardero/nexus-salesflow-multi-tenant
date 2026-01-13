@@ -1655,18 +1655,53 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
 
       // Get all sales for the store in the period
       const salesQuery = `
-        SELECT s.*, u.name as "gestorName", p.name as "productName"
+        SELECT s.*, u.name as "gestorName", u."createdBy" as "gestorCreatedBy", u."storeId" as "gestorStoreId"
         FROM "Sale" s
         JOIN "User" u ON s."gestorId" = u.id
-        JOIN "InventoryItem" ii ON s."inventoryItemId" = ii.id
-        JOIN "Product" p ON ii."productId" = p.id
-        WHERE (
-          u."storeId" = $1
-            OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u.id)
-        )
+        WHERE u."storeId" = $1
         AND s."soldAt" >= $2 AND s."soldAt" <= $3
       `;
+
+      console.log('[director-metrics] Debug info:', {
+        requestingUserId: requestingUser.id,
+        requestingUserName: requestingUser.name,
+        requestingUserStoreId: requestingUser.storeId,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      });
+
+      // Debug: Check all users in the store
+      const allUsersQuery = `
+        SELECT id, name, role, "storeId", "createdBy"
+        FROM "User"
+        WHERE "storeId" = $1 OR "createdBy" IN (
+          SELECT id FROM "User" WHERE "storeId" = $1
+        )
+      `;
+      const { rows: allUsers } = await db.query(allUsersQuery, [requestingUser.storeId]);
+      console.log('[director-metrics] All users in store:', JSON.stringify(allUsers, null, 2));
+
+      // Debug: Check StoreToUser relations
+      const storeToUserQuery = `
+        SELECT * FROM "_StoreToUser"
+        WHERE "A" = $1
+      `;
+      const { rows: storeToUser } = await db.query(storeToUserQuery, [requestingUser.storeId]);
+      console.log('[director-metrics] StoreToUser relations:', JSON.stringify(storeToUser, null, 2));
+
+      // Debug: Check all sales for the store (without date filter)
+      const allSalesQuery = `
+        SELECT s.*, u.name as "gestorName", u.role as "gestorRole", u."createdBy" as "gestorCreatedBy", u."storeId" as "gestorStoreId"
+        FROM "Sale" s
+        JOIN "User" u ON s."gestorId" = u.id
+      `;
+      const { rows: allSales } = await db.query(allSalesQuery);
+      console.log('[director-metrics] All sales in database:', JSON.stringify(allSales, null, 2));
+
       const { rows: sales } = await db.query(salesQuery, [requestingUser.storeId, startDate, endDate]);
+
+      console.log('[director-metrics] Sales found:', sales.length);
+      console.log('[director-metrics] Sales data:', JSON.stringify(sales, null, 2));
 
       // Calculate metrics
       const totalSales = sales.reduce((sum, sale) => sum + (sale.finalMN || 0), 0);
@@ -1678,6 +1713,15 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
       const netProfit = totalSales - totalCost - totalCommission;
       const margin = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0;
       const numberOfSales = sales.length;
+
+      console.log('[director-metrics] Calculated metrics:', {
+        totalSales,
+        totalCost,
+        totalCommission,
+        netProfit,
+        margin,
+        numberOfSales
+      });
 
       // Sales per day
       const salesByDay: { [key: string]: number } = {};
@@ -1698,20 +1742,16 @@ app.post('/api/assigned-inventory', authenticateToken, validateInventoryAssignme
         LEFT JOIN "Sale" s ON s."gestorId" IN (
           SELECT u3.id FROM "User" u3
           WHERE u3."createdBy" = u.id
-            AND (
-              u3."storeId" = $1
-              OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u3.id)
-            )
         ) AND s."soldAt" >= $2 AND s."soldAt" <= $3
         WHERE u.role = 'Manager'
-          AND (
-            u."storeId" = $1
-            OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u.id)
-          )
+          AND (u."storeId" = $1 OR EXISTS (SELECT 1 FROM "_StoreToUser" WHERE "A" = $1 AND "B" = u.id))
         GROUP BY u.id, u.name
         ORDER BY "totalSales" DESC
       `;
+      console.log('[director-metrics] Managers query:', managersQuery);
       const { rows: managers } = await db.query(managersQuery, [requestingUser.storeId, startDate, endDate]);
+      console.log('[director-metrics] Managers found:', managers.length);
+      console.log('[director-metrics] Managers data:', JSON.stringify(managers, null, 2));
 
       res.json({
         period,
