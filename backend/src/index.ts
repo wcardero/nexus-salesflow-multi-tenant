@@ -11,21 +11,24 @@ import jwt from 'jsonwebtoken';
 import db from './db';
 import { updateInventoryAfterSale } from './inventory';
 
-// Secret for JWT tokens (should be in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET || 'nexus_salesflow_secret';
+// Secret for JWT tokens (must be in environment variables)
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Please set it in backend/.env');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Rate limiting middleware (increased limits) - DISABLED for development
+// Rate limiting middleware (increased limits)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // Very high limit for development
+  max: process.env.NODE_ENV === 'production' ? 1000 : 10000, // Stricter limit in production
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   skip: (req: Request) => {
-    // Skip rate limiting for all requests during development
-    return true;
+    // Skip rate limiting in development
+    return process.env.NODE_ENV !== 'production';
   },
   handler: (req: Request, res: any) => {
     res.status(429).json({ message: 'Too many requests from this IP, please try again later.' });
@@ -47,8 +50,10 @@ const loginLimiter = rateLimit({
 app.use(cors());
 app.use(express.json());
 
-// DISABLED rate limiting for development - comment this back in for production
-// app.use(limiter);
+// Apply rate limiting (enabled in production, disabled in development)
+if (process.env.NODE_ENV === 'production') {
+  app.use(limiter);
+}
 
 // Public endpoint to check if any users exist (for initial setup) - exempt from rate limiting
 app.get('/api/users/exists', async (req: Request, res: Response) => {

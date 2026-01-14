@@ -50,7 +50,10 @@ prototypes/
 .env.production.local
 
 # Docker files (development only)
-Dockerfile
-docker-compose.yml
-docker-compose*.yml
 .dockerignore
+
+# ====== Archivos de entorno sensibles ======
+.env
+backend/.env
+docker.env
+!*.env.example

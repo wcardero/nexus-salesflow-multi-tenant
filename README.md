@@ -167,6 +167,80 @@ nexus-salesflow-multi-tenant/
 | Tailwind CSS 4.1 | bcrypt 5.0 | - |
 | jsPDF 4.0 | express-validator 7.3 | - |
 
+
+### 🔐 Flujo Seguro para Nuevos Desarrolladores
+
+#### Requisitos Previos de Seguridad
+- ✅ Cuenta con un gestor de contraseñas (1Password, Bitwarden, Vault)
+- ✅ Tiene acceso a los secretos del proyecto (solicitar al lead developer)
+- ✅ Conoce las políticas de seguridad de la organización
+
+#### Paso 1: Solicitar Accesos
+```bash
+# Contactar al lead developer para obtener:
+# 1. URL del repositorio (si es privado)
+# 2. Secretos de producción (via canal seguro)
+# 3. Acceso a la base de datos de desarrollo
+```
+
+#### Paso 2: Generar Secretos Locales
+```bash
+# Generar JWT_SECRET seguro (64 caracteres aleatorios)
+openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 64
+
+# Generar DATABASE_URL para desarrollo local
+# Formato: postgresql://usuario:password@localhost:5432/nexusdb
+```
+
+#### Paso 3: Configurar Archivos .env
+```bash
+# ✅ COPIAR archivos de ejemplo
+cp .env.example .env
+cp backend/.env.example backend/.env
+
+# ✅ EDITAR con valores reales (no compartir estos archivos)
+# ⚠️ NUNCA committiar archivos .env al repositorio
+```
+
+#### Paso 4: Verificar Configuración de Seguridad
+```bash
+# Verificar que .env está en .gitignore
+cat .gitignore | grep -E "^\.env"
+
+# Verificar que JWT_SECRET no es el valor por defecto
+grep "JWT_SECRET" backend/.env | grep -v "tu_secreto"
+```
+
+#### Paso 5: Configurar Base de Datos Local
+```bash
+# Crear usuario y base de datos PostgreSQL
+sudo -u postgres createuser -s nexus_dev
+sudo -u postgres createdb nexusdb
+sudo -u postgres psql -c "ALTER USER nexus_dev PASSWORD 'tu_password_seguro';"
+
+# Ejecutar migraciones
+cd backend && node init-db.js
+```
+
+#### ✅ Checklist de Seguridad para Pull Requests
+- [ ] No hay URLs de producción en el código
+- [ ] No hay IPs hardcodeadas
+- [ ] No hay credenciales en comentarios
+- [ ] Las variables de entorno usan `process.env.VARIABLE`
+- [ ] Los mensajes de error no revelan información sensible
+
+#### ⚠️ Reglas de Oro
+1. **NUNCA** committiar archivos `.env`
+2. **NUNCA** compartir tokens en Slack/mensajería
+3. **NUNCA** hacer push de secretos a Git
+4. **SIEMPRE** usar HTTPS en producción
+5. **SIEMPRE** rotar secretos si hay sospecha de compromiso
+
+#### 📚 Recursos de Seguridad
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
+- [PostgreSQL Security](https://www.postgresql.org/docs/current/security.html)
+
 ## 🚀 Instalación
 
 ### Prerrequisitos
@@ -670,6 +744,47 @@ docker build -t nexus-salesflow .
 # Ejecutar contenedor
 docker-compose up
 ```
+
+#### Configuración de Variables de Entorno
+
+Para ejecutar PostgreSQL con Docker, primero configura las variables de entorno:
+
+```bash
+# Copiar el archivo de ejemplo
+cp docker.env.example docker.env
+
+# Editar con tus valores de desarrollo
+# Los valores deben coincidir con los de backend/.env
+POSTGRES_USER=nexus_user
+POSTGRES_PASSWORD=nexus_secure_pass_2024  # Mismo valor que en backend/.env
+POSTGRES_DB=nexusdb
+```
+
+**Nota:** El archivo `docker.env` está en `.gitignore` y nunca debe committiarse.
+
+#### Levantar la Base de Datos
+
+```bash
+# Iniciar solo PostgreSQL
+docker-compose up -d postgres
+
+# Ver logs
+docker-compose logs -f postgres
+
+# Detener
+docker-compose down
+```
+
+#### Verificar Conexión
+
+```bash
+# Verificar que PostgreSQL está corriendo
+docker ps | grep postgres
+
+# Probar conexión (desde el contenedor)
+docker exec -it nexus-sales-db psql -U nexus_user -d nexusdb -c "\dt"
+```
+
 
 ## 📁 Estructura del Proyecto
 
