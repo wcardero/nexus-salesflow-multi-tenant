@@ -10,6 +10,7 @@ export default {
     "./views/GestorDashboard.tsx",
     "./views/Login.tsx",
     "./views/ManagerDashboard.tsx",
+    "./views/DirectorDashboard.tsx",
   ],
   theme: {
     extend: {

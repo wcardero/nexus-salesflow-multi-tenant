@@ -313,7 +313,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
 
   if (loading && !dashboardData) {
     return (
-       <div className="p-8">
+    <div className="p-4 md:p-8">
          <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Panel de Director</h1>
          <p className="text-gray-500 dark:text-gray-400">Cargando métricas...</p>
        </div>
@@ -323,7 +323,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
    const metrics = dashboardData?.metrics || { totalSales: 0, netProfit: 0, numberOfSales: 0, margin: 0, isProfitable: false };
 
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Panel de Director</h1>
           {activeStore && (
@@ -331,7 +331,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
           )}
         </div>
 
-        <div className="mb-6 flex items-center gap-4">
+        <div className="mb-4 md:mb-6 flex flex-col md:flex-row items-start md:items-center gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período:</label>
             <DateRangeSelector value={dateRange} onChange={setDateRange} />
@@ -355,39 +355,39 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
            {metrics.margin < 20 && ' - Margen bajo (< 20%)'}
          </p>
 
-         <div className="grid grid-cols-4 gap-4">
-           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-             <div className="text-sm text-gray-600 dark:text-gray-400">Ventas Totales</div>
-             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(metrics.totalSales)}</div>
-           </div>
+          <div className="grid grid-cols-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded">
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Ventas Totales</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(metrics.totalSales)}</div>
+            </div>
 
-           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-             <div className="text-sm text-gray-600 dark:text-gray-400">Ganancia</div>
-             <div className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(metrics.netProfit)}</div>
-           </div>
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded">
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Ganancia</div>
+              <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(metrics.netProfit)}</div>
+            </div>
 
-           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-             <div className="text-sm text-gray-600 dark:text-gray-400">Número de Ventas</div>
-             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{metrics.numberOfSales}</div>
-           </div>
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded">
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Número de Ventas</div>
+              <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">{metrics.numberOfSales}</div>
+            </div>
 
-           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-             <div className="text-sm text-gray-600 dark:text-gray-400">Margen</div>
-             <div className={`text-2xl font-bold ${
-               metrics.margin > 20
-                 ? 'text-green-600 dark:text-green-400'
-                 : metrics.margin >= 10
-                   ? 'text-yellow-600 dark:text-yellow-400'
-                   : 'text-red-600 dark:text-red-400'
-             }`}>
-               {metrics.margin.toFixed(1)}%
-             </div>
-           </div>
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded">
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Margen</div>
+              <div className={`text-xl sm:text-2xl font-bold ${
+                metrics.margin > 20
+                  ? 'text-green-600 dark:text-green-400'
+                  : metrics.margin >= 10
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-red-600 dark:text-red-400'
+              }`}>
+                {metrics.margin.toFixed(1)}%
+              </div>
+            </div>
          </div>
        </div>
 
-       <div className="grid grid-cols-2 gap-6 mb-6">
-         <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded shadow-lg">
            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Ventas por Día</h2>
            {dashboardData?.salesByDay && Object.keys(dashboardData.salesByDay).length > 0 ? (
              <div className="space-y-2">
@@ -403,7 +403,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
            )}
          </div>
 
-         <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded shadow-lg">
            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Ventas por Manager</h2>
            {dashboardData?.managers && dashboardData.managers.length > 0 ? (
              <div className="space-y-2">
@@ -491,8 +491,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
             </div>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
-            <table className="w-full">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-100 dark:bg-gray-600">
                 <tr>
                   <th className="px-4 py-3 text-left text-gray-900 dark:text-white">Nombre</th>
