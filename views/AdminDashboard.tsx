@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import DateRangeSelector from '../components/DateRangeSelector';
+import ExportButton from '../components/ExportButton';
+import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
+import { formatDate } from '../dateUtils';
 import { MockDB, Role, User } from '../types';
 
 interface AdminDashboardProps {
@@ -44,6 +48,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   const [newManagerName, setNewManagerName] = useState('');
   const [newDirectorName, setNewDirectorName] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)),
+    end: new Date()
+  });
+
+  const getPeriodLabel = () => {
+    return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
+  };
   
   const handleCreateStore = async () => {
     if (!newStoreName.trim()) {
@@ -198,6 +210,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
     }
   };
 
+  // Export handlers
+  const handleExportCSV = () => {
+    const data = [
+      { Metrica: 'Tiendas Totales', Valor: totalStores },
+      { Metrica: 'Directores Activos', Valor: totalDirectors },
+      { Metrica: 'Managers Activos', Valor: totalManagers },
+      ...db.stores.map(store => ({
+        Tienda: store.name,
+        Director: db.users.find(u => u.id === store.directorId)?.name || 'N/A',
+        Managers: store.managerIds?.length || 0
+      }))
+    ];
+    exportToCSV(data, `admin-reports-${getPeriodLabel()}`);
+  };
+
+  const handleExportPDF = () => {
+    const data = [
+      { Metrica: 'Tiendas Totales', Valor: totalStores },
+      { Metrica: 'Directores Activos', Valor: totalDirectors },
+      { Metrica: 'Managers Activos', Valor: totalManagers },
+      ...db.stores.map(store => ({
+        Tienda: store.name,
+        Director: db.users.find(u => u.id === store.directorId)?.name || 'N/A',
+        Managers: store.managerIds?.length || 0
+      }))
+    ];
+    exportToPDF(data, `Reporte Admin - ${getPeriodLabel()}`, `admin-reports-${getPeriodLabel()}`);
+  };
+
+  const handleExportExcel = () => {
+    const data = [
+      { Metrica: 'Tiendas Totales', Valor: totalStores },
+      { Metrica: 'Directores Activos', Valor: totalDirectors },
+      { Metrica: 'Managers Activos', Valor: totalManagers },
+      ...db.stores.map(store => ({
+        Tienda: store.name,
+        Director: db.users.find(u => u.id === store.directorId)?.name || 'N/A',
+        Managers: store.managerIds?.length || 0
+      }))
+    ];
+    exportToExcel(data, 'Resumen Admin', `admin-reports-${getPeriodLabel()}`);
+  };
+
 
   const totalStores = db.stores.length;
   const totalManagers = db.users.filter(u => u.role === Role.MANAGER).length;
@@ -215,15 +270,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
             Bienvenido de nuevo. Aquí están las métricas de rendimiento de su sistema.
           </p>
         </div>
-        <div className="flex gap-2 md:gap-3 flex-wrap">
-          <button className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md transition-all">
-            <span className="material-symbols-outlined text-[18px] md:text-[20px]">calendar_today</span>
-            <span className="hidden sm:inline">Este Mes</span>
-          </button>
-          <button className="flex items-center gap-2 bg-primary-600 text-white rounded-lg px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-bold shadow-md hover:bg-primary-700 transition-all hover:shadow-xl">
-            <span className="material-symbols-outlined text-[18px] md:text-[20px]">download</span>
-            <span className="hidden sm:inline">Exportar Reporte</span>
-          </button>
+        <div className="flex gap-2 md:gap-3 flex-wrap items-center">
+          <DateRangeSelector value={dateRange} onChange={setDateRange} />
+          <ExportButton
+            onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+            onExportExcel={handleExportExcel}
+            filename={`admin-reports-${getPeriodLabel()}`}
+          />
         </div>
       </div>
 
