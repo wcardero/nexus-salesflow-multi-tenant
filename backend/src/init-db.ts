@@ -7,28 +7,35 @@ const pool = new Pool({
 
 const dbSchema = `-- SQL for Nexus SalesFlow Database
 
--- Drop tables if they exist to ensure a clean slate
-DROP TABLE IF EXISTS "Closing", "Sale", "InventoryItem", "Product", "ExchangeRate", "User", "Store", "_ClosingToSale", "_StoreToUser", "ProductStock", "AssignedInventory", "AuditLog" CASCADE;
+-- 1. Limpieza agresiva de TODO el esquema público
+DO $$ DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END $$;
 
--- ENUMS would be custom types in PostgreSQL
-DROP TYPE IF EXISTS "Role";
+DO $$ DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public' AND t.typtype = 'e') LOOP
+        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+    END LOOP;
+END $$;
+
+-- 2. ENUMS
 CREATE TYPE "Role" AS ENUM ('Admin', 'Director', 'Manager', 'Gestor');
-
-DROP TYPE IF EXISTS "InventoryStatus";
 CREATE TYPE "InventoryStatus" AS ENUM ('Available', 'Sold');
-
-DROP TYPE IF EXISTS "ClosingStatus";
 CREATE TYPE "ClosingStatus" AS ENUM ('PENDING', 'COMPLETED');
-
-DROP TYPE IF EXISTS "SalePaymentStatus";
 CREATE TYPE "SalePaymentStatus" AS ENUM ('PAID', 'PENDING');
 
-
--- Create Tables
+-- 3. Tablas Base
 CREATE TABLE "Store" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
-    "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10
+    "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
+    "directorId" TEXT
 );
 
 CREATE TABLE "User" (
@@ -37,8 +44,12 @@ CREATE TABLE "User" (
     "password" TEXT NOT NULL,
     "role" "Role" NOT NULL,
     "storeId" TEXT,
-    CONSTRAINT "User_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
+    "createdBy" TEXT,
+    CONSTRAINT "User_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "User_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
+ALTER TABLE "Store" ADD CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE TABLE "ExchangeRate" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -52,10 +63,17 @@ CREATE TABLE "ExchangeRate" (
 CREATE TABLE "Product" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "costUSD" DOUBLE PRECISION NOT NULL,
-    "margin" DOUBLE PRECISION NOT NULL,
+    "costUSD" DOUBLE PRECISION,
+    "costMN" DOUBLE PRECISION,
+    "currency" TEXT DEFAULT 'USD',
+    "margin" DOUBLE PRECISION,
+    "priceMN" DOUBLE PRECISION,
+    "gestorCommissionMN" DOUBLE PRECISION,
+    "commissionRate" DOUBLE PRECISION,
     "storeId" TEXT NOT NULL,
-    CONSTRAINT "Product_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "createdBy" TEXT,
+    CONSTRAINT "Product_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Product_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE "InventoryItem" (
@@ -83,6 +101,10 @@ CREATE TABLE "AssignedInventory" (
     "gestorId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 0,
     "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "priceMN" DOUBLE PRECISION,
+    "status" TEXT NOT NULL DEFAULT 'Pending',
+    "confirmedAt" TIMESTAMP(3),
+    "rejectionReason" TEXT,
     CONSTRAINT "AssignedInventory_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "AssignedInventory_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -106,16 +128,19 @@ CREATE TABLE "Sale" (
     "soldAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "exchangeRateUsed" DOUBLE PRECISION NOT NULL,
     "costUSD" DOUBLE PRECISION NOT NULL,
+    "costMN" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "margin" DOUBLE PRECISION NOT NULL,
     "saleUSD" DOUBLE PRECISION NOT NULL,
     "baseMN" DOUBLE PRECISION NOT NULL,
     "commission" DOUBLE PRECISION NOT NULL,
     "finalMN" DOUBLE PRECISION NOT NULL,
+    "productId" TEXT,
     "inventoryItemId" TEXT NOT NULL UNIQUE,
     "gestorId" TEXT NOT NULL,
     "paymentStatus" "SalePaymentStatus" NOT NULL DEFAULT 'PAID',
     "customerName" TEXT,
-    CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Sale_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "AssignedInventory"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -145,9 +170,23 @@ CREATE TABLE "_StoreToUser" (
     CONSTRAINT "_StoreToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE "InventoryConflict" (
+  "id" TEXT PRIMARY KEY,
+  "assignedInventoryId" TEXT NOT NULL,
+  "gestorId" TEXT NOT NULL,
+  "managerId" TEXT NOT NULL,
+  "reason" TEXT NOT NULL,
+  "status" TEXT DEFAULT 'Pending',
+  "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "resolvedAt" TIMESTAMP,
+  CONSTRAINT "fk_assigned_inventory" FOREIGN KEY ("assignedInventoryId") REFERENCES "AssignedInventory"("id"),
+  CONSTRAINT "fk_conflict_gestor" FOREIGN KEY ("gestorId") REFERENCES "User"("id"),
+  CONSTRAINT "fk_conflict_manager" FOREIGN KEY ("managerId") REFERENCES "User"("id")
+);
+
+-- 4. Índices
 CREATE UNIQUE INDEX "_ClosingToSale_AB_unique" ON "_ClosingToSale"("A", "B");
 CREATE INDEX "_ClosingToSale_B_index" ON "_ClosingToSale"("B");
-
 CREATE UNIQUE INDEX "_StoreToUser_AB_unique" ON "_StoreToUser"("A", "B");
 CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
 `;

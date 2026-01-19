@@ -9,7 +9,7 @@ ADD COLUMN "rejectionReason" TEXT;
 
 -- 2. Migrar inventarios existentes a estado 'Confirmed'
 UPDATE "AssignedInventory"
-SET "confirmedAt" = assignedAt,
+SET "confirmedAt" = "assignedAt",
     status = 'Confirmed'
 WHERE status = 'Pending';
 

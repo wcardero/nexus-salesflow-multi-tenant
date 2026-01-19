@@ -12,6 +12,8 @@ import inventoryRoutes from './routes/inventory.routes';
 import salesRoutes from './routes/sales.routes';
 import closingsRoutes from './routes/closings.routes';
 import directorRoutes from './routes/director.routes';
+import productsRoutes from './routes/products.routes';
+import auditRoutes from './routes/audit.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -34,6 +36,8 @@ app.use('/api', inventoryRoutes);
 app.use('/api', salesRoutes);
 app.use('/api', closingsRoutes);
 app.use('/api', directorRoutes);
+app.use('/api', productsRoutes);
+app.use('/api', auditRoutes);
 
 app.use((err: Error, req: Request, res: Response, next: any) => {
   console.error(err.stack);

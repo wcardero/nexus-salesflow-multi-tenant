@@ -36,9 +36,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       try {
         const response = await fetch('http://localhost:3001/api/stores/public');
         const data = await response.json();
-        setStores(data);
+        // Ensure data is an array before setting state
+        if (Array.isArray(data)) {
+          setStores(data);
+        } else {
+          console.error('Fetch stores error: Expected array, received:', data);
+          setStores([]);
+        }
       } catch (error) {
         console.error('Error fetching stores:', error);
+        setStores([]);
       }
     };
     fetchStores();

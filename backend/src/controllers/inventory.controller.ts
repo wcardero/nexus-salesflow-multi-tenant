@@ -1,10 +1,43 @@
 import { Request, Response } from 'express';
 import db from '../db';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { AuthenticatedRequest, isAdmin, isGestor } from '../middleware/auth.middleware';
 import { validateProductStock, validateInventoryAssignment } from '../validators/stores.validator';
 import { validationResult, ValidationChain } from 'express-validator';
 import { createAuditLog } from '../utils/audit.utils';
 import { updateInventoryAfterSale } from '../inventory';
+
+export const getInventory = async (req: Request, res: Response) => {
+  const requestingUser = (req as AuthenticatedRequest).user;
+  const storeId = requestingUser?.storeId;
+
+  let query = 'SELECT * FROM "InventoryItem"';
+  const params: any[] = [];
+
+  if (isAdmin(requestingUser?.role)) {
+    // Admin sees all
+  } else if (isGestor(requestingUser?.role)) {
+    query += ' WHERE "gestorId" = $1';
+    params.push(requestingUser?.id);
+  } else {
+    // Manager/Director see by store
+    if (storeId) {
+        query = `
+            SELECT ii.* FROM "InventoryItem" ii
+            JOIN "Product" p ON ii."productId" = p.id
+            WHERE p."storeId" = $1
+        `;
+        params.push(storeId);
+    }
+  }
+
+  try {
+    const { rows } = await db.query(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get inventory error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 // ============================================================================
 // Product Stock Controllers

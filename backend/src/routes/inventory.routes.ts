@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getInventory,
   getProductStock,
   createOrUpdateProductStock,
   deleteProductStock,
@@ -22,6 +23,7 @@ const router = Router();
 
 router.use(authenticateToken);
 
+router.get('/inventory', getInventory);
 router.get('/product-stock', getProductStock);
 router.post('/product-stock', ...withValidation(validateProductStock, createOrUpdateProductStock));
 router.delete('/product-stock/:stockId', deleteProductStock);

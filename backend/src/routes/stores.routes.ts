@@ -19,8 +19,9 @@ const withValidation = (validations: ValidationChain[], handler: any) => {
 
 const router = Router();
 
-// Public route (no auth)
-router.get('/public', getPublicStores);
+// Public routes (no auth)
+router.get('/stores/public', getPublicStores);
+router.get('/public', getPublicStores); // Deprecated, but keeping for compatibility if needed
 
 // Protected routes (require auth)
 router.use(authenticateToken);

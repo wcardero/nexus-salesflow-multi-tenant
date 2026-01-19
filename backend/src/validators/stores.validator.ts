@@ -1,4 +1,4 @@
-import { body, param, ValidationChain } from 'express-validator';
+import { body, param, query, ValidationChain } from 'express-validator';
 
 // ============================================================================
 // Store Creation Validation
@@ -171,5 +171,4 @@ export const validatePagination: ValidationChain[] = [
     .withMessage('Limit must be between 1 and 100'),
 ];
 
-// Import query for pagination validation
-import { query } from 'express-validator';
+
