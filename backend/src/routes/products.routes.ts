@@ -10,11 +10,9 @@ import { validateProduct } from '../validators/stores.validator';
 
 const router = Router();
 
-router.use(authenticateToken);
-
-router.get('/products', getProducts);
-router.post('/products', validateProduct, createProduct);
-router.put('/products/:id', validateProduct, updateProduct);
-router.delete('/products/:id', deleteProduct);
+router.get('/products', authenticateToken, getProducts);
+router.post('/products', authenticateToken, validateProduct, createProduct);
+router.put('/products/:id', authenticateToken, validateProduct, updateProduct);
+router.delete('/products/:id', authenticateToken, deleteProduct);
 
 export default router;

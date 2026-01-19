@@ -25,11 +25,17 @@ export const validateStoreCreation: ValidationChain[] = [
  */
 export const validateStoreUpdate: ValidationChain[] = [
   body('name')
+    .optional()
     .trim()
     .isLength({ min: 1, max: 100 })
     .withMessage('Store name must be between 1 and 100 characters')
     .matches(/^[a-zA-Z0-9\s\-_]+$/)
     .withMessage('Store name can only contain letters, numbers, spaces, hyphens, and underscores'),
+  body('directorId')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Director ID must be between 1 and 100 characters'),
 ];
 
 // ============================================================================

@@ -4,8 +4,6 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.use(authenticateToken);
-
-router.get('/director/metrics', getDirectorMetrics);
+router.get('/director/metrics', authenticateToken, getDirectorMetrics);
 
 export default router;

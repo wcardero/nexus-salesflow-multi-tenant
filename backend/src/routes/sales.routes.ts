@@ -4,11 +4,9 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.use(authenticateToken);
-
-router.get('/sales', getSales);
-router.post('/sales', createSale);
-router.patch('/sales/:saleId/mark-as-paid', markSaleAsPaid);
-router.delete('/sales/:id', deleteSale);
+router.get('/sales', authenticateToken, getSales);
+router.post('/sales', authenticateToken, createSale);
+router.patch('/sales/:saleId/mark-as-paid', authenticateToken, markSaleAsPaid);
+router.delete('/sales/:id', authenticateToken, deleteSale);
 
 export default router;

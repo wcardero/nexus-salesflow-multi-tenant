@@ -16,22 +16,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
 
   useEffect(() => {
-    const checkUsersExist = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/users/exists');
-        const data = await response.json();
-        setShowCreateAdmin(!data.exists);
-      } catch (error) {
-        console.error('Error checking if users exist:', error);
-        setShowCreateAdmin(false);
-      } finally {
-        setCheckingUsers(false);
-      }
-    };
-    checkUsersExist();
-  }, []);
-
-  useEffect(() => {
     const fetchStores = async () => {
       try {
         const response = await fetch('http://localhost:3001/api/stores/public');
@@ -49,6 +33,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     };
     fetchStores();
+    
+    // Also re-check if users exist when component mounts/remounts (logout)
+    const checkUsersExist = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/users/exists');
+        const data = await response.json();
+        setShowCreateAdmin(!data.exists);
+      } catch (error) {
+        console.error('Error checking if users exist:', error);
+        setShowCreateAdmin(false);
+      } finally {
+        setCheckingUsers(false);
+      }
+    };
+    checkUsersExist();
   }, []);
 
   const handleCreateAdmin = async (e: React.FormEvent) => {

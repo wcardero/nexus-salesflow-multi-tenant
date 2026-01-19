@@ -21,19 +21,17 @@ const withValidation = (validations: ValidationChain[], handler: any) => {
 
 const router = Router();
 
-router.use(authenticateToken);
+router.get('/inventory', authenticateToken, getInventory);
+router.get('/product-stock', authenticateToken, getProductStock);
+router.post('/product-stock', authenticateToken, ...withValidation(validateProductStock, createOrUpdateProductStock));
+router.delete('/product-stock/:stockId', authenticateToken, deleteProductStock);
 
-router.get('/inventory', getInventory);
-router.get('/product-stock', getProductStock);
-router.post('/product-stock', ...withValidation(validateProductStock, createOrUpdateProductStock));
-router.delete('/product-stock/:stockId', deleteProductStock);
+router.get('/assigned-inventory', authenticateToken, getAssignedInventory);
+router.post('/assigned-inventory', authenticateToken, ...withValidation(validateInventoryAssignment, assignInventory));
+router.post('/assigned-inventory/:id/confirm', authenticateToken, confirmInventory);
+router.post('/assigned-inventory/:id/reject', authenticateToken, rejectInventory);
 
-router.get('/assigned-inventory', getAssignedInventory);
-router.post('/assigned-inventory', ...withValidation(validateInventoryAssignment, assignInventory));
-router.post('/assigned-inventory/:id/confirm', confirmInventory);
-router.post('/assigned-inventory/:id/reject', rejectInventory);
-
-router.get('/inventory-conflicts', getInventoryConflicts);
-router.post('/inventory-conflicts/:id/resolve', resolveInventoryConflict);
+router.get('/inventory-conflicts', authenticateToken, getInventoryConflicts);
+router.post('/inventory-conflicts/:id/resolve', authenticateToken, resolveInventoryConflict);
 
 export default router;

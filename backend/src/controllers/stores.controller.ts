@@ -123,15 +123,11 @@ export const updateStore = [
     }
 
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, directorId } = req.body;
     const requestingUser = (req as AuthenticatedRequest).user;
 
     if (!isAdmin(requestingUser?.role)) {
       return res.status(403).json({ message: 'Access denied. Only admins can update stores.' });
-    }
-
-    if (!name) {
-      return res.status(400).json({ message: 'Store name is required.' });
     }
 
     try {
@@ -140,7 +136,15 @@ export const updateStore = [
         return res.status(404).json({ message: 'Store not found.' });
       }
 
-      const result = await db.query('UPDATE "Store" SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+      const query = `
+        UPDATE "Store"
+        SET name = COALESCE($1, name),
+            "directorId" = COALESCE($2, "directorId")
+        WHERE id = $3
+        RETURNING *
+      `;
+      const result = await db.query(query, [name || null, directorId || null, id]);
+      
       if (result.rows.length === 0) {
         return res.status(404).json({ message: 'Store not found.' });
       }

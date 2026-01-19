@@ -11,13 +11,10 @@ const withValidation = (validations: ValidationChain[], handler: any) => {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateToken);
-
 // User management routes
-router.get('/users', getUsers);
-router.put('/users/:id', ...withValidation(validateUserUpdate, updateUser));
-router.put('/users/:id/password', ...withValidation(validatePasswordChange, changePassword));
-router.delete('/users/:id', deleteUser);
+router.get('/users', authenticateToken, getUsers);
+router.put('/users/:id', authenticateToken, ...withValidation(validateUserUpdate, updateUser));
+router.put('/users/:id/password', authenticateToken, ...withValidation(validatePasswordChange, changePassword));
+router.delete('/users/:id', authenticateToken, deleteUser);
 
 export default router;

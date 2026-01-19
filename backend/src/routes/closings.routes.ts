@@ -4,10 +4,8 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.use(authenticateToken);
-
-router.get('/closings', getClosings);
-router.post('/closings', createClosing);
-router.patch('/closings/:id/complete', completeClosing);
+router.get('/closings', authenticateToken, getClosings);
+router.post('/closings', authenticateToken, createClosing);
+router.patch('/closings/:id/complete', authenticateToken, completeClosing);
 
 export default router;

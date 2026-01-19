@@ -20,17 +20,15 @@ const withValidation = (validations: ValidationChain[], handler: any) => {
 const router = Router();
 
 // Public routes (no auth)
+router.get('/public', getPublicStores);
 router.get('/stores/public', getPublicStores);
-router.get('/public', getPublicStores); // Deprecated, but keeping for compatibility if needed
 
 // Protected routes (require auth)
-router.use(authenticateToken);
-
-router.get('/stores', getStores);
-router.post('/stores', ...withValidation(validateStoreCreation, createStore));
-router.put('/stores/:id', ...withValidation(validateStoreUpdate, updateStore));
-router.delete('/stores/:id', deleteStore);
-router.post('/stores/:storeId/assign-manager', ...withValidation(validateAssignManager, assignManagerToStore));
-router.delete('/stores/:storeId/remove-manager/:userId', removeManagerFromStore);
+router.get('/stores', authenticateToken, getStores);
+router.post('/stores', authenticateToken, ...withValidation(validateStoreCreation, createStore));
+router.put('/stores/:id', authenticateToken, ...withValidation(validateStoreUpdate, updateStore));
+router.delete('/stores/:id', authenticateToken, deleteStore);
+router.post('/stores/:storeId/assign-manager', authenticateToken, ...withValidation(validateAssignManager, assignManagerToStore));
+router.delete('/stores/:storeId/remove-manager/:userId', authenticateToken, removeManagerFromStore);
 
 export default router;

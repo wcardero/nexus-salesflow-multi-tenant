@@ -131,8 +131,15 @@ export const createUser = [
         }
 
         // Directors must be assigned to a store
-        if (role === 'Director' && !storeId) {
-          return res.status(400).json({ message: 'No puedes agregar un director sin antes asociarle una tienda.' });
+        if (role === 'Director') {
+          if (!storeId) {
+            return res.status(400).json({ message: 'No puedes agregar un director sin antes asociarle una tienda.' });
+          }
+          // Check if store already has a director
+          const storeCheck = await db.query('SELECT "directorId" FROM "Store" WHERE id = $1', [storeId]);
+          if (storeCheck.rows.length > 0 && storeCheck.rows[0].directorId) {
+            return res.status(400).json({ message: 'Esta tienda ya tiene un director asignado. Elimine al actual o cámbielo desde la gestión de tiendas.' });
+          }
         }
       }
       // Directors can create Managers for their own store

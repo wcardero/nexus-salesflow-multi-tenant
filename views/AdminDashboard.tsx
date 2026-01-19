@@ -46,7 +46,9 @@ const StatCard: React.FC<{
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   const [newStoreName, setNewStoreName] = useState('');
   const [newManagerName, setNewManagerName] = useState('');
+  const [newManagerPassword, setNewManagerPassword] = useState('');
   const [newDirectorName, setNewDirectorName] = useState('');
+  const [newDirectorPassword, setNewDirectorPassword] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setDate(1)),
@@ -91,8 +93,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   };
 
   const handleCreateManager = async () => {
-    if (!newManagerName.trim()) {
-      alert('Por favor, ingrese un nombre para el manager.');
+    if (!newManagerName.trim() || !newManagerPassword.trim()) {
+      alert('Por favor, ingrese un nombre y contraseña para el manager.');
       return;
     }
 
@@ -106,6 +108,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
         },
         body: JSON.stringify({
           name: newManagerName.trim(),
+          password: newManagerPassword.trim(),
           role: Role.MANAGER,
           storeId: selectedStoreId
         })
@@ -143,6 +146,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       }
 
       setNewManagerName('');
+      setNewManagerPassword('');
       await refreshDb();
       alert(`Manager "${newUser.name}" creado exitosamente.`);
     } catch (error: any) {
@@ -152,9 +156,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   };
 
   const handleCreateDirector = async () => {
-    if (!newDirectorName.trim()) {
-      alert('Por favor, ingrese un nombre para el director.');
+    if (!newDirectorName.trim() || !newDirectorPassword.trim()) {
+      alert('Por favor, ingrese un nombre y contraseña para el director.');
       return;
+    }
+
+    const targetStore = db.stores.find(s => s.id === selectedStoreId);
+    if (targetStore?.directorId) {
+        alert('Esta tienda ya tiene un director asignado. Para cambiarlo, primero debe remover al actual.');
+        return;
     }
 
     try {
@@ -167,6 +177,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
         },
         body: JSON.stringify({
           name: newDirectorName.trim(),
+          password: newDirectorPassword.trim(),
           role: Role.DIRECTOR,
           storeId: selectedStoreId
         })
@@ -202,6 +213,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       }
 
       setNewDirectorName('');
+      setNewDirectorPassword('');
       await refreshDb();
       alert(`Director "${newUser.name}" creado exitosamente.`);
     } catch (error: any) {
@@ -305,22 +317,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
              </div>
               {/* Create Director */}
               <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
-                 <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Director</h4>
+                  <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Director</h4>
                 <input type="text" placeholder="Nombre del Director" value={newDirectorName} onChange={e => setNewDirectorName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <input type="password" placeholder="Contraseña" value={newDirectorPassword} onChange={e => setNewDirectorPassword(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
                 <button onClick={handleCreateDirector} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Crear Director</button>
-             </div>
-              {/* Create Manager */}
-              <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
-                 <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Manager</h4>
+              </div>
+               {/* Create Manager */}
+               <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
+                  <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Manager</h4>
                 <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <input type="password" placeholder="Contraseña" value={newManagerPassword} onChange={e => setNewManagerPassword(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
                 <button onClick={handleCreateManager} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Crear Manager</button>
-             </div>
+              </div>
           </div>
         </div>
 
