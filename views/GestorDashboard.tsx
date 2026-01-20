@@ -1,8 +1,9 @@
 // views/GestorDashboard.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate, SalePaymentStatus } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
 import SellModal from '../components/SellModal';
+import Button from '../components/Button';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
@@ -18,205 +19,6 @@ interface GestorDashboardProps {
 }
 
 type Tabs = 'inventory' | 'sales' | 'debts' | 'pending-closings' | 'reports';
-
-const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
-
-  const [activeTab, setActiveTab] = useState<Tabs>('inventory');
-  const [rejecting, setRejecting] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-
-  const storeProducts = db.products.filter(p => p.storeId === store.id);
-  const productsById = useMemo(() => Object.fromEntries(db.products.map(p => [p.id, p])), [db.products]);
-  const currentRate = getCurrentExchangeRate(store);
-
-  const pendingInventory = useMemo(() => {
-    const pending = db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Pending');
-    return pending;
-  }, [db.assignedInventory, user.id]);
-
-  const handleConfirmInventory = async (assignedId: string) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/assigned-inventory/${assignedId}/confirm`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        await refreshDb();
-        alert('Inventario confirmado exitosamente.');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message}`);
-      }
-    } catch (error: any) {
-      console.error('Error confirming inventory:', error);
-      alert('Error al confirmar el inventario.');
-    }
-  };
-
-  const handleRejectInventory = async (assignedId: string, reason: string) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/assigned-inventory/${assignedId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ reason })
-      });
-
-      if (response.ok) {
-        await refreshDb();
-        alert('Inventario rechazado. El manager será notificado.');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message}`);
-      }
-    } catch (error: any) {
-      console.error('Error rejecting inventory:', error);
-      alert('Error al rechazar el inventario.');
-    }
-  };
-
-  // Data filtered for the current gestor from assigned inventory (Confirmed status only)
-  const gestorInventory = useMemo(() => {
-    const assigned = db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed');
-    const items: InventoryItem[] = [];
-
-    assigned.forEach(ai => {
-      for (let i = 0; i < ai.quantity; i++) {
-        items.push({
-          id: `${ai.id}-${i}`,
-          productId: ai.productId,
-          gestorId: ai.gestorId,
-          assignedAt: ai.assignedAt,
-          status: 'Available'
-        });
-      }
-    });
-
-    return items;
-  }, [db.assignedInventory, user.id]);
-
-
-
-  const groupedInventory = useMemo(() => {
-    const groups: { [key: string]: InventoryGroup } = {};
-
-    // PRIMERO filtrar por gestorId para que cada gestor solo vea sus asignaciones
-    db.assignedInventory
-      .filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed')
-      .forEach(ai => {
-        // Key includes both productId and gestorId to separate assignments by gestor
-        const key = `${ai.productId}-${ai.gestorId}`;
-        if (!groups[key]) {
-          groups[key] = { productId: ai.productId, quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, assignedInventoryId: ai.id, items: [] };
-        }
-        groups[key].quantity += ai.quantity;
-
-        for (let i = 0; i < ai.quantity; i++) {
-          groups[key].items.push({
-            id: `${ai.id}-${i}`,
-            productId: ai.productId,
-            gestorId: ai.gestorId,
-            assignedAt: ai.assignedAt,
-            status: 'Available'
-          });
-        }
-      });
-
-    return groups;
-  }, [db.assignedInventory, user.id]);
-
-  const gestorSales = useMemo(() => db.sales.filter(sale => sale.gestorId === user.id), [db.sales, user.id]);
-  const gestorClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id), [db.closings, user.id]);
-  const pendingClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id && c.status === ClosingStatus.PENDING), [db.closings, user.id]);
-
-  const renderContent = () => {
-    
-    // Si products no está cargado, mostrar estado de carga
-    if (!db.products || db.products.length === 0) {
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-slate-200">
-          <p>Cargando inventario...</p>
-        </div>
-      );
-    }
-    
-    switch (activeTab) {
-      case 'inventory':
-        return (
-          <PendingInventoryView
-            pendingInventory={pendingInventory}
-            productsById={productsById}
-            onConfirm={handleConfirmInventory}
-            onReject={handleRejectInventory}
-          />
-        );
-       case 'sales':
-        return (
-          <SalesView
-            user={user}
-            store={store}
-            db={db}
-            setDb={setDb}
-            gestorInventory={gestorInventory.filter(item => item.status === 'Available')}
-            gestorSalesSinceLastClosing={gestorSales.filter(sale => !gestorClosings.some(c => c.sales && c.sales.some(s => s.id === sale.id)))}
-            productsById={productsById}
-            currentRate={currentRate}
-            groupedInventory={groupedInventory}
-            refreshDb={refreshDb}
-          />
-        );
-      case 'debts':
-        return (
-          <DebtsView
-            gestorSales={gestorSales}
-            gestorClosings={gestorClosings}
-            db={db}
-            productsById={productsById}
-            refreshDb={refreshDb}
-            user={user}
-          />
-        );
-      case 'pending-closings':
-        return (
-          <PendingClosingsView
-            pendingClosings={pendingClosings}
-          />
-        );
-      case 'reports':
-        return (
-          <GestorReportsView
-            gestorSales={gestorSales}
-            gestorClosings={gestorClosings}
-            products={storeProducts}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm w-full">
-       <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
-        <nav className="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
-          <TabButton name="Inventario Pendiente" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Inventario y Ventas" tab="sales" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Deudas Pendientes" tab="debts" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Cierres Pendientes" tab="pending-closings" activeTab={activeTab} onClick={setActiveTab} />
-          <TabButton name="Mis Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
-        </nav>
-      </div>
-      <div className="py-4 md:py-6">
-        {renderContent()}
-      </div>
-    </div>
-  );
-};
 
 // =======================================================================
 // Sub-components for each tab
@@ -235,557 +37,7 @@ const TabButton: React.FC<{name: string, tab: Tabs, activeTab: Tabs, onClick: (t
   </button>
 );
 
-// --- SALES VIEW (Existing functionality) ---
-interface SalesViewProps extends GestorDashboardProps {
-  gestorInventory: InventoryItem[];
-  gestorSalesSinceLastClosing: Sale[];
-  productsById: { [key: string]: Product };
-  currentRate: ReturnType<typeof getCurrentExchangeRate>;
-  groupedInventory: { [key: string]: InventoryGroup };
-  refreshDb: () => Promise<void>;
-}
-
-const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory, refreshDb }) => {
-  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
-
-  const handleOpenSellModal = (group: InventoryGroup) => {
-    setSelectedGroup(group);
-    setIsSellModalOpen(true);
-  };
-
-  const handleCloseSellModal = () => {
-    setSelectedGroup(null);
-    setIsSellModalOpen(false);
-  };
-
-  const handleMarkAsPaid = async (saleId: string) => {
-    if (!window.confirm('¿Confirmas que esta venta ha sido pagada? Ahora podrá incluirse en un cierre.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        await refreshDb();
-        alert('Venta marcada como pagada exitosamente.');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message}`);
-      }
-    } catch (error: any) {
-      console.error('Error marking sale as paid:', error);
-      alert('Error al marcar la venta como pagada.');
-    }
-  };
-
-  const performSale = (quantity: number, group: InventoryGroup, product: Product, exchangeRate: ExchangeRate | undefined, paymentStatus: SalePaymentStatus, customerName?: string) => {
-    const prices = calculateProductPrices(product, exchangeRate);
-
-    const newSales: Sale[] = [];
-    let updatedInventoryItems: InventoryItem[] = [];
-
-    // Assuming a simple scenario where we sell from the beginning of the items array
-    // In a real app, you might have a more complex inventory management (e.g., specific item IDs)
-    for (let i = 0; i < quantity; i++) {
-      const soldItem = group.items[i]; // Get the specific item to mark as sold
-
-      const newSale: Sale = {
-        id: `sale-${Date.now()}-${soldItem.id}`,
-        inventoryItemId: soldItem.id,
-        gestorId: user.id,
-        soldAt: new Date(),
-        exchangeRateUsed: exchangeRate?.rate || 0,
-        costUSD: product.costUSD,
-        costMN: exchangeRate ? (product.costUSD || 0) * exchangeRate.rate : (product.costMN || 0),
-        margin: product.margin,
-        ...prices,
-        paymentStatus,
-        customerName: paymentStatus === SalePaymentStatus.PENDING ? customerName : undefined
-      };
-      newSales.push(newSale);
-
-      // Mark the specific inventory item as sold
-      updatedInventoryItems.push({
-        ...soldItem,
-        status: 'Sold',
-        saleId: newSale.id
-      });
-    }
-
-    setDb(prevDb => {
-      if (!prevDb) return prevDb;
-
-      // Update the main inventory list
-      const updatedGlobalInventory = prevDb.inventory.map(item => {
-        const soldMatch = updatedInventoryItems.find(sold => sold.id === item.id);
-        return soldMatch ? soldMatch : item;
-      });
-
-      return {
-        ...prevDb,
-        inventory: updatedGlobalInventory,
-        sales: [...prevDb.sales, ...newSales]
-      };
-    });
-  };
-
-  const handleSell = async (quantity: number, paymentStatus: SalePaymentStatus, customerName?: string) => {
-    if (!selectedGroup) {
-      alert('Error: No se pudo completar la venta. Faltan datos.');
-      return;
-    }
-
-    if (quantity > selectedGroup.quantity) {
-      alert(`Solo tienes ${selectedGroup.quantity} unidades disponibles.`);
-      return;
-    }
-
-    if (!window.confirm(`¿Vender ${quantity} unidad(es) de ${productsById[selectedGroup.productId]?.name} por ${formatCurrency(selectedGroup.priceMN * quantity)}?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:3001/api/sales', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          assignedInventoryId: selectedGroup.assignedInventoryId,
-          quantity,
-          paymentStatus,
-          customerName: paymentStatus === SalePaymentStatus.PENDING ? customerName : undefined
-        })
-      });
-
-      if (response.ok) {
-        await refreshDb();
-        handleCloseSellModal();
-        alert(`Venta exitosa: ${quantity} unidad(es) por ${formatCurrency(selectedGroup.priceMN * quantity)}`);
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message}`);
-      }
-    } catch (error: any) {
-      console.error('Error creating sale:', error);
-      alert('Error al crear la venta.');
-    }
-  };
-  
-  const handleExecuteClosing = async () => {
-    const paidSales = gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID);
-
-    if (paidSales.length === 0) {
-      alert('No hay ventas pagadas para cerrar. Solo las ventas con "Pago al contado" pueden incluirse en el cierre.');
-      return;
-    }
-
-    const totalBaseMN = paidSales.reduce((sum, sale) => sum + sale.baseMN, 0);
-    const totalCommission = paidSales.reduce((sum, sale) => sum + sale.commission, 0);
-    const totalFinalMN = paidSales.reduce((sum, sale) => sum + sale.finalMN, 0);
-
-    const summary = `
-      Resumen del Cierre:
-      - Artículos Vendidos: ${paidSales.length}
-      - Total Recaudado: ${formatCurrency(totalFinalMN)}
-      - Tu Comisión: ${formatCurrency(totalCommission)}
-      - Monto a Entregar: ${formatCurrency(totalBaseMN)}
-
-      ¿Confirmas la ejecución del cierre?
-    `;
-
-    if (!window.confirm(summary)) {
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:3001/api/closings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          saleIds: paidSales.map(s => s.id)
-        })
-      });
-
-      if (response.ok) {
-        await refreshDb();
-        alert('Cierre ejecutado. El manager ha sido notificado.');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message}`);
-      }
-    } catch (error: any) {
-      console.error('Error creating closing:', error);
-      alert('Error al crear el cierre.');
-    }
-  };
-
-  const salesByProduct = useMemo(() => {
-    const groups: { [key: string]: { quantity: number; total: number; gestorGain: number; storeGain: number } } = {};
- 
-    gestorSalesSinceLastClosing.forEach(sale => {
-      if (sale.paymentStatus !== SalePaymentStatus.PAID) return;
-
-      if (sale.productId) {
-        const key = sale.productId;
-        if (!groups[key]) {
-          groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0 };
-        }
-        groups[key].quantity += 1;
-        groups[key].total += sale.finalMN;
-        groups[key].gestorGain += sale.commission;
-        groups[key].storeGain += sale.baseMN;
-      }
-    });
- 
-    return groups;
-  }, [gestorSalesSinceLastClosing]);
-
-  const totalSalesAmount = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.total || 0), 0);
-  const totalGestorGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.gestorGain || 0), 0);
-  const totalStoreGain = (Object.values(salesByProduct) as Array<{ quantity: number; total: number; gestorGain: number; storeGain: number }>).reduce((sum: number, data) => sum + (data.storeGain || 0), 0);
-
-  const pendingSales = useMemo(() => {
-    return gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PENDING);
-  }, [gestorSalesSinceLastClosing]);
-
-  const pendingSalesByProduct = useMemo(() => {
-    const groups: { [key: string]: { sales: Sale[]; total: number } } = {};
-
-    pendingSales.forEach(sale => {
-      const assignedInventory = db.assignedInventory.find(ai => ai.gestorId === user.id && sale.inventoryItemId.startsWith(ai.id));
-      if (assignedInventory) {
-        const key = assignedInventory.productId;
-        if (!groups[key]) {
-          groups[key] = { sales: [], total: 0 };
-        }
-        groups[key].sales.push(sale);
-        groups[key].total += sale.finalMN;
-      }
-    });
-
-    return groups;
-  }, [pendingSales, db.assignedInventory, user.id]);
-
-  return (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Columna de Inventario Asignado */}
-        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm">
-          <h2 className="text-lg md:text-xl font-bold mb-4">Mi Inventario Disponible</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-100 dark:bg-slate-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Producto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Precio de Venta</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">% Comision Gestor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Cantidad</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                {(Object.entries(groupedInventory) as [string, InventoryGroup][]).map(([key, group]) => {
-                  const product = productsById[group.productId];
-                  if (!product) {
-                    return null;
-                  }
-                  return (
-                    <tr key={key}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{formatCurrency(group.priceMN)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{((product.commissionRate || 0) * 100).toFixed(0)}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{group.quantity}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {group.items.length > 0 && (
-                          <button
-                            onClick={() => handleOpenSellModal(group)}
-                            className="bg-success-500 hover:bg-success-600 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
-                          >
-                            Vender
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {Object.keys(groupedInventory).length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-600">No tienes inventario asignado.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Ventas Realizadas */}
-        {Object.keys(salesByProduct).length > 0 && (
-          <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm">
-            <h2 className="text-lg md:text-xl font-bold mb-4">Ventas Realizadas</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-100 dark:bg-slate-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Producto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Cantidad</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Ganancia Gestor</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Ganancia Tienda</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-400 uppercase tracking-wider">Dinero Recaudado</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                  {(Object.entries(salesByProduct) as [string, { quantity: number; total: number; gestorGain: number; storeGain: number }][]).map(([productId, data]) => {
-                    const product = productsById[productId];
-                    if (!product) return null;
-                    return (
-                      <tr key={productId}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{data.quantity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(data.gestorGain)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(data.storeGain)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(data.total)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="bg-slate-100 dark:bg-slate-700">
-                  <tr>
-                    <td colSpan={2} className="px-6 py-3 text-left text-sm font-bold text-slate-900 dark:text-slate-200">Total</td>
-                    <td className="px-6 py-3 text-right text-sm font-bold text-success-600 dark:text-success-400">
-                      {formatCurrency(totalGestorGain)}
-                    </td>
-                    <td className="px-6 py-3 text-right text-sm font-bold text-primary-600 dark:text-primary-400">
-                      {formatCurrency(totalStoreGain)}
-                    </td>
-                    <td className="px-6 py-3 text-right text-sm font-bold text-info-600 dark:text-info-400">
-                      {formatCurrency(totalSalesAmount)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Ventas al Crédito Pendientes */}
-        {Object.keys(pendingSalesByProduct).length > 0 && (
-          <div className="lg:col-span-2 bg-warning-50 dark:bg-warning-900/20 p-4 md:p-6 rounded-lg shadow-sm">
-            <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">Ventas al Crédito Pendientes</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-warning-200 dark:divide-warning-700">
-                <thead className="bg-warning-100 dark:bg-warning-900/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Producto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Cantidad</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Cliente</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Monto</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-slate-800 divide-y divide-warning-200 dark:divide-warning-700">
-                  {(Object.entries(pendingSalesByProduct) as [string, { sales: Sale[]; total: number }][]).map(([productId, data]) => {
-                    const product = productsById[productId];
-                    if (!product) return null;
-                    return data.sales.map((sale) => (
-                      <tr key={sale.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{product.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">1</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sale.customerName || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">{formatCurrency(sale.finalMN)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => handleMarkAsPaid(sale.id)}
-                            className="bg-success-500 hover:bg-success-600 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
-                          >
-                            Marcar como Pagada
-                          </button>
-                        </td>
-                      </tr>
-                    ));
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Columna de Cierre de Caja */}
-        <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm h-fit">
-          <h2 className="text-lg md:text-xl font-bold mb-4">Cierre de Caja</h2>
-          <div className="space-y-4">
-              <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                  <h3 className="font-semibold text-slate-800 dark:text-slate-200">Ventas pagadas desde último cierre</h3>
-                  <p className="text-2xl font-bold text-info-600 dark:text-info-400">{Object.keys(salesByProduct).length}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Total recaudado: {formatCurrency(totalSalesAmount)}
-                  </p>
-              </div>
-            <button
-              onClick={handleExecuteClosing}
-              disabled={Object.keys(salesByProduct).length === 0}
-              className="w-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              Ejecutar Cierre
-            </button>
-          </div>
-        </div>
-      </div>
-      <SellModal
-        isOpen={isSellModalOpen}
-        onClose={handleCloseSellModal}
-        onSell={handleSell}
-        product={selectedGroup ? productsById[selectedGroup.productId] : null}
-        inventoryGroup={selectedGroup}
-      />
-    </>
-  );
-};
-
-
-// --- GESTOR REPORTS VIEW ---
-interface GestorReportsViewProps {
-  gestorSales: Sale[];
-  gestorClosings: Closing[];
-  products: Product[];
-}
-
-const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gestorClosings, products }) => {
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)),
-    end: new Date()
-  });
-
-  const filteredClosings = gestorClosings.filter(c => 
-    c.status === ClosingStatus.COMPLETED &&
-    c.completedAt &&
-    c.completedAt >= dateRange.start &&
-    c.completedAt <= dateRange.end
-  );
-
-  const totalClosings = filteredClosings.length;
-  const totalCommissionEarned = filteredClosings.reduce((sum, c) => sum + c.totalCommission, 0);
-  const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
-  const totalEntregado = filteredClosings.reduce((sum, c) => sum + c.totalBaseMN, 0);
-
-  const getPeriodLabel = () => {
-    return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
-  };
-
-  const handleExportCSV = () => {
-    const data = filteredClosings.map(c => ({
-      Fecha: formatDate(new Date(c.completedAt!)),
-      Ventas: c.sales.length,
-      TotalRecaudado: c.totalFinalMN,
-      MontoEntregado: c.totalBaseMN,
-      MiComision: c.totalCommission
-    }));
-    exportToCSV(data, `reporte_gestor_${getPeriodLabel()}`);
-  };
-
-  const handleExportPDF = () => {
-    const data = filteredClosings.map(c => ({
-      Fecha: formatDate(new Date(c.completedAt!)),
-      Ventas: c.sales.length,
-      Total: c.totalFinalMN,
-      Entregado: c.totalBaseMN,
-      Comisión: c.totalCommission
-    }));
-    exportToPDF(data, `Reporte de Cierres - Gestor (${getPeriodLabel()})`, `reporte_gestor_${getPeriodLabel()}`);
-  };
-
-  const handleExportExcel = () => {
-    const data = filteredClosings.map(c => ({
-      Fecha: formatDate(new Date(c.completedAt!)),
-      Ventas: c.sales.length,
-      TotalRecaudado: c.totalFinalMN,
-      MontoEntregado: c.totalBaseMN,
-      MiComision: c.totalCommission
-    }));
-    exportToExcel(data, 'Cierres', `reporte_gestor_${getPeriodLabel()}`);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <DateRangeSelector value={dateRange} onChange={setDateRange} />
-        <ExportButton
-          onExportCSV={handleExportCSV}
-          onExportPDF={handleExportPDF}
-          onExportExcel={handleExportExcel}
-          disabled={filteredClosings.length === 0}
-          filename={`reporte_gestor_${formatDate(new Date())}`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ReportCard
-          title="Cierres"
-          value={totalClosings}
-          icon="receipt_long"
-        />
-        <ReportCard
-          title="Comisión Ganada"
-          value={formatCurrency(totalCommissionEarned)}
-          icon="payments"
-        />
-        <ReportCard
-          title="Total Recaudado"
-          value={formatCurrency(totalRecaudado)}
-          icon="account_balance_wallet"
-        />
-      </div>
-
-      <div>
-        <h3 className="text-lg md:text-xl font-bold mb-4">Cierres Completados</h3>
-        {filteredClosings.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
-            <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">event_busy</span>
-            <p className="text-slate-500 dark:text-slate-400">No hay cierres en el período seleccionado</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-50 dark:bg-slate-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total Recaudado</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Entregado</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Mi Comisión</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                {filteredClosings.map(closing => (
-                  <tr key={closing.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">{formatDate(new Date(closing.completedAt!))}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{closing.sales.length}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalFinalMN)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalBaseMN)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 text-right">{formatCurrency(closing.totalCommission)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// --- PENDING INVENTORY VIEW (New functionality) ---
+// --- PENDING INVENTORY VIEW ---
 interface PendingInventoryViewProps {
   pendingInventory: AssignedInventory[];
   productsById: { [key: string]: Product };
@@ -836,18 +88,21 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                     <td className="px-6 py-4">{product.name}</td>
                     <td className="px-6 py-4">{ai.quantity}</td>
                     <td className="px-6 py-4 text-center">
-                      <button
+                      <Button
+                        variant="success"
+                        size="xs"
                         onClick={() => onConfirm(ai.id)}
-                        className="bg-green-600 hover:bg-green-700 dark:bg-success-600 dark:hover:bg-success-700 text-white font-bold py-1 px-3 rounded-md text-xs mr-2 shadow-md transition-all"
+                        className="mr-2"
                       >
                         Aceptar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="xs"
                         onClick={() => setRejecting(ai.id)}
-                        className="bg-red-600 hover:bg-red-700 dark:bg-danger-600 dark:hover:bg-danger-700 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
                       >
                         Rechazar
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -859,33 +114,251 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
       {rejecting && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Rechazar Inventario</h3>
+            <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Rechazar Inventario</h3>
             <textarea
               value={rejectionReason}
               onChange={e => setRejectionReason(e.target.value)}
               placeholder="Explica la razón del rechazo..."
-              className="w-full h-32 p-3 border rounded-md dark:bg-slate-700 dark:border-slate-600 mb-4"
+              className="w-full h-32 p-3 border rounded-md dark:bg-slate-700 dark:border-slate-600 mb-4 dark:text-white"
             />
             <div className="flex justify-end gap-2">
-              <button
+              <Button
+                variant="neutral"
                 onClick={() => { setRejecting(null); setRejectionReason(''); }}
-                className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
               >
                 Cancelar
-              </button>
-                <button
-                  onClick={() => handleReject(rejecting)}
-                  className="px-4 py-2 bg-danger-500 hover:bg-danger-600 dark:bg-danger-600 dark:hover:bg-danger-700 text-white rounded-md shadow-md transition-all"
-                >
-                  Confirmar Rechazo
-                </button>
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => handleReject(rejecting)}
+                disabled={!rejectionReason.trim()}
+              >
+                Confirmar Rechazo
+              </Button>
             </div>
           </div>
-     </div>
-       )}
-     </div>
-   );
- };
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- SALES VIEW ---
+interface SalesViewProps {
+  user: User;
+  store: Store;
+  db: MockDB;
+  setDb: React.Dispatch<React.SetStateAction<MockDB | null>>;
+  gestorSalesSinceLastClosing: Sale[];
+  productsById: { [key: string]: Product };
+  currentRate: ReturnType<typeof getCurrentExchangeRate>;
+  groupedInventory: { [key: string]: InventoryGroup };
+  refreshDb: () => Promise<void>;
+}
+
+const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory, refreshDb }) => {
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
+
+  const handleOpenSellModal = (group: InventoryGroup) => {
+    setSelectedGroup(group);
+    setIsSellModalOpen(true);
+  };
+
+  const handleCloseSellModal = () => {
+    setSelectedGroup(null);
+    setIsSellModalOpen(false);
+  };
+
+  const handleSell = async (quantity: number, paymentStatus: SalePaymentStatus, customerName?: string) => {
+    if (!selectedGroup) return;
+
+    try {
+      const response = await fetch('http://localhost:3001/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          assignedInventoryId: selectedGroup.assignedInventoryId,
+          quantity,
+          paymentStatus,
+          customerName
+        })
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        handleCloseSellModal();
+        alert('Venta realizada con éxito.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error creating sale:', error);
+      alert('Error al procesar la venta.');
+    }
+  };
+
+  const handleExecuteClosing = async () => {
+    const paidSales = gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID);
+    if (paidSales.length === 0) {
+      alert('No hay ventas pagadas para realizar el cierre.');
+      return;
+    }
+
+    const totalBaseMN = paidSales.reduce((sum, s) => sum + s.baseMN, 0);
+
+    if (!window.confirm(`¿Ejecutar cierre por un total de ${formatCurrency(totalBaseMN)}?`)) return;
+
+    try {
+      const response = await fetch('http://localhost:3001/api/closings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          saleIds: paidSales.map(s => s.id)
+        })
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Cierre de caja ejecutado correctamente.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error creating closing:', error);
+      alert('Error al ejecutar el cierre.');
+    }
+  };
+
+  const salesByProduct = useMemo(() => {
+    const groups: { [key: string]: { quantity: number; total: number; gestorGain: number; storeGain: number } } = {};
+    gestorSalesSinceLastClosing.forEach(sale => {
+      if (sale.paymentStatus !== SalePaymentStatus.PAID) return;
+      if (sale.productId) {
+        const key = sale.productId;
+        if (!groups[key]) {
+          groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0 };
+        }
+        groups[key].quantity += 1;
+        groups[key].total += sale.finalMN;
+        groups[key].gestorGain += sale.commission;
+        groups[key].storeGain += sale.baseMN;
+      }
+    });
+    return groups;
+  }, [gestorSalesSinceLastClosing]);
+
+  const totalSalesAmount = Object.values(salesByProduct).reduce((sum, data) => sum + data.total, 0);
+  const totalGestorGain = Object.values(salesByProduct).reduce((sum, data) => sum + data.gestorGain, 0);
+  const totalStoreGain = Object.values(salesByProduct).reduce((sum, data) => sum + data.storeGain, 0);
+
+  return (
+    <div className="flex flex-col gap-6 md:gap-8">
+      <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-800 dark:text-slate-100 uppercase tracking-tight">Mi Inventario Disponible</h2>
+        <div className="overflow-x-auto rounded-lg">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead className="bg-slate-50 dark:bg-slate-900/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Producto</th>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Precio Venta</th>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Stock</th>
+                <th className="px-4 py-3 text-center text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Acción</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-transparent divide-y divide-slate-100 dark:divide-slate-700/50">
+              {Object.entries(groupedInventory).map(([key, group]) => {
+                const product = productsById[group.productId];
+                if (!product) return null;
+                return (
+                  <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{product.name}</td>
+                    <td className="px-4 py-4 text-sm font-black text-primary-600 dark:text-primary-400">{formatCurrency(group.priceMN)}</td>
+                    <td className="px-4 py-4 text-sm font-medium text-slate-600 dark:text-slate-400">{group.quantity}</td>
+                    <td className="px-4 py-4 text-center">
+                      <Button variant="success" size="xs" onClick={() => handleOpenSellModal(group)}>Vender</Button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {Object.keys(groupedInventory).length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">No tienes mercancía asignada</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {Object.keys(salesByProduct).length > 0 && (
+        <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-800 dark:text-slate-100 uppercase tracking-tight">Ventas Realizadas (Hoy)</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-900/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Producto</th>
+                  <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cant.</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Monto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                {Object.entries(salesByProduct).map(([productId, data]) => (
+                  <tr key={productId}>
+                    <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{productsById[productId]?.name}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{data.quantity}</td>
+                    <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(data.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-50 dark:bg-slate-900/50 font-black">
+                <tr>
+                  <td colSpan={2} className="px-4 py-4 text-slate-500 text-xs uppercase tracking-widest">Total Hoy</td>
+                  <td className="px-4 py-4 text-right text-primary-600 dark:text-primary-400">{formatCurrency(totalSalesAmount)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl border-2 border-primary-500/20">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase">Cierre de Caja</h2>
+            <p className="text-slate-500 text-sm">Resumen de dinero a entregar al manager.</p>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monto a Entregar</p>
+              <p className="text-3xl font-black text-primary-600 dark:text-primary-400">{formatCurrency(totalStoreGain)}</p>
+            </div>
+            <Button variant="primary" size="lg" onClick={handleExecuteClosing} disabled={Object.keys(salesByProduct).length === 0} className="px-10 h-16 uppercase shadow-xl">
+              Cerrar Caja
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <SellModal
+        isOpen={isSellModalOpen}
+        onClose={handleCloseSellModal}
+        onSell={handleSell}
+        product={selectedGroup ? productsById[selectedGroup.productId] : null}
+        inventoryGroup={selectedGroup}
+      />
+    </div>
+  );
+};
 
 // --- DEBTS VIEW ---
 interface DebtsViewProps {
@@ -900,254 +373,271 @@ interface DebtsViewProps {
 const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, productsById, refreshDb, user }) => {
   const pendingSales = useMemo(() => {
     return gestorSales.filter(sale =>
-      sale.paymentStatus === 'PENDING' &&
+      sale.paymentStatus === SalePaymentStatus.PENDING &&
       !gestorClosings.some(c => c.sales?.some(s => s.id === sale.id))
     );
   }, [gestorSales, gestorClosings]);
 
-  const debtsByGroup = useMemo(() => {
-    const groups: { [key: string]: {
-      sales: Sale[];
-      totalQuantity: number;
-      totalAmount: number;
-      dateString: string;
-      date: Date;
-    } } = {};
-
-    pendingSales.forEach(sale => {
-      if (!sale.productId) return;
-
-      const customerName = sale.customerName || 'Sin nombre';
-      const saleDate = new Date(sale.soldAt);
-      const dateString = saleDate.toISOString().split('T')[0];
-      const groupKey = `${sale.productId}_${customerName}_${dateString}`;
-
-      if (!groups[groupKey]) {
-        groups[groupKey] = { sales: [], totalQuantity: 0, totalAmount: 0, dateString, date: saleDate };
-      }
-
-      groups[groupKey].sales.push(sale);
-      groups[groupKey].totalQuantity += 1;
-      groups[groupKey].totalAmount += sale.finalMN;
-    });
-
-    return Object.values(groups).sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [pendingSales]);
-
-  const formatDates = (date: Date) => {
-    return new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date);
-  };
-
-  const handleLiquidateDeuda = async (group: {
-    sales: Sale[];
-    totalQuantity: number;
-    totalAmount: number;
-    dateString: string;
-    date: Date;
-  }) => {
-    const product = group.sales[0].productId ? productsById[group.sales[0].productId] : null;
-    const customerName = group.sales[0].customerName || 'Sin nombre';
-    const productName = product ? product.name : 'producto(s)';
-    const confirmationMessage = `¿Liquidar ${group.totalQuantity} ${productName} del cliente ${customerName} del ${formatDates(group.date)} por ${formatCurrency(group.totalAmount)}?`;
-
-    if (!window.confirm(confirmationMessage)) {
-      return;
-    }
-
+  const handleMarkAsPaid = async (saleId: string) => {
     try {
-      for (const sale of group.sales) {
-        const response = await fetch(`http://localhost:3001/api/sales/${sale.id}/mark-as-paid`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Error al liquidar deuda');
-        }
+      const response = await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        await refreshDb();
+        alert('Deuda pagada correctamente.');
       }
-
-      await refreshDb();
-      alert(`Deuda liquidada exitosamente: ${group.totalQuantity} ${productName} por ${formatCurrency(group.totalAmount)}`);
-    } catch (error: any) {
-      console.error('Error liquidating debt:', error);
-      alert(`Error al liquidar la deuda: ${error.message}`);
+    } catch (error) {
+      console.error(error);
     }
   };
-
-  if (debtsByGroup.length === 0) {
-    return (
-      <div className="bg-warning-50 dark:bg-warning-900/20 p-6 rounded-lg shadow-sm">
-        <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
-          Deudas Pendientes
-        </h2>
-        <p className="text-sm text-warning-600 dark:text-warning-400">
-          No hay deudas pendientes de cobro.
-        </p>
-      </div>
-    );
-  }
 
   return (
-    <div className="bg-warning-50 dark:bg-warning-900/20 p-4 md:p-6 rounded-lg shadow-sm">
-      <h2 className="text-lg md:text-xl font-bold mb-4 text-warning-800 dark:text-warning-200">
-        Deudas Pendientes
-      </h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-warning-200 dark:divide-warning-700">
-          <thead className="bg-warning-100 dark:bg-warning-900/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
-                Fecha
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
-                Producto
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
-                Cantidad
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
-                Deudor
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
-                Monto Total
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">
-                Acción
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-warning-200 dark:divide-warning-700">
-            {debtsByGroup.map((group, index) => {
-              const product = group.sales[0].productId ? productsById[group.sales[0].productId] : null;
-              const customerName = group.sales[0].customerName || 'Sin nombre';
-
-              return (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
-                    {formatDates(group.date)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                    {product ? product.name : '<Producto eliminado>'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
-                    {group.totalQuantity}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
-                    {customerName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
-                    {formatCurrency(group.totalAmount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => handleLiquidateDeuda(group)}
-                      className="bg-success-500 hover:bg-success-600 text-white font-bold py-1 px-3 rounded-md text-xs shadow-md transition-all"
-                    >
-                      Liquidar Todo
-                    </button>
+    <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+      <h2 className="text-lg font-bold mb-4 text-amber-600 dark:text-amber-400">Deudas Pendientes</h2>
+      {pendingSales.length === 0 ? (
+        <p className="text-slate-500 py-8 text-center">No hay deudas pendientes</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Cliente</th>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Producto</th>
+                <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Monto</th>
+                <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase tracking-widest">Acción</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+              {pendingSales.map(sale => (
+                <tr key={sale.id}>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{sale.customerName || 'N/A'}</td>
+                  <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{productsById[sale.productId || '']?.name}</td>
+                  <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(sale.finalMN)}</td>
+                  <td className="px-4 py-4 text-center">
+                    <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(sale.id)}>Marcar Pagada</Button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
 // --- PENDING CLOSINGS VIEW ---
-interface PendingClosingsViewProps {
-  pendingClosings: Closing[];
+const PendingClosingsView: React.FC<{pendingClosings: Closing[]}> = ({ pendingClosings }) => (
+  <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+    <h2 className="text-lg font-bold mb-4 text-primary-600 dark:text-primary-400">Cierres Pendientes de Validación</h2>
+    {pendingClosings.length === 0 ? (
+      <p className="text-slate-500 py-8 text-center">No hay cierres pendientes</p>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead>
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+              <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Monto</th>
+              <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase tracking-widest">Estado</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+            {pendingClosings.map(c => (
+              <tr key={c.id}>
+                <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{formatDate(new Date(c.initiatedAt))}</td>
+                <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(c.totalBaseMN)}</td>
+                <td className="px-4 py-4 text-center">
+                  <span className="px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-bold uppercase">Pendiente</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+);
+
+// --- GESTOR REPORTS VIEW ---
+interface GestorReportsViewProps {
+  gestorSales: Sale[];
+  gestorClosings: Closing[];
+  products: Product[];
 }
 
-const PendingClosingsView: React.FC<PendingClosingsViewProps> = ({ pendingClosings }) => {
-  const totalClosings = pendingClosings.length;
-  const totalSales = pendingClosings.reduce((sum, c) => sum + c.sales.length, 0);
-  const totalRecaudado = pendingClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
-  const totalEntregado = pendingClosings.reduce((sum, c) => sum + c.totalBaseMN, 0);
-  const totalComision = pendingClosings.reduce((sum, c) => sum + c.totalCommission, 0);
+const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gestorClosings, products }) => {
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)),
+    end: new Date()
+  });
+
+  const filteredClosings = gestorClosings.filter(c => 
+    c.status === ClosingStatus.COMPLETED &&
+    c.completedAt &&
+    c.completedAt >= dateRange.start &&
+    c.completedAt <= dateRange.end
+  );
+
+  const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
+  const totalCommissionEarned = filteredClosings.reduce((sum, c) => sum + c.totalCommission, 0);
 
   return (
     <div className="space-y-6">
-       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-warning-50 dark:bg-warning-900/20 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-warning-800 dark:text-warning-200">Cierres Pendientes</h3>
-          <p className="text-2xl font-bold text-warning-900 dark:text-warning-100">{totalClosings}</p>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Ventas Totales</h3>
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalSales}</p>
-        </div>
-        <div className="bg-success-50 dark:bg-success-900/20 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-success-800 dark:text-success-200">Monto Recaudado</h3>
-          <p className="text-xl font-bold text-success-900 dark:text-success-100">{formatCurrency(totalRecaudado)}</p>
-        </div>
-        <div className="bg-info-50 dark:bg-info-900/20 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-info-800 dark:text-info-200">Comisión</h3>
-          <p className="text-xl font-bold text-info-900 dark:text-info-100">{formatCurrency(totalComision)}</p>
-        </div>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <DateRangeSelector value={dateRange} onChange={setDateRange} />
       </div>
 
-      <div>
-        <h3 className="text-lg md:text-xl font-bold mb-4">Detalle de Cierres Pendientes</h3>
-        {pendingClosings.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-lg">
-            <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">check_circle</span>
-            <p className="text-slate-500 dark:text-slate-400">No tienes cierres pendientes de validación.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-warning-100 dark:bg-warning-900/50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Ventas</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Monto Entregado</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Total Recaudado</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Comisión</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-warning-900 dark:text-warning-200 uppercase tracking-wider">Estado</th>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ReportCard title="Total Recaudado" value={formatCurrency(totalRecaudado)} icon="account_balance_wallet" />
+        <ReportCard title="Mi Comisión" value={formatCurrency(totalCommissionEarned)} icon="payments" />
+      </div>
+
+      <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+        <h3 className="font-bold mb-4 uppercase tracking-wider text-slate-500 text-xs">Historial de Cierres</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Monto</th>
+                <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Comisión</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClosings.map(c => (
+                <tr key={c.id}>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{formatDate(new Date(c.completedAt!))}</td>
+                  <td className="px-4 py-4 text-sm text-right text-slate-900 dark:text-slate-100">{formatCurrency(c.totalBaseMN)}</td>
+                  <td className="px-4 py-4 text-sm text-right text-emerald-600 font-bold">{formatCurrency(c.totalCommission)}</td>
                 </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                {pendingClosings.map(closing => (
-                  <tr key={closing.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                      {formatDate(new Date(closing.initiatedAt))}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
-                      {closing.sales.length}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
-                      {formatCurrency(closing.totalBaseMN)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
-                      {formatCurrency(closing.totalFinalMN)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300 text-right">
-                      {formatCurrency(closing.totalCommission)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-warning-100 dark:bg-warning-900/50 text-warning-800 dark:text-warning-200">
-                        Pendiente de Validación
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
 
- export default GestorDashboard;
+// =======================================================================
+// Main Dashboard Component
+// =======================================================================
+
+const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setDb, refreshDb }) => {
+  const [activeTab, setActiveTab] = useState<Tabs>('inventory');
+  const productsById = useMemo(() => Object.fromEntries(db.products.map(p => [p.id, p])), [db.products]);
+  const currentRate = getCurrentExchangeRate(store);
+
+  const pendingInventory = useMemo(() => 
+    db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Pending'),
+    [db.assignedInventory, user.id]
+  );
+
+  const gestorInventory = useMemo(() => {
+    const assigned = db.assignedInventory.filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed');
+    const items: InventoryItem[] = [];
+    assigned.forEach(ai => {
+      for (let i = 0; i < ai.quantity; i++) {
+        items.push({
+          id: `${ai.id}-${i}`,
+          productId: ai.productId,
+          gestorId: ai.gestorId,
+          assignedAt: ai.assignedAt,
+          status: 'Available'
+        });
+      }
+    });
+    return items;
+  }, [db.assignedInventory, user.id]);
+
+  const groupedInventory = useMemo(() => {
+    const groups: { [key: string]: InventoryGroup } = {};
+    db.assignedInventory
+      .filter(ai => ai.gestorId === user.id && ai.status === 'Confirmed')
+      .forEach(ai => {
+        const key = `${ai.productId}-${ai.gestorId}`;
+        if (!groups[key]) {
+          groups[key] = { productId: ai.productId, quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, assignedInventoryId: ai.id, items: [] };
+        }
+        groups[key].quantity += ai.quantity;
+        for (let i = 0; i < ai.quantity; i++) {
+          groups[key].items.push({ id: `${ai.id}-${i}`, productId: ai.productId, gestorId: ai.gestorId, assignedAt: ai.assignedAt, status: 'Available' });
+        }
+      });
+    return groups;
+  }, [db.assignedInventory, user.id]);
+
+  const gestorSales = useMemo(() => db.sales.filter(s => s.gestorId === user.id), [db.sales, user.id]);
+  const gestorClosings = useMemo(() => db.closings.filter(c => c.gestorId === user.id), [db.closings, user.id]);
+
+  const handleConfirmInventory = async (id: string) => {
+    try {
+      await fetch(`http://localhost:3001/api/assigned-inventory/${id}/confirm`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      await refreshDb();
+    } catch (error) { console.error(error); }
+  };
+
+  const handleRejectInventory = async (id: string, reason: string) => {
+    try {
+      await fetch(`http://localhost:3001/api/assigned-inventory/${id}/reject`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ reason })
+      });
+      await refreshDb();
+    } catch (error) { console.error(error); }
+  };
+
+  const handleMarkAsPaid = async (saleId: string) => {
+    try {
+      await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      await refreshDb();
+    } catch (error) { console.error(error); }
+  };
+
+  const renderContent = () => {
+    if (!db.products || db.products.length === 0) return <div className="py-20 text-center text-slate-400">Cargando...</div>;
+    
+    switch (activeTab) {
+      case 'inventory':
+        return <PendingInventoryView pendingInventory={pendingInventory} productsById={productsById} onConfirm={handleConfirmInventory} onReject={handleRejectInventory} />;
+      case 'sales':
+        return <SalesView user={user} store={store} db={db} setDb={setDb} gestorSalesSinceLastClosing={gestorSales.filter(sale => !gestorClosings.some(c => c.sales?.some(s => s.id === sale.id)))} productsById={productsById} currentRate={currentRate} groupedInventory={groupedInventory} refreshDb={refreshDb} />;
+      case 'debts':
+        return <DebtsView gestorSales={gestorSales} gestorClosings={gestorClosings} db={db} productsById={productsById} refreshDb={refreshDb} user={user} />;
+      case 'pending-closings':
+        return <PendingClosingsView pendingClosings={db.closings.filter(c => c.gestorId === user.id && c.status === ClosingStatus.PENDING)} />;
+      case 'reports':
+        return <GestorReportsView gestorSales={gestorSales} gestorClosings={db.closings.filter(c => c.gestorId === user.id)} products={db.products.filter(p => p.storeId === store.id)} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 min-h-full">
+      <nav className="flex space-x-6 border-b border-slate-200 dark:border-slate-700 mb-6 overflow-x-auto">
+        <TabButton name="Inventario Nuevo" tab="inventory" activeTab={activeTab} onClick={setActiveTab} />
+        <TabButton name="Ventas" tab="sales" activeTab={activeTab} onClick={setActiveTab} />
+        <TabButton name="Deudas" tab="debts" activeTab={activeTab} onClick={setActiveTab} />
+        <TabButton name="Cierres" tab="pending-closings" activeTab={activeTab} onClick={setActiveTab} />
+        <TabButton name="Reportes" tab="reports" activeTab={activeTab} onClick={setActiveTab} />
+      </nav>
+      {renderContent()}
+    </div>
+  );
+};
+
+export default GestorDashboard;
