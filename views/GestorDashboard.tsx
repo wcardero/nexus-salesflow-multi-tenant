@@ -552,8 +552,8 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
   const filteredClosings = gestorClosings.filter(c => 
     c.status === ClosingStatus.COMPLETED &&
     c.completedAt &&
-    c.completedAt >= dateRange.start &&
-    c.completedAt <= dateRange.end
+    new Date(c.completedAt) >= dateRange.start &&
+    new Date(c.completedAt) <= dateRange.end
   );
 
   const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
