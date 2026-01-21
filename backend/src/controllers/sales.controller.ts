@@ -94,7 +94,7 @@ export const createSale = async (req: Request, res: Response) => {
     const costUSD = product.costUSD || 0;
     const costMN = product.costMN || 0;
     const margin = product.margin || 0;
-    const commissionRate = product.commissionRate || 0.1;
+    const commissionRate = product.commissionRate || 0;
 
     let saleUSD = 0, baseMN = 0, commission = 0, finalMN = 0;
 
