@@ -75,9 +75,9 @@ export const createClosing = async (req: Request, res: Response) => {
 
     let totalBaseMN = 0, totalCommission = 0, totalFinalMN = 0;
     for (const sale of salesResult.rows) {
-      totalBaseMN += sale.baseMN * sale.quantity;
-      totalCommission += sale.commission * sale.quantity;
-      totalFinalMN += sale.finalMN * sale.quantity;
+      totalBaseMN += sale.baseMN;
+      totalCommission += sale.commission;
+      totalFinalMN += sale.finalMN;
     }
 
     const closingId = `closing-${Date.now()}`;
