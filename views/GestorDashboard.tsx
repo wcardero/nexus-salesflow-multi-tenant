@@ -408,32 +408,68 @@ interface DebtsViewProps {
 }
 
 const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, productsById, refreshDb, user }) => {
-  const pendingSales = useMemo(() => {
-    return gestorSales.filter(sale =>
+  // Group pending debts by customer and product
+  const groupedDebts = useMemo(() => {
+    const pendingSales = gestorSales.filter(sale =>
       sale.paymentStatus === SalePaymentStatus.PENDING &&
       !gestorClosings.some(c => c.sales?.some(s => s.id === sale.id))
     );
+
+    interface DebtGroup {
+      customerName: string;
+      productId: string;
+      quantity: number;
+      totalAmount: number;
+      saleIds: string[];
+    }
+
+    const groups: { [key: string]: DebtGroup } = {};
+
+    pendingSales.forEach(sale => {
+      if (sale.productId) {
+        const key = `${sale.customerName || 'N/A'}-${sale.productId}`;
+        if (!groups[key]) {
+          groups[key] = {
+            customerName: sale.customerName || 'N/A',
+            productId: sale.productId,
+            quantity: 0,
+            totalAmount: 0,
+            saleIds: []
+          };
+        }
+        groups[key].quantity += 1;
+        groups[key].totalAmount += sale.finalMN;
+        groups[key].saleIds.push(sale.id);
+      }
+    });
+
+    return Object.values(groups);
   }, [gestorSales, gestorClosings]);
 
-  const handleMarkAsPaid = async (saleId: string) => {
+  const handleMarkAsPaid = async (saleIds: string[]) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        await refreshDb();
-        alert('Deuda pagada correctamente.');
+      // Mark all sales in the group as paid
+      for (const saleId of saleIds) {
+        const response = await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (!response.ok) {
+          console.error(`Failed to mark sale ${saleId} as paid`);
+        }
       }
+      await refreshDb();
+      alert(`${saleIds.length} deuda(s) pagada(s) correctamente.`);
     } catch (error) {
       console.error(error);
+      alert('Error al marcar las deudas como pagadas.');
     }
   };
 
   return (
     <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
       <h2 className="text-lg font-bold mb-4 text-amber-600 dark:text-amber-400">Deudas Pendientes</h2>
-      {pendingSales.length === 0 ? (
+      {groupedDebts.length === 0 ? (
         <p className="text-slate-500 py-8 text-center">No hay deudas pendientes</p>
       ) : (
         <div className="overflow-x-auto">
@@ -448,14 +484,14 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {pendingSales.map(sale => (
-                <tr key={sale.id}>
-                  <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{sale.customerName || 'N/A'}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{productsById[sale.productId || '']?.name}</td>
-                  <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-center">1</td>
-                  <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(sale.finalMN)}</td>
+              {groupedDebts.map((debt, index) => (
+                <tr key={`debt-${index}`}>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{debt.customerName}</td>
+                  <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{productsById[debt.productId]?.name}</td>
+                  <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-center">{debt.quantity}</td>
+                  <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(debt.totalAmount)}</td>
                   <td className="px-4 py-4 text-center">
-                    <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(sale.id)}>Marcar Pagada</Button>
+                    <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(debt.saleIds)}>Marcar Pagada</Button>
                   </td>
                 </tr>
               ))}
