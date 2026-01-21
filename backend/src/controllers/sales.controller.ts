@@ -110,23 +110,26 @@ export const createSale = async (req: Request, res: Response) => {
       finalMN = baseMN + commission;
     }
 
-    const saleId = `sale-${Date.now()}`;
+    // Create multiple sales, one per unit
+    const sales = [];
+    for (let i = 0; i < quantity; i++) {
+      const saleId = `sale-${Date.now()}-${i}`;
+      const saleResult = await db.query(
+        `INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "productId", "soldAt", "exchangeRateUsed",
+          "costUSD", "costMN", "margin", "saleUSD", "baseMN", "commission", "finalMN", "paymentStatus", "customerName")
+         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        [saleId, assignedInventoryId, requestingUser?.id, assignment.productId, exchangeRate,
+          costUSD, costMN, margin, saleUSD, baseMN, commission, finalMN, paymentStatus || 'PAID', customerName]
+      );
+      sales.push(saleResult.rows[0]);
+      await auditSaleCreation(requestingUser?.id || '', saleId, saleResult.rows[0], assignment.storeId);
+    }
+
     const totalFinalMN = finalMN * quantity;
-
-    const saleResult = await db.query(
-      `INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "productId", "soldAt", "exchangeRateUsed",
-        "costUSD", "costMN", "margin", "saleUSD", "baseMN", "commission", "finalMN", "paymentStatus", "customerName")
-       VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
-      [saleId, assignedInventoryId, requestingUser?.id, assignment.productId, exchangeRate,
-        costUSD, costMN, margin, saleUSD, baseMN, commission, finalMN, paymentStatus || 'PAID', customerName]
-    );
-
     const newQuantity = assignment.quantity - quantity;
     await db.query('UPDATE "AssignedInventory" SET quantity = $1 WHERE id = $2', [newQuantity, assignedInventoryId]);
 
-    await auditSaleCreation(requestingUser?.id || '', saleId, saleResult.rows[0], assignment.storeId);
-
-    res.status(201).json({ sales: saleResult.rows[0], totalFinalMN });
+    res.status(201).json({ sales, totalFinalMN });
   } catch (error) {
     console.error('Create sale error:', error);
     res.status(500).json({ message: 'Internal server error' });
