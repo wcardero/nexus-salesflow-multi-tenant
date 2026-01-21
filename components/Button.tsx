@@ -23,35 +23,27 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseStyles = 'font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:shadow-none';
+  const baseStyles = 'font-bold rounded-lg transition-all duration-200 shadow-sm active:scale-95 disabled:active:scale-100 disabled:shadow-none select-none flex items-center justify-center';
 
   const sizeStyles: Record<ButtonSize, string> = {
-    xs: 'py-1 px-2 text-xs font-bold rounded-md',
-    sm: 'py-1.5 px-3 text-xs font-bold rounded-md',
-    md: 'py-2 px-4 text-sm font-bold rounded-md',
-    lg: 'py-2.5 px-6 text-lg font-bold rounded-lg',
-    xl: 'py-3 px-8 text-xl font-bold rounded-xl',
+    xs: 'py-1 px-2.5 text-xs rounded-md',
+    sm: 'py-1.5 px-3.5 text-xs rounded-md',
+    md: 'py-2 px-5 text-sm rounded-md',
+    lg: 'py-2.5 px-7 text-base rounded-lg',
+    xl: 'py-3 px-10 text-lg rounded-xl',
   };
 
   const variantStyles: Record<ButtonVariant, string> = {
-    primary: 'bg-primary-600 hover:bg-primary-700 text-white',
-    success: 'bg-success-500 hover:bg-success-600 text-white',
-    danger: 'bg-danger-500 hover:bg-danger-600 text-white',
-    warning: 'bg-warning-500 hover:bg-warning-600 text-white',
-    neutral: 'bg-slate-200 hover:bg-slate-300 text-slate-700',
+    primary: 'bg-primary-600 hover:bg-primary-700 text-white border border-transparent',
+    success: 'bg-emerald-600 hover:bg-emerald-700 text-white border border-transparent',
+    danger: 'bg-rose-600 hover:bg-rose-700 text-white border border-transparent',
+    warning: 'bg-amber-500 hover:bg-amber-600 text-white border border-transparent',
+    neutral: 'bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 border border-slate-300 dark:border-slate-600',
   };
 
-  const darkVariantStyles: Record<ButtonVariant, string> = {
-    primary: 'dark:bg-primary-600 dark:hover:bg-primary-500 dark:text-white',
-    success: 'dark:bg-success-600 dark:hover:bg-success-500 dark:text-white',
-    danger: 'dark:bg-danger-600 dark:hover:bg-danger-500 dark:text-white',
-    warning: 'dark:bg-warning-600 dark:hover:bg-warning-500 dark:text-white',
-    neutral: 'dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300',
-  };
+  const disabledStyles = 'disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:disabled:bg-slate-800 dark:disabled:text-slate-600';
 
-  const disabledStyles = 'disabled:bg-slate-400 disabled:cursor-not-allowed disabled:opacity-50';
-
-  const loadingStyles = isLoading ? 'cursor-waiting opacity-70' : '';
+  const loadingStyles = isLoading ? 'cursor-wait opacity-70' : '';
 
   const widthStyles = fullWidth ? 'w-full' : '';
 
@@ -59,7 +51,6 @@ const Button: React.FC<ButtonProps> = ({
     ${baseStyles}
     ${sizeStyles[size]}
     ${variantStyles[variant]}
-    ${darkVariantStyles[variant]}
     ${disabledStyles}
     ${loadingStyles}
     ${widthStyles}
