@@ -442,6 +442,7 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Cliente</th>
                 <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Producto</th>
+                <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase tracking-widest">Cant.</th>
                 <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Monto</th>
                 <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase tracking-widest">Acción</th>
               </tr>
@@ -451,6 +452,7 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
                 <tr key={sale.id}>
                   <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{sale.customerName || 'N/A'}</td>
                   <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{productsById[sale.productId || '']?.name}</td>
+                  <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-center">1</td>
                   <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(sale.finalMN)}</td>
                   <td className="px-4 py-4 text-center">
                     <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(sale.id)}>Marcar Pagada</Button>
