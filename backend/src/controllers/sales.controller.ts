@@ -84,7 +84,7 @@ export const createSale = async (req: Request, res: Response) => {
 
     const exchangeRateResult = await db.query(
       'SELECT * FROM "ExchangeRate" WHERE "storeId" = $1 ORDER BY "startDate" DESC LIMIT 1',
-      [assignment.storeId]
+      [requestingUser?.storeId]
     );
     const exchangeRate = exchangeRateResult.rows[0]?.rate || 1;
 
