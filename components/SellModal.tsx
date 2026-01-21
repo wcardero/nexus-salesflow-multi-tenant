@@ -90,17 +90,19 @@ const SellModal: React.FC<SellModalProps> = ({ isOpen, onClose, onSell, product,
             </div>
           )}
 
-          <div className="flex justify-end gap-2 flex-wrap">
+          <div className="flex justify-end gap-2 flex-wrap mt-4 md:mt-6">
             <button
+              type="button"
               onClick={onClose}
-              className="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md"
+              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={handleSell}
               disabled={quantity <= 0 || quantity > inventoryGroup.quantity || (paymentStatus === SalePaymentStatus.PENDING && !customerName.trim())}
-              className="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-success-600 hover:text-success-800 font-bold rounded-md disabled:bg-slate-400 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Vender
             </button>
