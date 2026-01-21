@@ -297,7 +297,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-transparent divide-y divide-slate-100 dark:divide-slate-700/50">
-              {Object.entries(groupedInventory).map(([key, group]) => {
+              {Object.entries(groupedInventory).map(([key, group]: [string, InventoryGroup]) => {
                 const product = productsById[group.productId];
                 if (!product) return null;
                 return (
@@ -305,8 +305,10 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                     <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{product.name}</td>
                     <td className="px-4 py-4 text-sm font-black text-primary-600 dark:text-primary-400">{formatCurrency(group.priceMN)}</td>
                     <td className="px-4 py-4 text-sm font-medium text-slate-600 dark:text-slate-400">{group.quantity}</td>
-                    <td className="px-4 py-4 text-center">
-                      <Button variant="success" size="xs" onClick={() => handleOpenSellModal(group)}>Vender</Button>
+                    <td className="px-4 py-4 align-middle">
+                      <div className="flex items-center justify-center w-full">
+                        <Button variant="success" size="xs" onClick={() => handleOpenSellModal(group)}>Vender</Button>
+                      </div>
                     </td>
                   </tr>
                 );

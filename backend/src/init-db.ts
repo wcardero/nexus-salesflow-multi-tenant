@@ -135,7 +135,7 @@ CREATE TABLE "Sale" (
     "commission" DOUBLE PRECISION NOT NULL,
     "finalMN" DOUBLE PRECISION NOT NULL,
     "productId" TEXT,
-    "inventoryItemId" TEXT NOT NULL UNIQUE,
+    "inventoryItemId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
     "paymentStatus" "SalePaymentStatus" NOT NULL DEFAULT 'PAID',
     "customerName" TEXT,

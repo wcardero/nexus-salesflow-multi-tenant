@@ -104,7 +104,7 @@ CREATE TABLE "Sale" (
     "baseMN" DOUBLE PRECISION NOT NULL,
     "commission" DOUBLE PRECISION NOT NULL,
     "finalMN" DOUBLE PRECISION NOT NULL,
-    "inventoryItemId" TEXT NOT NULL UNIQUE,
+    "inventoryItemId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
     CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
