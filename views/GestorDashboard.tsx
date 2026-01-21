@@ -325,7 +325,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
       {Object.keys(salesByProduct).length > 0 && (
         <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-800 dark:text-slate-100 uppercase tracking-tight">Ventas Realizadas (Hoy)</h2>
+          <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-800 dark:text-slate-100 uppercase tracking-tight">Ventas del Período (Desde Último Cierre)</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
               <thead className="bg-slate-50 dark:bg-slate-900/50">
@@ -350,7 +350,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
               </tbody>
               <tfoot className="bg-slate-50 dark:bg-slate-900/50 font-black">
                 <tr>
-                  <td colSpan={2} className="px-4 py-4 text-slate-500 text-xs uppercase tracking-widest">Total Hoy</td>
+                  <td colSpan={2} className="px-4 py-4 text-slate-500 text-xs uppercase tracking-widest">Total Período</td>
                   <td className="px-4 py-4 text-right text-slate-500">{formatCurrency(totalStoreGain)}</td>
                   <td className="px-4 py-4 text-right text-slate-500">{formatCurrency(totalGestorGain)}</td>
                   <td className="px-4 py-4 text-right text-primary-600 dark:text-primary-400">{formatCurrency(totalSalesAmount)}</td>
