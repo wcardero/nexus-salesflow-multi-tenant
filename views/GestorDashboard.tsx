@@ -255,10 +255,17 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         if (!groups[key]) {
           groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0, unitPrice: 0, unitCommission: 0 };
         }
-        groups[key].quantity += 1;
-        groups[key].total += sale.finalMN;
-        groups[key].gestorGain += sale.commission;
-        groups[key].storeGain += sale.baseMN;
+        // Los valores sale.finalMN, sale.commission y sale.baseMN son por UNIDAD
+        // Por cada venta individual, incrementamos la cantidad por la cantidadVendida
+        // Y calculamos los totales correctamente: total = precioUnitario * cantidad
+        const quantitySold = 1; // Cada venta individual representa 1 unidad
+        
+        groups[key].quantity += quantitySold;
+        groups[key].total += sale.finalMN; // finalMN ya es el precio por unidad
+        groups[key].gestorGain += sale.commission; // commission ya es la comisión por unidad
+        groups[key].storeGain += sale.baseMN; // baseMN ya es el precio base por unidad
+        
+        // Guardamos el precio unitario y comisión unitaria (de la primera venta del producto)
         if (groups[key].unitPrice === 0) {
           groups[key].unitPrice = sale.baseMN;
           groups[key].unitCommission = sale.commission;
@@ -342,8 +349,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                   <tr key={productId}>
                     <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{productsById[productId]?.name}</td>
                     <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-center">{data.quantity}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.unitPrice)}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.unitCommission)}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.quantity * data.unitPrice)}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.quantity * data.unitCommission)}</td>
                     <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(data.total)}</td>
                   </tr>
                 ))}
