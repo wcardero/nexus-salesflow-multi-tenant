@@ -239,26 +239,48 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   };
 
   const salesByProduct = useMemo(() => {
-    const groups: { [key: string]: { quantity: number; total: number; gestorGain: number; storeGain: number } } = {};
+    interface SalesGroup {
+      quantity: number;
+      total: number;
+      gestorGain: number;
+      storeGain: number;
+      unitPrice: number;
+      unitCommission: number;
+    }
+    const groups: { [key: string]: SalesGroup } = {};
     gestorSalesSinceLastClosing.forEach(sale => {
       if (sale.paymentStatus !== SalePaymentStatus.PAID) return;
       if (sale.productId) {
         const key = sale.productId;
         if (!groups[key]) {
-          groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0 };
+          groups[key] = { quantity: 0, total: 0, gestorGain: 0, storeGain: 0, unitPrice: 0, unitCommission: 0 };
         }
         groups[key].quantity += 1;
         groups[key].total += sale.finalMN;
         groups[key].gestorGain += sale.commission;
         groups[key].storeGain += sale.baseMN;
+        if (groups[key].unitPrice === 0) {
+          groups[key].unitPrice = sale.baseMN;
+          groups[key].unitCommission = sale.commission;
+        }
       }
     });
     return groups;
   }, [gestorSalesSinceLastClosing]);
 
-  const totalSalesAmount = Object.values(salesByProduct).reduce((sum, data) => sum + data.total, 0);
-  const totalGestorGain = Object.values(salesByProduct).reduce((sum, data) => sum + data.gestorGain, 0);
-  const totalStoreGain = Object.values(salesByProduct).reduce((sum, data) => sum + data.storeGain, 0);
+  interface SalesGroup {
+    quantity: number;
+    total: number;
+    gestorGain: number;
+    storeGain: number;
+    unitPrice: number;
+    unitCommission: number;
+  }
+
+  const salesValues = Object.values(salesByProduct) as SalesGroup[];
+  const totalSalesAmount = salesValues.reduce((sum, data) => sum + data.total, 0);
+  const totalGestorGain = salesValues.reduce((sum, data) => sum + data.gestorGain, 0);
+  const totalStoreGain = salesValues.reduce((sum, data) => sum + data.storeGain, 0);
 
   return (
     <div className="flex flex-col gap-6 md:gap-8">
@@ -307,15 +329,19 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
               <thead className="bg-slate-50 dark:bg-slate-900/50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Producto</th>
-                  <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cant.</th>
-                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Monto</th>
+                  <th className="px-4 py-3 text-center text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cant.</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Precio</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Comisión</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {Object.entries(salesByProduct).map(([productId, data]) => (
+                {Object.entries(salesByProduct).map(([productId, data]: [string, SalesGroup]) => (
                   <tr key={productId}>
                     <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{productsById[productId]?.name}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{data.quantity}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-center">{data.quantity}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.unitPrice)}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.unitCommission)}</td>
                     <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(data.total)}</td>
                   </tr>
                 ))}
@@ -323,6 +349,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
               <tfoot className="bg-slate-50 dark:bg-slate-900/50 font-black">
                 <tr>
                   <td colSpan={2} className="px-4 py-4 text-slate-500 text-xs uppercase tracking-widest">Total Hoy</td>
+                  <td className="px-4 py-4 text-right text-slate-500">{formatCurrency(totalStoreGain)}</td>
+                  <td className="px-4 py-4 text-right text-slate-500">{formatCurrency(totalGestorGain)}</td>
                   <td className="px-4 py-4 text-right text-primary-600 dark:text-primary-400">{formatCurrency(totalSalesAmount)}</td>
                 </tr>
               </tfoot>
