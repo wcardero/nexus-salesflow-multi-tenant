@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
-import { formatDate } from '../dateUtils';
+import { formatDate, getPresetRanges } from '../dateUtils';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 
 interface GestorDashboardProps {
@@ -544,9 +544,10 @@ interface GestorReportsViewProps {
 }
 
 const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gestorClosings, products }) => {
+  const presetRanges = getPresetRanges();
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)),
-    end: new Date()
+    start: presetRanges.esteMes.start,
+    end: presetRanges.esteMes.end
   });
 
   const filteredClosings = gestorClosings.filter(c => 
