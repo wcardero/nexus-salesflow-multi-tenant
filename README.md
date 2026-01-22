@@ -140,7 +140,8 @@ nexus-salesflow-multi-tenant/
 │   ├── App.tsx              # Componente principal
 │   ├── types.ts             # Definiciones TypeScript
 │   ├── utils.ts             # Utilidades de cálculo
-│   └── exportUtils.ts       # Exportación de reportes
+│   ├── exportUtils.ts       # Exportación de reportes
+│   └── dateUtils.ts         # Utilidades de fecha
 │
 └── backend/                 # Express + TypeScript + PostgreSQL
     ├── src/
@@ -218,8 +219,8 @@ sudo -u postgres createuser -s nexus_dev
 sudo -u postgres createdb nexusdb
 sudo -u postgres psql -c "ALTER USER nexus_dev PASSWORD 'tu_password_seguro';"
 
-# Ejecutar migraciones
-cd backend && node init-db.js
+# Ejecutar script de inicialización
+cd backend && npx ts-node src/init-db.ts
 ```
 
 #### ✅ Checklist de Seguridad para Pull Requests
@@ -262,7 +263,7 @@ createdb nexusdb
 
 # Ejecutar script de inicialización
 cd backend
-node init-db.js
+npx ts-node src/init-db.ts
 ```
 
 ### 3. Configurar variables de entorno
@@ -304,13 +305,13 @@ cd ..
 npm run dev
 ```
 
-El frontend estará disponible en `http://localhost:5173`
+El frontend estará disponible en `http://localhost:3000`
 El backend estará disponible en `http://localhost:3001`
 
 ## ⚙️ Configuración
 
 ### Primer Usuario (Admin)
-1. Accede a `http://localhost:5173`
+1. Accede a `http://localhost:3000`
 2. El sistema detectará que no hay usuarios
 3. Crea el primer usuario con rol **Admin**
 4. Desde el admin podrás crear tiendas y otros usuarios
@@ -829,10 +830,10 @@ nexus-salesflow-multi-tenant/
 │   │   ├── inventory.ts    # Lógica de inventario
 │   │   ├── sales.ts        # Lógica de ventas
 │   │   ├── init-db.ts      # Inicialización de BD
-│   │   └── store.ts       # Store simulado
+│   │   └── store.ts       # (Eliminado - funcionalidad integrada)
 │   ├── migrations/         # Scripts de migración
 │   ├── db.sql             # Script SQL completo
-│   ├── init-db.js         # Inicializador de BD
+│   ├── init-db.ts         # Inicializador de BD (TypeScript)
 │   ├── Dockerfile
 │   └── package.json
 │
