@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
-import { formatDate } from '../dateUtils';
+import { formatDate, getPresetRanges } from '../dateUtils';
 import { MockDB, Role, User } from '../types';
 
 interface AdminDashboardProps {
@@ -50,9 +50,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   const [newDirectorName, setNewDirectorName] = useState('');
   const [newDirectorPassword, setNewDirectorPassword] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
+  const presets = getPresetRanges();
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)),
-    end: new Date()
+    start: presets.esteMes.start,
+    end: presets.esteMes.end
   });
 
   const getPeriodLabel = () => {

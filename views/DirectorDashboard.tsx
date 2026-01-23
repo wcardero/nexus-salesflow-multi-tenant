@@ -4,7 +4,7 @@ import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import Button from '../components/Button';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
-import { formatDate } from '../dateUtils';
+import { formatDate, getPresetRanges } from '../dateUtils';
 
 interface DirectorDashboardProps {
   db: MockDB;
@@ -44,9 +44,10 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     return undefined;
   }, [currentUser, db]);
 
+  const presets = getPresetRanges();
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)),
-    end: new Date()
+    start: presets.esteMes.start,
+    end: presets.esteMes.end
   });
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     try {
       const startDate = dateRange.start.toISOString();
       const endDate = dateRange.end.toISOString();
-      const response = await fetch(`http://localhost:3001/api/director/metrics?startDate=${startDate}&endDate=${endDate}`, {
+      const response = await fetch(`http://localhost:3001/api/director/metrics?startDate=${startDate}&endDate=${endDate}&period=custom`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

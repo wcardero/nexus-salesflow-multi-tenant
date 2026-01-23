@@ -28,6 +28,11 @@ export const getSales = async (req: Request, res: Response) => {
   } else if (requestingUser?.role === 'Gestor') {
     condition = 'WHERE s."gestorId" = $1';
     params.push(requestingUser?.id);
+  } else if (requestingUser?.role === 'Director') {
+    condition = `WHERE s."productId" IN (
+      SELECT id FROM "Product" WHERE "storeId" = $1
+    )`;
+    params.push(requestingUser.storeId);
   }
 
   try {
