@@ -46,7 +46,7 @@ export const createProduct = async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
   }
 
-  const { name, costUSD, costMN, margin, currency, commissionRate, storeId } = req.body;
+  const { name, costUSD, costMN, margin, currency, commissionRate, storeId, priceMN, gestorCommissionMN } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!isDirector(requestingUser?.role) && !isManager(requestingUser?.role)) {
@@ -72,12 +72,12 @@ export const createProduct = async (req: Request, res: Response) => {
     const productId = `prod-${Date.now()}`;
     const query = `
       INSERT INTO "Product" (
-        id, name, "costUSD", "costMN", margin, currency, "commissionRate", "storeId", "createdBy"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        id, name, "costUSD", "costMN", margin, currency, "commissionRate", "storeId", "createdBy", "priceMN", "gestorCommissionMN"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
     const result = await db.query(query, [
-      productId, name, costUSD || null, costMN || null, margin || null, currency || 'USD', commissionRate || null, finalStoreId, requestingUser?.id
+      productId, name, costUSD || null, costMN || null, margin || null, currency || 'USD', commissionRate || null, finalStoreId, requestingUser?.id, priceMN || null, gestorCommissionMN || null
     ]);
 
     await createAuditLog(
@@ -99,7 +99,7 @@ export const createProduct = async (req: Request, res: Response) => {
 
 export const updateProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, costUSD, costMN, margin, currency, commissionRate } = req.body;
+  const { name, costUSD, costMN, margin, currency, commissionRate, priceMN, gestorCommissionMN } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!isDirector(requestingUser?.role) && !isManager(requestingUser?.role)) {
@@ -135,8 +135,8 @@ export const updateProduct = async (req: Request, res: Response) => {
 
     const query = `
       UPDATE "Product"
-      SET name = $1, "costUSD" = $2, "costMN" = $3, margin = $4, currency = $5, "commissionRate" = $6
-      WHERE id = $7
+      SET name = $1, "costUSD" = $2, "costMN" = $3, margin = $4, currency = $5, "commissionRate" = $6, "priceMN" = $7, "gestorCommissionMN" = $8
+      WHERE id = $9
       RETURNING *
     `;
     const result = await db.query(query, [
@@ -146,6 +146,8 @@ export const updateProduct = async (req: Request, res: Response) => {
       margin !== undefined ? margin : currentProduct.margin,
       currency || currentProduct.currency,
       commissionRate !== undefined ? commissionRate : currentProduct.commissionRate,
+      priceMN !== undefined ? priceMN : currentProduct.priceMN,
+      gestorCommissionMN !== undefined ? gestorCommissionMN : currentProduct.gestorCommissionMN,
       id
     ]);
 

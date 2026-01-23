@@ -7,9 +7,10 @@ import {
   deleteStore,
   assignManagerToStore,
   removeManagerFromStore,
+  createExchangeRate,
 } from '../controllers/stores.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { validateStoreCreation, validateStoreUpdate, validateAssignManager } from '../validators/stores.validator';
+import { validateStoreCreation, validateStoreUpdate, validateAssignManager, validateExchangeRate } from '../validators/stores.validator';
 import { validationResult, ValidationChain } from 'express-validator';
 
 // Helper function to wrap validation chains with error handler
@@ -30,5 +31,6 @@ router.put('/stores/:id', authenticateToken, ...withValidation(validateStoreUpda
 router.delete('/stores/:id', authenticateToken, deleteStore);
 router.post('/stores/:storeId/assign-manager', authenticateToken, ...withValidation(validateAssignManager, assignManagerToStore));
 router.delete('/stores/:storeId/remove-manager/:userId', authenticateToken, removeManagerFromStore);
+router.post('/exchange-rates', authenticateToken, ...withValidation(validateExchangeRate, createExchangeRate));
 
 export default router;

@@ -69,12 +69,12 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
         COALESCE((
           SELECT COUNT(*) FROM "Sale" s2
           JOIN "User" u2 ON s2."gestorId" = u2.id
-          WHERE u2."createdBy" = u.id AND s2."soldAt" BETWEEN $1 AND $2
+          WHERE u2."createdBy" = u.id AND s2."soldAt" BETWEEN $2 AND $3
         ), 0) as salesCount,
         COALESCE((
           SELECT SUM("finalMN") FROM "Sale" s3
           JOIN "User" u3 ON s3."gestorId" = u3.id
-          WHERE u3."createdBy" = u.id AND s3."soldAt" BETWEEN $1 AND $2
+          WHERE u3."createdBy" = u.id AND s3."soldAt" BETWEEN $2 AND $3
         ), 0) as totalSales
        FROM "User" u
        WHERE u."storeId" = $1 AND u.role = 'Manager'`,

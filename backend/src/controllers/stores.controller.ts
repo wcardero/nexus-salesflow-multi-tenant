@@ -172,8 +172,45 @@ export const deleteStore = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Store not found.' });
     }
 
-    await db.query('DELETE FROM "Store" WHERE id = $1', [id]);
+    await db.query('DELETE FROM "ExchangeRate" WHERE "storeId" = $1', [id]);
+    await db.query('DELETE FROM "ProductStock" WHERE "storeId" = $1', [id]);
+    
+    await db.query(`
+      DELETE FROM "InventoryConflict" 
+      WHERE "assignedInventoryId" IN (
+        SELECT ai.id FROM "AssignedInventory" ai
+        JOIN "Product" p ON ai."productId" = p.id
+        WHERE p."storeId" = $1
+      )
+    `, [id]);
+
+    await db.query(`
+      DELETE FROM "Sale" 
+      WHERE "inventoryItemId" IN (
+        SELECT ai.id FROM "AssignedInventory" ai
+        JOIN "Product" p ON ai."productId" = p.id
+        WHERE p."storeId" = $1
+      )
+    `, [id]);
+
+    await db.query(`
+      DELETE FROM "AssignedInventory" 
+      WHERE "productId" IN (
+        SELECT id FROM "Product" WHERE "storeId" = $1
+      )
+    `, [id]);
+
+    await db.query(`
+      DELETE FROM "InventoryItem" 
+      WHERE "productId" IN (
+        SELECT id FROM "Product" WHERE "storeId" = $1
+      )
+    `, [id]);
+
+    await db.query('DELETE FROM "Product" WHERE "storeId" = $1', [id]);
+
     await auditStoreDeletion(requestingUser?.id || '', id, storeResult.rows[0]);
+    await db.query('DELETE FROM "Store" WHERE id = $1', [id]);
     res.status(200).json({ message: 'Store deleted successfully.' });
   } catch (error) {
     console.error('Store deletion error:', error);
@@ -261,6 +298,64 @@ export const removeManagerFromStore = async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Manager removed from store successfully.' });
   } catch (error) {
     console.error('Remove manager from store error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// ============================================================================
+// Exchange Rate Controller
+// ============================================================================
+
+export const createExchangeRate = async (req: Request, res: Response) => {
+  const requestingUser = (req as AuthenticatedRequest).user;
+  const { rate, startDate, storeId } = req.body;
+
+  // Only Manager or Director can set exchange rate
+  if (!requestingUser || (requestingUser.role !== 'Manager' && requestingUser.role !== 'Director')) {
+    return res.status(403).json({ message: 'Access denied. Only managers or directors can set exchange rates.' });
+  }
+
+  // Validate storeId matches user's store
+  if (requestingUser.storeId !== storeId) {
+    // Check if manager is assigned to this store via _StoreToUser
+    const storeAssignment = await db.query(
+      'SELECT * FROM "_StoreToUser" WHERE "A" = $1 AND "B" = $2',
+      [storeId, requestingUser.id]
+    );
+    if (storeAssignment.rows.length === 0) {
+      return res.status(403).json({ message: 'Access denied. You are not assigned to this store.' });
+    }
+  }
+
+  try {
+    const newId = `rate-${Date.now()}`;
+    const effectiveStartDate = startDate ? new Date(startDate) : new Date();
+
+    // Close previous exchange rate if exists
+    await db.query(
+      'UPDATE "ExchangeRate" SET "endDate" = $1 WHERE "storeId" = $2 AND "endDate" IS NULL',
+      [effectiveStartDate, storeId]
+    );
+
+    // Insert new exchange rate
+    const result = await db.query(
+      'INSERT INTO "ExchangeRate" (id, rate, "startDate", "storeId") VALUES ($1, $2, $3, $4) RETURNING *',
+      [newId, rate, effectiveStartDate, storeId]
+    );
+
+    await createAuditLog(
+      requestingUser.id,
+      'CREATE_EXCHANGE_RATE',
+      'ExchangeRate',
+      newId,
+      null,
+      result.rows[0],
+      storeId
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Create exchange rate error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

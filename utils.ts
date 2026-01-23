@@ -7,13 +7,17 @@ import { Store, Product, ExchangeRate } from "./types";
  * @returns El tipo de cambio activo.
  */
 export const getCurrentExchangeRate = (store: Store): ExchangeRate | undefined => {
-  // Cuando los datos vienen de la API como JSON, las fechas son strings.
-  // Nos aseguramos de que se manejen como objetos Date para la comparación.
+  if (!store.exchangeRates || store.exchangeRates.length === 0) return undefined;
+
   const now = new Date();
-  return store.exchangeRates
+  const rates = store.exchangeRates
     .map(xr => ({ ...xr, startDate: new Date(xr.startDate), endDate: xr.endDate ? new Date(xr.endDate) : undefined }))
-    .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
-    .find(xr => xr.startDate <= now && (!xr.endDate || xr.endDate > now));
+    .sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+
+  const activeRate = rates.find(xr => xr.startDate <= now && (!xr.endDate || xr.endDate > now));
+  if (activeRate) return activeRate;
+
+  return rates[0];
 };
 
 /**
@@ -26,7 +30,7 @@ export const calculateProductPrices = (
   product: Product,
   exchangeRate: ExchangeRate | undefined
 ) => {
-  if (!product.commissionRate) {
+  if (product.commissionRate === undefined || product.commissionRate === null) {
     return { saleUSD: 0, baseMN: 0, commission: 0, finalMN: 0, priceMN: 0, gestorCommissionMN: 0 };
   }
 
