@@ -5,7 +5,7 @@ import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
-import { formatDate } from '../dateUtils';
+import { formatDate, getPresetRanges } from '../dateUtils';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 import { addDays } from 'date-fns';
 
@@ -171,9 +171,10 @@ interface ReportsViewProps {
 }
 
 const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, assignedInventory }) => {
+  const presets = getPresetRanges();
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)),
-    end: new Date()
+    start: presets.esteMes.start,
+    end: presets.esteMes.end
   });
 
 
@@ -1654,9 +1655,10 @@ const ClosingsReportView: React.FC<{
   products: Product[];
   assignedInventory: AssignedInventory[];
 }> = ({ closings, users, products, assignedInventory }) => {
+  const presets = getPresetRanges();
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)),
-    end: new Date()
+    start: presets.esteMes.start,
+    end: presets.esteMes.end
   });
   const [viewMode, setViewMode] = useState<'por-cierre' | 'por-gestor'>('por-cierre');
 
