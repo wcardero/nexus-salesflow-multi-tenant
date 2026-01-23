@@ -1512,9 +1512,9 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                     {group.gestor?.name || 'Gestor desconocido'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                    {group.priceMN ? formatCurrency(group.priceMN) : 'N/A'}
-                  </td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                     {group.priceMN !== undefined && group.priceMN !== null ? formatCurrency(group.priceMN) : 'N/A'}
+                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                     {group.quantity}
                   </td>

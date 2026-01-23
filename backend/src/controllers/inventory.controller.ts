@@ -292,11 +292,14 @@ export const assignInventory = [
         return res.status(400).json({ message: 'Insufficient stock.' });
       }
 
+      const productPriceResult = await db.query('SELECT "priceMN" FROM "Product" WHERE id = $1', [productId]);
+      const currentPriceMN = productPriceResult.rows[0]?.priceMN || 0;
+
       const assignmentId = `assigned-${Date.now()}`;
       const result = await db.query(
         `INSERT INTO "AssignedInventory" (id, "productId", "gestorId", "quantity", "priceMN", status)
-         VALUES ($1, $2, $3, $4, 0, 'Pending') RETURNING *`,
-        [assignmentId, productId, gestorId, quantity]
+         VALUES ($1, $2, $3, $4, $5, 'Pending') RETURNING *`,
+        [assignmentId, productId, gestorId, quantity, currentPriceMN]
       );
 
       const newStock = currentStock - quantity;
