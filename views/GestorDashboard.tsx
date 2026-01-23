@@ -87,22 +87,23 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                   <tr key={ai.id}>
                     <td className="px-6 py-4">{product.name}</td>
                     <td className="px-6 py-4">{ai.quantity}</td>
-                    <td className="px-6 py-4 text-center">
-                      <Button
-                        variant="success"
-                        size="xs"
-                        onClick={() => onConfirm(ai.id)}
-                        className="mr-2"
-                      >
-                        Aceptar
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="xs"
-                        onClick={() => setRejecting(ai.id)}
-                      >
-                        Rechazar
-                      </Button>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="success"
+                          size="xs"
+                          onClick={() => onConfirm(ai.id)}
+                        >
+                          Aceptar
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="xs"
+                          onClick={() => setRejecting(ai.id)}
+                        >
+                          Rechazar
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
