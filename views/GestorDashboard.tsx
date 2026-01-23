@@ -491,8 +491,10 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
                   <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">{productsById[debt.productId]?.name}</td>
                   <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-center">{debt.quantity}</td>
                   <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(debt.totalAmount)}</td>
-                  <td className="px-4 py-4 text-center">
-                    <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(debt.saleIds)}>Marcar Pagada</Button>
+                  <td className="px-4 py-4 align-middle">
+                    <div className="flex items-center justify-center">
+                      <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(debt.saleIds)}>Marcar Pagada</Button>
+                    </div>
                   </td>
                 </tr>
               ))}

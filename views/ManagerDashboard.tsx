@@ -1492,7 +1492,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
         </div>
 
         {/* Confirmed inventory grouped by price */}
-        <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Confirmado (Agrupado por Precio)</h4>
+        <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Confirmado</h4>
        <div className="overflow-x-auto">
          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
            <thead className="bg-slate-50 dark:bg-slate-700">
