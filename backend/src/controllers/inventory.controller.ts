@@ -168,6 +168,19 @@ export const deleteProductStock = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied. You do not have access to this store.' });
     }
 
+    const assignmentsCheck = await db.query(
+      `SELECT COUNT(*) FROM "AssignedInventory" ai
+       JOIN "Product" p ON ai."productId" = p.id
+       WHERE p.id = $1 AND p."storeId" = $2 AND ai.status IN ('Pending', 'Confirmed', 'Rejected')`,
+      [stock.productId, stock.storeId]
+    );
+
+    if (parseInt(assignmentsCheck.rows[0].count) > 0) {
+      return res.status(400).json({ 
+        message: 'No se puede eliminar el stock inicial porque existen asignaciones activas o conflictos pendientes asociados a este producto. Primero debe cancelar o resolver las asignaciones de los gestores.' 
+      });
+    }
+
     await db.query('DELETE FROM "ProductStock" WHERE id = $1', [stockId]);
 
     await createAuditLog(
@@ -317,7 +330,13 @@ export const confirmInventory = async (req: Request, res: Response) => {
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {
-    const assignmentResult = await db.query('SELECT * FROM "AssignedInventory" WHERE id = $1', [id]);
+    const assignmentResult = await db.query(
+      `SELECT ai.*, p."storeId" 
+       FROM "AssignedInventory" ai
+       JOIN "Product" p ON ai."productId" = p.id
+       WHERE ai.id = $1`, 
+      [id]
+    );
     if (assignmentResult.rows.length === 0) {
       return res.status(404).json({ message: 'Assignment not found.' });
     }
@@ -342,7 +361,7 @@ export const confirmInventory = async (req: Request, res: Response) => {
       id,
       assignment,
       { ...assignment, status: 'Confirmed' },
-      assignment.productId
+      assignment.storeId
     );
 
     res.status(200).json({ message: 'Inventory confirmed successfully.' });
@@ -362,7 +381,13 @@ export const rejectInventory = async (req: Request, res: Response) => {
   }
 
   try {
-    const assignmentResult = await db.query('SELECT * FROM "AssignedInventory" WHERE id = $1', [id]);
+    const assignmentResult = await db.query(
+      `SELECT ai.*, p."storeId" 
+       FROM "AssignedInventory" ai
+       JOIN "Product" p ON ai."productId" = p.id
+       WHERE ai.id = $1`, 
+      [id]
+    );
     if (assignmentResult.rows.length === 0) {
       return res.status(404).json({ message: 'Assignment not found.' });
     }
@@ -370,6 +395,25 @@ export const rejectInventory = async (req: Request, res: Response) => {
     const assignment = assignmentResult.rows[0];
     if (assignment.gestorId !== requestingUser?.id) {
       return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const creatorLog = await db.query(
+      'SELECT "userId" FROM "AuditLog" WHERE "action" = $1 AND "entityId" = $2 LIMIT 1',
+      ['CREATE_ASSIGNED_INVENTORY', id]
+    );
+    
+    let managerId = creatorLog.rows[0]?.userId;
+    
+    if (!managerId) {
+      const fallbackManager = await db.query(
+        'SELECT "B" as id FROM "_StoreToUser" WHERE "A" = $1 LIMIT 1',
+        [assignment.storeId]
+      );
+      managerId = fallbackManager.rows[0]?.id;
+    }
+
+    if (!managerId) {
+      return res.status(400).json({ message: 'No manager found to handle this conflict.' });
     }
 
     await db.query('BEGIN');
@@ -396,7 +440,7 @@ export const rejectInventory = async (req: Request, res: Response) => {
     await db.query(
       `INSERT INTO "InventoryConflict" (id, "assignedInventoryId", "gestorId", "managerId", reason, status)
        VALUES ($1, $2, $3, $4, $5, 'Pending')`,
-      [conflictId, id, assignment.gestorId, assignment.managerId, reason]
+      [conflictId, id, assignment.gestorId, managerId, reason]
     );
 
     await db.query('COMMIT');
@@ -447,7 +491,19 @@ export const getInventoryConflicts = async (req: Request, res: Response) => {
 
   try {
     const query = `
-      SELECT ic.*, p.name as productName, u.name as gestorName
+      SELECT 
+        ic.id, 
+        ic."assignedInventoryId", 
+        ic."gestorId", 
+        ic."managerId", 
+        ic.reason, 
+        ic.status, 
+        ic."createdAt", 
+        ic."resolvedAt",
+        p.name as "productName", 
+        u.name as "gestorName", 
+        ai.quantity, 
+        ai."productId"
       FROM "InventoryConflict" ic
       JOIN "AssignedInventory" ai ON ic."assignedInventoryId" = ai.id
       JOIN "Product" p ON ai."productId" = p.id
@@ -469,7 +525,14 @@ export const resolveInventoryConflict = async (req: Request, res: Response) => {
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {
-    const conflictResult = await db.query('SELECT * FROM "InventoryConflict" WHERE id = $1', [id]);
+    const conflictResult = await db.query(
+      `SELECT ic.*, p."storeId" 
+       FROM "InventoryConflict" ic
+       JOIN "AssignedInventory" ai ON ic."assignedInventoryId" = ai.id
+       JOIN "Product" p ON ai."productId" = p.id
+       WHERE ic.id = $1`, 
+      [id]
+    );
     if (conflictResult.rows.length === 0) {
       return res.status(404).json({ message: 'Conflict not found.' });
     }
@@ -479,26 +542,49 @@ export const resolveInventoryConflict = async (req: Request, res: Response) => {
     await db.query('BEGIN');
 
     if (action === 'resolve') {
+      const assignmentResult = await db.query(
+        'SELECT "productId", "quantity", "storeId" FROM "AssignedInventory" ai JOIN "Product" p ON ai."productId" = p.id WHERE ai.id = $1',
+        [conflict.assignedInventoryId]
+      );
+      const assignment = assignmentResult.rows[0];
+
+      const stockResult = await db.query(
+        'SELECT quantity FROM "ProductStock" WHERE "productId" = $1 AND "storeId" = $2',
+        [assignment.productId, assignment.storeId]
+      );
+      const currentStock = stockResult.rows[0]?.quantity || 0;
+
+      if (newQuantity > currentStock) {
+        await db.query('ROLLBACK');
+        return res.status(400).json({ 
+          message: `Stock insuficiente. El máximo disponible en tienda es ${currentStock}.` 
+        });
+      }
+
       await db.query(
         'UPDATE "InventoryConflict" SET status = $1, "resolvedAt" = NOW() WHERE id = $2',
         ['Resolved', id]
       );
       await db.query(
-        'UPDATE "AssignedInventory" SET status = $1, quantity = $2 WHERE id = $3',
-        ['Confirmed', newQuantity, conflict.assignedInventoryId]
+        'UPDATE "AssignedInventory" SET status = $1, quantity = $2, "rejectionReason" = NULL WHERE id = $3',
+        ['Pending', newQuantity, conflict.assignedInventoryId]
       );
+
+      const updatedStock = currentStock - newQuantity;
+      await db.query(
+        'UPDATE "ProductStock" SET "quantity" = $1 WHERE "productId" = $2 AND "storeId" = $3',
+        [updatedStock, assignment.productId, assignment.storeId]
+      );
+
     } else if (action === 'cancel') {
       await db.query(
         'UPDATE "InventoryConflict" SET status = $1, "resolvedAt" = NOW() WHERE id = $2',
         ['Resolved', id]
       );
-      const assignmentResult = await db.query(
-        'SELECT * FROM "AssignedInventory" WHERE id = $3',
-        [conflict.assignedInventoryId]
+      await db.query(
+        'UPDATE "AssignedInventory" SET status = $1 WHERE id = $2',
+        ['Cancelled', conflict.assignedInventoryId]
       );
-      if (assignmentResult.rows.length > 0) {
-        await db.query('DELETE FROM "AssignedInventory" WHERE id = $1', [conflict.assignedInventoryId]);
-      }
     }
 
     await db.query('COMMIT');

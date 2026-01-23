@@ -112,7 +112,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
         case 'stock':
          return <StockView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
         case 'conflicts':
-         return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} />;
+         return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} refreshDb={refreshDb} />;
         case 'reporte-cierres':
          return <ClosingsReportView closings={storeClosings} users={db.users} products={storeProducts} assignedInventory={db.assignedInventory} />;
         default:
@@ -1532,8 +1532,43 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
 };
 
 // --- AUDIT LOGS VIEW ---
-const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product[]}> = ({ conflicts, products }) => {
+const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product[], refreshDb: () => Promise<void>}> = ({ conflicts, products, refreshDb }) => {
   const productsById = Object.fromEntries(products.map(p => [p.id, p]));
+
+  const handleResolve = async (conflictId: string, action: 'resolve' | 'cancel') => {
+    let newQuantity = 0;
+    if (action === 'resolve') {
+      const input = prompt('Ingresa la cantidad corregida para esta asignación:');
+      if (input === null) return;
+      newQuantity = parseInt(input);
+      if (isNaN(newQuantity) || newQuantity < 0) {
+        alert('Cantidad inválida.');
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/inventory-conflicts/${conflictId}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ action, newQuantity })
+      });
+
+      if (response.ok) {
+        await refreshDb();
+        alert('Conflicto resuelto exitosamente.');
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error resolving conflict:', error);
+      alert('Error al resolver el conflicto.');
+    }
+  };
 
   return (
     <div>
@@ -1547,19 +1582,20 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Producto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cantidad</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Razón</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-slate-50 dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {conflicts.length > 0 ? conflicts.map(conflict => (
               <tr key={conflict.id} className="hover:bg-warning-50 dark:hover:bg-warning-900/10">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                  {new Date(conflict.createdat).toLocaleString()}
+                  {conflict.createdAt ? new Date(conflict.createdAt).toLocaleString() : 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
                   {conflict.gestorName || 'Gestor desconocido'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
-                  {productsById[conflict.productId]?.name || 'Producto desconocido'}
+                  {conflict.productName || productsById[conflict.productId]?.name || 'Producto desconocido'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                   {conflict.quantity}
@@ -1567,10 +1603,30 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
                 <td className="px-6 py-4 text-sm text-warning-600 dark:text-warning-400 max-w-xs">
                   {conflict.reason}
                 </td>
+                <td className="px-6 py-4 text-center whitespace-nowrap">
+                  {conflict.status === 'Pending' ? (
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={() => handleResolve(conflict.id, 'resolve')}
+                        className="bg-primary-600 hover:bg-primary-700 text-white text-xs px-3 py-1 rounded shadow-sm"
+                      >
+                        Reasignar
+                      </button>
+                      <button
+                        onClick={() => handleResolve(conflict.id, 'cancel')}
+                        className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-green-600 dark:text-green-400 text-xs font-bold uppercase">Resuelto</span>
+                  )}
+                </td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-slate-500">No hay conflictos de inventario.</td>
+                <td colSpan={6} className="px-6 py-4 text-center text-sm text-slate-500">No hay conflictos de inventario.</td>
               </tr>
             )}
           </tbody>
