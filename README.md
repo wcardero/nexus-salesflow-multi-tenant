@@ -797,8 +797,8 @@ cp docker.env.example docker.env
 
 # Editar con tus valores de desarrollo
 # Los valores deben coincidir con los de backend/.env
-POSTGRES_USER=nexus_user
-POSTGRES_PASSWORD=nexus_secure_pass_2024  # Mismo valor que en backend/.env
+POSTGRES_USER=tu_usuario
+POSTGRES_PASSWORD=tu_password_seguro
 POSTGRES_DB=nexusdb
 ```
 
@@ -809,22 +809,13 @@ POSTGRES_DB=nexusdb
 ```bash
 # Iniciar solo PostgreSQL
 docker-compose up -d postgres
-
-# Ver logs
-docker-compose logs -f postgres
-
-# Detener
-docker-compose down
 ```
 
 #### Verificar Conexión
 
 ```bash
-# Verificar que PostgreSQL está corriendo
-docker ps | grep postgres
-
 # Probar conexión (desde el contenedor)
-docker exec -it nexus-sales-db psql -U nexus_user -d nexusdb -c "\dt"
+docker exec -it nexus-sales-db psql -U tu_usuario_db -d nexusdb -c "\dt"
 ```
 
 
