@@ -120,9 +120,9 @@ export const createSale = async (req: Request, res: Response) => {
     for (let i = 0; i < quantity; i++) {
       const saleId = `sale-${Date.now()}-${i}`;
       const saleResult = await db.query(
-        `INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "productId", "soldAt", "exchangeRateUsed",
+        `INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "productId", "soldAt", "accountingDate", "exchangeRateUsed",
           "costUSD", "costMN", "margin", "saleUSD", "baseMN", "commission", "finalMN", "paymentStatus", "customerName")
-         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+         VALUES ($1, $2, $3, $4, NOW(), CURRENT_DATE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
         [saleId, assignedInventoryId, requestingUser?.id, assignment.productId, exchangeRate,
           costUSD, costMN, margin, saleUSD, baseMN, commission, finalMN, paymentStatus || 'PAID', customerName]
       );

@@ -111,6 +111,7 @@ export interface Sale {
   commission: number;
   finalMN: number;
   paymentStatus: SalePaymentStatus;
+  accountingDate?: string | Date;
   customerName?: string;
   productId?: string;
 }
@@ -140,6 +141,7 @@ export interface Closing {
   initiatedAt: Date;
   completedAt?: Date;
   status: ClosingStatus;
+  accountingDate?: string | Date;
   sales: Sale[];
   // Totales del cierre
   totalBaseMN: number;

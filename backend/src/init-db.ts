@@ -126,6 +126,7 @@ CREATE TABLE "AuditLog" (
 CREATE TABLE "Sale" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "soldAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "accountingDate" DATE,
     "exchangeRateUsed" DOUBLE PRECISION NOT NULL,
     "costUSD" DOUBLE PRECISION NOT NULL,
     "costMN" DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -148,6 +149,7 @@ CREATE TABLE "Closing" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "initiatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "completedAt" TIMESTAMP(3),
+    "accountingDate" DATE,
     "status" "ClosingStatus" NOT NULL DEFAULT 'PENDING',
     "totalBaseMN" DOUBLE PRECISION NOT NULL,
     "totalCommission" DOUBLE PRECISION NOT NULL,

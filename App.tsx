@@ -128,16 +128,23 @@ const App: React.FC = () => {
           if (c.resolvedAt) c.resolvedAt = new Date(c.resolvedAt);
         });
 
-        data.sales.forEach(s => s.soldAt = new Date(s.soldAt));
-
-        // Convert dates in closings and their sales
-        data.closings.forEach(c => {
-          c.initiatedAt = new Date(c.initiatedAt);
-          if (c.completedAt) c.completedAt = new Date(c.completedAt);
-          if (c.sales && Array.isArray(c.sales)) {
-            c.sales.forEach(s => s.soldAt = new Date(s.soldAt));
-          }
+        data.sales.forEach(s => {
+          s.soldAt = new Date(s.soldAt);
+          if (s.accountingDate) s.accountingDate = new Date(s.accountingDate as string + 'T00:00:00');
         });
+ 
+         // Convert dates in closings and their sales
+         data.closings.forEach(c => {
+           c.initiatedAt = new Date(c.initiatedAt);
+           if (c.completedAt) c.completedAt = new Date(c.completedAt);
+           if (c.accountingDate) c.accountingDate = new Date(c.accountingDate as string + 'T00:00:00');
+           if (c.sales && Array.isArray(c.sales)) {
+             c.sales.forEach(s => {
+               s.soldAt = new Date(s.soldAt);
+               if (s.accountingDate) s.accountingDate = new Date(s.accountingDate as string + 'T00:00:00');
+             });
+           }
+         });
 
       // Update current user from fresh database data to avoid stale cache issues
       const storedUserJson = localStorage.getItem('user');

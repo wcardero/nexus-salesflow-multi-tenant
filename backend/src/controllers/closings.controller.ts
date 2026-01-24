@@ -82,8 +82,8 @@ export const createClosing = async (req: Request, res: Response) => {
 
     const closingId = `closing-${Date.now()}`;
     const closingResult = await db.query(
-      `INSERT INTO "Closing" (id, "gestorId", "initiatedAt", status, "totalBaseMN", "totalCommission", "totalFinalMN")
-       VALUES ($1, $2, NOW(), 'PENDING', $3, $4, $5) RETURNING *`,
+      `INSERT INTO "Closing" (id, "gestorId", "initiatedAt", "accountingDate", status, "totalBaseMN", "totalCommission", "totalFinalMN")
+       VALUES ($1, $2, NOW(), CURRENT_DATE, 'PENDING', $3, $4, $5) RETURNING *`,
       [closingId, requestingUser?.id, totalBaseMN, totalCommission, totalFinalMN]
     );
 

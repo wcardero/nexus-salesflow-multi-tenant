@@ -593,12 +593,12 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
     end: presetRanges.esteMes.end
   });
 
-  const filteredClosings = gestorClosings.filter(c => 
-    c.status === ClosingStatus.COMPLETED &&
-    c.completedAt &&
-    c.completedAt.getTime() >= dateRange.start.getTime() &&
-    c.completedAt.getTime() <= dateRange.end.getTime()
-  );
+  const filteredClosings = gestorClosings.filter(c => {
+    const targetDate = c.accountingDate instanceof Date ? c.accountingDate : (c.completedAt || c.initiatedAt);
+    return c.status === ClosingStatus.COMPLETED &&
+           targetDate.getTime() >= dateRange.start.getTime() &&
+           targetDate.getTime() <= dateRange.end.getTime();
+  });
 
   const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
   const totalCommissionEarned = filteredClosings.reduce((sum, c) => sum + c.totalCommission, 0);

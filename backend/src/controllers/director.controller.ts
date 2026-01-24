@@ -48,16 +48,16 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
       `SELECT COUNT(*) as count, COALESCE(SUM("finalMN"), 0) as total, COALESCE(SUM("baseMN"), 0) as base, COALESCE(SUM("commission"), 0) as commission
        FROM "Sale" s
        JOIN "Product" p ON s."productId" = p.id
-       WHERE p."storeId" = $1 AND s."soldAt" BETWEEN $2 AND $3`,
+       WHERE p."storeId" = $1 AND s."accountingDate" BETWEEN $2 AND $3`,
       [requestingUser.storeId, start, end]
     );
 
     const salesByDayResult = await db.query(
-      `SELECT DATE("soldAt") as date, COUNT(*) as count, COALESCE(SUM("finalMN"), 0) as total
+      `SELECT "accountingDate" as date, COUNT(*) as count, COALESCE(SUM("finalMN"), 0) as total
        FROM "Sale" s
        JOIN "Product" p ON s."productId" = p.id
-       WHERE p."storeId" = $1 AND s."soldAt" BETWEEN $2 AND $3
-       GROUP BY DATE("soldAt")
+       WHERE p."storeId" = $1 AND s."accountingDate" BETWEEN $2 AND $3
+       GROUP BY "accountingDate"
        ORDER BY date`,
       [requestingUser.storeId, start, end]
     );
@@ -68,12 +68,12 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
         COALESCE((
           SELECT COUNT(*) FROM "Sale" s2
           JOIN "User" gestor ON s2."gestorId" = gestor.id
-          WHERE gestor."createdBy" = manager.id AND s2."soldAt" BETWEEN $2 AND $3
+          WHERE gestor."createdBy" = manager.id AND s2."accountingDate" BETWEEN $2 AND $3
         ), 0) as "salesCount",
         COALESCE((
           SELECT SUM("finalMN") FROM "Sale" s3
           JOIN "User" gestor ON s3."gestorId" = gestor.id
-          WHERE gestor."createdBy" = manager.id AND s3."soldAt" BETWEEN $2 AND $3
+          WHERE gestor."createdBy" = manager.id AND s3."accountingDate" BETWEEN $2 AND $3
         ), 0) as "totalSales"
        FROM "User" manager
        WHERE (manager."storeId" = $1 OR manager.id IN (SELECT "B" FROM "_StoreToUser" WHERE "A" = $1)) 

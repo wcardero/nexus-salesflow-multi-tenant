@@ -97,6 +97,7 @@ CREATE TABLE "AuditLog" (
 CREATE TABLE "Sale" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "soldAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "accountingDate" DATE,
     "exchangeRateUsed" DOUBLE PRECISION NOT NULL,
     "costUSD" DOUBLE PRECISION NOT NULL,
     "margin" DOUBLE PRECISION NOT NULL,
@@ -106,6 +107,8 @@ CREATE TABLE "Sale" (
     "finalMN" DOUBLE PRECISION NOT NULL,
     "inventoryItemId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
+    "paymentStatus" "SalePaymentStatus" NOT NULL DEFAULT 'PAID',
+    "customerName" TEXT,
     CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -114,6 +117,7 @@ CREATE TABLE "Closing" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "initiatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "completedAt" TIMESTAMP(3),
+    "accountingDate" DATE,
     "status" "ClosingStatus" NOT NULL DEFAULT 'PENDING',
     "totalBaseMN" DOUBLE PRECISION NOT NULL,
     "totalCommission" DOUBLE PRECISION NOT NULL,
