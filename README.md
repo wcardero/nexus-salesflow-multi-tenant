@@ -30,9 +30,10 @@ Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples t
 - **Jerarquía de 4 roles**: Admin → Director → Manager → Gestor
 - **Control de inventario**: Asignación, confirmación y seguimiento
 - **Ventas al contado y crédito**: Con seguimiento de deudas
-- **Cierre de caja**: Automatizado con cálculos de comisiones
+- **Cierre de caja**: Automatizado con cálculos de comisiones y fecha contable precisa
 - **Tipo de cambio persistente**: Historial de cambios por tienda
 - **Auditoría completa**: Registro de todas las operaciones
+- **Integridad Contable**: Sistema blindado contra desfases de zona horaria (UTC)
 - **Exportación de reportes**: CSV, PDF y Excel
 
 ## ✨ Características
@@ -96,6 +97,7 @@ Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples t
 ### Cierre de Caja
 - **Ejecución de cierre**: Gestor agrupa ventas y genera resumen
 - **Cálculos automáticos**: Total base MN, total comisión, total final MN
+- **Fecha Contable**: Se registra la fecha local del negocio, independiente de la hora del servidor
 - **Estado del cierre**: PENDING (esperando dinero) → COMPLETED (dinero recibido)
 - **Confirmación de recepción**: Manager marca cuando recibe dinero físico
 - **Historial completo**: Todos los cierres con sus ventas asociadas
@@ -614,6 +616,7 @@ Sistema: Conflicto pasa a "Resolved"
 - gestorId (TEXT FK)
 - productId (TEXT FK)
 - soldAt (TIMESTAMP)
+- accountingDate (DATE) - Fecha local del negocio
 - exchangeRateUsed (DOUBLE PRECISION)
 - costUSD (DOUBLE PRECISION)
 - costMN (DOUBLE PRECISION)
@@ -624,6 +627,44 @@ Sistema: Conflicto pasa a "Resolved"
 - finalMN (DOUBLE PRECISION)
 - paymentStatus (ENUM: PAID, PENDING)
 - customerName (TEXT)
+```
+
+#### Closing
+```sql
+- id (TEXT PK)
+- gestorId (TEXT FK)
+- initiatedAt (TIMESTAMP)
+- completedAt (TIMESTAMP)
+- accountingDate (DATE) - Fecha local del negocio
+- status (ENUM: PENDING, COMPLETED)
+- totalBaseMN (DOUBLE PRECISION)
+- totalCommission (DOUBLE PRECISION)
+- totalFinalMN (DOUBLE PRECISION)
+```
+
+#### InventoryConflict
+```sql
+- id (TEXT PK)
+- assignedInventoryId (TEXT FK)
+- gestorId (TEXT FK)
+- managerId (TEXT FK)
+- reason (TEXT)
+- status (ENUM: Pending, Resolved)
+- createdAt (TIMESTAMP)
+- resolvedAt (TIMESTAMP)
+```
+
+#### AssignedInventory
+```sql
+- id (TEXT PK)
+- productId (TEXT FK)
+- gestorId (TEXT FK)
+- quantity (INTEGER)
+- assignedAt (TIMESTAMP)
+- status (ENUM: Pending, Confirmed, Rejected, Archived, Cancelled)
+- confirmedAt (TIMESTAMP)
+- rejectionReason (TEXT)
+- priceMN (DOUBLE PRECISION) - Precio congelado al asignar
 ```
 
 #### Closing
@@ -951,8 +992,11 @@ Monto que se queda el gestor = Total Comisión
 ### Solucionados
 - ✅ Gestores no se listaban para Managers - Solucionado: Backend verifica _StoreToUser
 - ✅ Error "Access token required" al asignar inventario - Solucionado: Agregado header Authorization
-- ✅ Foreign Key Constraint al eliminar usuarios - Solucionado: Orden correcto de eliminación
-- ✅ Managers no pueden editar gestores - Solucionado: Permisos actualizados
+- ✅ Foreign Key Constraint al eliminar usuarios/tiendas - Solucionado: Limpieza en cascada y orden de auditoría
+- ✅ Estadísticas en cero para Director - Solucionado: Lógica de búsqueda por Product.storeId y alias camelCase
+- ✅ Desfase horario en cierres y ventas - Solucionado: Sistema de Fecha Contable (accountingDate)
+- ✅ Cálculo de precios con comisión 0% - Solucionado: Corrección de validación falsy en utils.ts
+- ✅ Botones desalineados en Gestor - Solucionado: Flexbox layout y eliminación de márgenes manuales
 
 ### Por Monitorear
 - Conexión a base de datos en producción
