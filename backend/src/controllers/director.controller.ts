@@ -47,7 +47,18 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
 
   try {
     const totalSalesResult = await db.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM("finalMN"), 0) as total, COALESCE(SUM("baseMN"), 0) as base, COALESCE(SUM("commission"), 0) as commission
+      `SELECT 
+         COUNT(*) as count, 
+         COALESCE(SUM("finalMN"), 0) as total, 
+         COALESCE(SUM("baseMN"), 0) as base, 
+         COALESCE(SUM("commission"), 0) as commission,
+         COALESCE(SUM(
+           CASE 
+             WHEN s."costMN" > 0 THEN s."costMN"
+             WHEN s."costUSD" > 0 AND s."exchangeRateUsed" > 0 THEN s."costUSD" * s."exchangeRateUsed"
+             ELSE 0
+           END
+         ), 0) as "totalCost"
        FROM "Sale" s
        JOIN "Product" p ON s."productId" = p.id
        WHERE p."storeId" = $1 AND s."accountingDate" BETWEEN $2 AND $3`,
@@ -76,7 +87,20 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
           SELECT SUM("finalMN") FROM "Sale" s3
           JOIN "User" gestor ON s3."gestorId" = gestor.id
           WHERE gestor."createdBy" = manager.id AND s3."accountingDate" BETWEEN $2 AND $3
-        ), 0) as "totalSales"
+        ), 0) as "totalSales",
+        COALESCE((
+          SELECT SUM(
+            "finalMN" - "commission" - (
+              CASE 
+                WHEN "costMN" > 0 THEN "costMN"
+                WHEN "costUSD" > 0 AND "exchangeRateUsed" > 0 THEN "costUSD" * "exchangeRateUsed"
+                ELSE 0
+              END
+            )
+          ) FROM "Sale" s4
+          JOIN "User" gestor ON s4."gestorId" = gestor.id
+          WHERE gestor."createdBy" = manager.id AND s4."accountingDate" BETWEEN $2 AND $3
+        ), 0) as "netProfit"
        FROM "User" manager
        WHERE (manager."storeId" = $1 OR manager.id IN (SELECT "B" FROM "_StoreToUser" WHERE "A" = $1)) 
        AND manager.role = 'Manager'`,
@@ -91,16 +115,19 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
       [requestingUser.storeId]
     );
 
+    const totalRevenue = parseFloat(totalSalesResult.rows[0].total);
+    const totalCost = parseFloat(totalSalesResult.rows[0].totalCost);
+    const totalCommission = parseFloat(totalSalesResult.rows[0].commission);
+    const netProfit = totalRevenue - totalCost - totalCommission;
+
     res.json({
       period: { start, end },
       metrics: {
-        totalSales: parseFloat(totalSalesResult.rows[0].total),
-        netProfit: parseFloat(totalSalesResult.rows[0].base),
+        totalSales: totalRevenue,
+        netProfit: netProfit,
         numberOfSales: parseInt(totalSalesResult.rows[0].count),
-        margin: parseFloat(totalSalesResult.rows[0].total) > 0 
-          ? (parseFloat(totalSalesResult.rows[0].base) / parseFloat(totalSalesResult.rows[0].total)) * 100 
-          : 0,
-        isProfitable: parseFloat(totalSalesResult.rows[0].base) > 0
+        margin: totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0,
+        isProfitable: netProfit > 0
       },
       salesByDay: salesByDayResult.rows.reduce((acc: any, curr: any) => {
         const dateStr = curr.date instanceof Date 
@@ -114,7 +141,7 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
         name: m.name,
         numberOfSales: parseInt(m.salesCount),
         totalSales: parseFloat(m.totalSales),
-        profit: parseFloat(m.totalSales) * 0.2,
+        profit: parseFloat(m.netProfit),
         numberOfGestors: parseInt(m.gestorCount)
       })),
       pendingPayments: {

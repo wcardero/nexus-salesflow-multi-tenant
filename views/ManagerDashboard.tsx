@@ -1968,7 +1968,7 @@ const ClosingsReportView: React.FC<{
                 </tbody>
                 <tfoot className="bg-slate-50 dark:bg-slate-700">
                   <tr>
-                    <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white" colSpan={2}>TOTAL</td>
+                    <td className="px-6 py-4 text-left text-sm font-bold text-slate-900 dark:text-white" colSpan={3}>TOTAL</td>
                     <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{totals.totalVentas}</td>
                     <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(totals.costoProductosMN)}</td>
                     <td className="px-6 py-4 text-right text-sm font-bold text-success-600 dark:text-success-400">{formatCurrency(totals.gananciaTiendaMN)}</td>
