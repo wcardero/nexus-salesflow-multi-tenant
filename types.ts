@@ -89,7 +89,7 @@ export interface AssignedInventory {
   gestorId: string;
   quantity: number;
   assignedAt: Date;
-  status: 'Pending' | 'Confirmed' | 'Rejected';
+  status: 'Pending' | 'Confirmed' | 'Rejected' | 'Archived' | 'Cancelled';
   confirmedAt?: Date;
   rejectionReason?: string;
   priceMN?: number;
@@ -101,13 +101,14 @@ export interface AssignedInventory {
 export interface InventoryConflict {
   id: string;
   assignedInventoryId: string;
-  gestorid: string;
-  managerid: string;
+  gestorId: string;
+  managerId: string;
   reason: string;
   status: 'Pending' | 'Resolved';
-  createdat: Date;
-  resolvedat?: Date;
+  createdAt: Date;
+  resolvedAt?: Date;
   gestorName?: string;
+  productName?: string;
   productId?: string;
   quantity?: number;
 }
@@ -119,6 +120,7 @@ export interface InventoryGroup {
   priceMN: number;
   assignedAt: Date;
   assignedInventoryId?: string;
+  inventoryIds?: string[];
   items: InventoryItem[];
 }
 

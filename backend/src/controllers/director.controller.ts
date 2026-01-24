@@ -27,15 +27,15 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
     switch (period) {
       case 'today':
         start = new Date(now.setHours(0, 0, 0, 0));
-        end = new Date();
+        end = new Date(now.setHours(23, 59, 59, 999));
         break;
       case '30d':
         start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        end = new Date();
+        end = new Date(now.setHours(23, 59, 59, 999));
         break;
       default: // '7d'
         start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        end = new Date();
+        end = new Date(now.setHours(23, 59, 59, 999));
     }
   }
   

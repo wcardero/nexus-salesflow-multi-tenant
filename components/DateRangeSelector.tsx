@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getPresetRanges, PresetRange } from '../dateUtils';
+import { getPresetRanges, PresetRange, formatDate } from '../dateUtils';
+import { endOfDay, startOfDay } from 'date-fns';
 
 interface DateRangeSelectorProps {
   value: { start: Date; end: Date };
@@ -20,13 +21,15 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange }
   };
 
   const handleCustomStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.value) return;
     setSelectedPreset('personalizado');
-    onChange({ ...value, start: new Date(e.target.value) });
+    onChange({ ...value, start: startOfDay(new Date(e.target.value + 'T00:00:00')) });
   };
 
   const handleCustomEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.value) return;
     setSelectedPreset('personalizado');
-    onChange({ ...value, end: new Date(e.target.value) });
+    onChange({ ...value, end: endOfDay(new Date(e.target.value + 'T00:00:00')) });
   };
 
   return (

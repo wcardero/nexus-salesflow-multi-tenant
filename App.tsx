@@ -124,8 +124,8 @@ const App: React.FC = () => {
         data.assignedInventory.forEach(i => i.assignedAt = new Date(i.assignedAt));
 
         data.inventoryConflicts.forEach(c => {
-          c.createdat = new Date(c.createdat);
-          if (c.resolvedat) c.resolvedat = new Date(c.resolvedat);
+          if (c.createdAt) c.createdAt = new Date(c.createdAt);
+          if (c.resolvedAt) c.resolvedAt = new Date(c.resolvedAt);
         });
 
         data.sales.forEach(s => s.soldAt = new Date(s.soldAt));

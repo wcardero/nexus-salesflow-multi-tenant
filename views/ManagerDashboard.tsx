@@ -180,7 +180,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
 
   const salesInPeriod = useMemo(() => {
     const filtered = sales.filter(s => {
-      const isInRange = s.soldAt >= dateRange.start && s.soldAt <= dateRange.end;
+      const isInRange = s.soldAt.getTime() >= dateRange.start.getTime() && s.soldAt.getTime() <= dateRange.end.getTime();
       return isInRange;
     });
     return filtered;
@@ -1668,8 +1668,8 @@ const ClosingsReportView: React.FC<{
     closings.filter(c => 
       c.status === ClosingStatus.COMPLETED &&
       c.completedAt &&
-      c.completedAt >= dateRange.start && 
-      c.completedAt <= dateRange.end
+      c.completedAt.getTime() >= dateRange.start.getTime() && 
+      c.completedAt.getTime() <= dateRange.end.getTime()
     ),
     [closings, dateRange]
   );

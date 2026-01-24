@@ -466,6 +466,53 @@ export const rejectInventory = async (req: Request, res: Response) => {
   }
 };
 
+export const archiveInventory = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const requestingUser = (req as AuthenticatedRequest).user;
+
+  try {
+    const assignmentResult = await db.query(
+      `SELECT ai.*, p."storeId" 
+       FROM "AssignedInventory" ai
+       JOIN "Product" p ON ai."productId" = p.id
+       WHERE ai.id = $1`, 
+      [id]
+    );
+    if (assignmentResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Assignment not found.' });
+    }
+
+    const assignment = assignmentResult.rows[0];
+    if (assignment.gestorId !== requestingUser?.id) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    if (assignment.quantity !== 0) {
+      return res.status(400).json({ message: 'Only items with 0 quantity can be cleaned.' });
+    }
+
+    await db.query(
+      'UPDATE "AssignedInventory" SET status = $1 WHERE id = $2',
+      ['Archived', id]
+    );
+
+    await createAuditLog(
+      requestingUser?.id || '',
+      'ARCHIVE_INVENTORY',
+      'AssignedInventory',
+      id,
+      assignment,
+      { ...assignment, status: 'Archived' },
+      assignment.storeId
+    );
+
+    res.status(200).json({ message: 'Inventory archived successfully.' });
+  } catch (error) {
+    console.error('Archive inventory error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 // ============================================================================
 // Inventory Conflicts Controller
 // ============================================================================

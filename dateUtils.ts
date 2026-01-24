@@ -10,13 +10,16 @@ export const formatDateTime = (date: Date): string => {
   return format(date, 'dd/MM/yy HH:mm', { locale: es });
 };
 
-export const getPresetRanges = () => ({
-  hoy: { start: startOfDay(new Date()), end: endOfDay(new Date()), label: 'Hoy' },
-  ultimos7: { start: subDays(startOfDay(new Date()), 6), end: endOfDay(new Date()), label: 'Últimos 7 días' },
-  estaSemana: { start: startOfWeek(new Date()), end: endOfWeek(new Date()), label: 'Esta semana' },
-  esteMes: { start: startOfMonth(new Date()), end: endOfDay(new Date()), label: 'Este mes' },
-  ultimos30: { start: subDays(startOfDay(new Date()), 29), end: endOfDay(new Date()), label: 'Últimos 30 días' },
-  personalizado: { start: startOfMonth(new Date()), end: endOfDay(new Date()), label: 'Personalizado' }
-});
+export const getPresetRanges = () => {
+  const now = new Date();
+  return {
+    hoy: { start: startOfDay(now), end: endOfDay(now), label: 'Hoy' },
+    ultimos7: { start: subDays(startOfDay(now), 6), end: endOfDay(now), label: 'Últimos 7 días' },
+    estaSemana: { start: startOfWeek(now), end: endOfDay(now), label: 'Esta semana' },
+    esteMes: { start: startOfMonth(now), end: endOfDay(now), label: 'Este mes' },
+    ultimos30: { start: subDays(startOfDay(now), 29), end: endOfDay(now), label: 'Últimos 30 días' },
+    personalizado: { start: startOfMonth(now), end: endOfDay(now), label: 'Personalizado' }
+  };
+};
 
 export type PresetRange = keyof ReturnType<typeof getPresetRanges>;

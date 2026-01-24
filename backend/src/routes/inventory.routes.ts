@@ -8,6 +8,7 @@ import {
   assignInventory,
   confirmInventory,
   rejectInventory,
+  archiveInventory,
   getInventoryConflicts,
   resolveInventoryConflict,
 } from '../controllers/inventory.controller';
@@ -30,6 +31,7 @@ router.get('/assigned-inventory', authenticateToken, getAssignedInventory);
 router.post('/assigned-inventory', authenticateToken, ...withValidation(validateInventoryAssignment, assignInventory));
 router.post('/assigned-inventory/:id/confirm', authenticateToken, confirmInventory);
 router.post('/assigned-inventory/:id/reject', authenticateToken, rejectInventory);
+router.post('/assigned-inventory/:id/archive', authenticateToken, archiveInventory);
 
 router.get('/inventory-conflicts', authenticateToken, getInventoryConflicts);
 router.post('/inventory-conflicts/:id/resolve', authenticateToken, resolveInventoryConflict);

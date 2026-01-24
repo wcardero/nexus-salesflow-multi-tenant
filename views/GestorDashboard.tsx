@@ -290,6 +290,36 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   const totalGestorGain = salesValues.reduce((sum, data) => sum + data.gestorGain, 0);
   const totalStoreGain = salesValues.reduce((sum, data) => sum + data.storeGain, 0);
 
+  const handleCleanInventory = async (inventoryIds: string[]) => {
+    if (!inventoryIds || inventoryIds.length === 0) return;
+    
+    if (!confirm('¿Estás seguro de que deseas limpiar este producto de tu lista? Se archivará porque no tienes existencias.')) {
+      return;
+    }
+
+    try {
+      for (const id of inventoryIds) {
+        const response = await fetch(`http://localhost:3001/api/assigned-inventory/${id}/archive`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error(`Error archiving inventory ${id}:`, error);
+        }
+      }
+      
+      await refreshDb();
+      alert('Inventario actualizado.');
+    } catch (error) {
+      console.error('Error cleaning inventory:', error);
+      alert('Error al limpiar el inventario.');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 md:gap-8">
       <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
@@ -315,7 +345,17 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                     <td className="px-4 py-4 text-sm font-medium text-slate-600 dark:text-slate-400">{group.quantity}</td>
                     <td className="px-4 py-4 align-middle">
                       <div className="flex items-center justify-center w-full">
-                        <Button variant="success" size="xs" onClick={() => handleOpenSellModal(group)}>Vender</Button>
+                        {group.quantity > 0 ? (
+                          <Button variant="success" size="xs" onClick={() => handleOpenSellModal(group)}>Vender</Button>
+                        ) : (
+                          <button 
+                            onClick={() => handleCleanInventory(group.inventoryIds || [])}
+                            className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Limpiar inventario agotado"
+                          >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -556,8 +596,8 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
   const filteredClosings = gestorClosings.filter(c => 
     c.status === ClosingStatus.COMPLETED &&
     c.completedAt &&
-    new Date(c.completedAt) >= dateRange.start &&
-    new Date(c.completedAt) <= dateRange.end
+    c.completedAt.getTime() >= dateRange.start.getTime() &&
+    c.completedAt.getTime() <= dateRange.end.getTime()
   );
 
   const totalRecaudado = filteredClosings.reduce((sum, c) => sum + c.totalFinalMN, 0);
@@ -639,9 +679,18 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
       .forEach(ai => {
         const key = `${ai.productId}-${ai.gestorId}`;
         if (!groups[key]) {
-          groups[key] = { productId: ai.productId, quantity: 0, priceMN: ai.priceMN || 0, assignedAt: ai.assignedAt, assignedInventoryId: ai.id, items: [] };
+          groups[key] = { 
+            productId: ai.productId, 
+            quantity: 0, 
+            priceMN: ai.priceMN || 0, 
+            assignedAt: ai.assignedAt, 
+            assignedInventoryId: ai.id,
+            inventoryIds: [],
+            items: [] 
+          };
         }
         groups[key].quantity += ai.quantity;
+        groups[key].inventoryIds?.push(ai.id);
         for (let i = 0; i < ai.quantity; i++) {
           groups[key].items.push({ id: `${ai.id}-${i}`, productId: ai.productId, gestorId: ai.gestorId, assignedAt: ai.assignedAt, status: 'Available' });
         }
