@@ -274,12 +274,13 @@ Crear `.env` en la raíz:
 ```bash
 # Frontend
 VITE_API_URL=http://localhost:3001
+VITE_PORT=3000
 ```
 
 Crear `.env` en `/backend`:
 ```bash
 # Backend
-DATABASE_URL=postgresql://user:password@localhost:5432/nexusdb
+DATABASE_URL=postgresql://tu_usuario:tu_password_seguro@localhost:5432/nexusdb
 JWT_SECRET=tu_secreto_super_seguro
 PORT=3001
 ```
