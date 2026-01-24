@@ -173,17 +173,17 @@ CREATE TABLE "_StoreToUser" (
 );
 
 CREATE TABLE "InventoryConflict" (
-  "id" TEXT PRIMARY KEY,
-  "assignedInventoryId" TEXT NOT NULL,
-  "gestorId" TEXT NOT NULL,
-  "managerId" TEXT NOT NULL,
-  "reason" TEXT NOT NULL,
-  "status" TEXT DEFAULT 'Pending',
-  "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  "resolvedAt" TIMESTAMP,
-  CONSTRAINT "fk_assigned_inventory" FOREIGN KEY ("assignedInventoryId") REFERENCES "AssignedInventory"("id"),
-  CONSTRAINT "fk_conflict_gestor" FOREIGN KEY ("gestorId") REFERENCES "User"("id"),
-  CONSTRAINT "fk_conflict_manager" FOREIGN KEY ("managerId") REFERENCES "User"("id")
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "assignedInventoryId" TEXT NOT NULL,
+    "gestorId" TEXT NOT NULL,
+    "managerId" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "status" TEXT DEFAULT 'Pending',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP,
+    CONSTRAINT "fk_assigned_inventory" FOREIGN KEY ("assignedInventoryId") REFERENCES "AssignedInventory"("id"),
+    CONSTRAINT "fk_conflict_gestor" FOREIGN KEY ("gestorId") REFERENCES "User"("id"),
+    CONSTRAINT "fk_conflict_manager" FOREIGN KEY ("managerId") REFERENCES "User"("id")
 );
 
 -- 4. Índices

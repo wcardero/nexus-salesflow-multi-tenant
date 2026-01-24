@@ -54,7 +54,7 @@ export const getClosings = async (req: Request, res: Response) => {
 };
 
 export const createClosing = async (req: Request, res: Response) => {
-  const { saleIds } = req.body;
+  const { saleIds, accountingDate } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!saleIds || !Array.isArray(saleIds) || saleIds.length === 0) {
@@ -83,8 +83,8 @@ export const createClosing = async (req: Request, res: Response) => {
     const closingId = `closing-${Date.now()}`;
     const closingResult = await db.query(
       `INSERT INTO "Closing" (id, "gestorId", "initiatedAt", "accountingDate", status, "totalBaseMN", "totalCommission", "totalFinalMN")
-       VALUES ($1, $2, NOW(), CURRENT_DATE, 'PENDING', $3, $4, $5) RETURNING *`,
-      [closingId, requestingUser?.id, totalBaseMN, totalCommission, totalFinalMN]
+       VALUES ($1, $2, NOW(), COALESCE($3, CURRENT_DATE), 'PENDING', $4, $5, $6) RETURNING *`,
+      [closingId, requestingUser?.id, accountingDate || null, totalBaseMN, totalCommission, totalFinalMN]
     );
 
     for (const saleId of saleIds) {

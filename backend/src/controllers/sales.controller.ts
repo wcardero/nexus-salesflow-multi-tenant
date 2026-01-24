@@ -53,12 +53,8 @@ export const getSales = async (req: Request, res: Response) => {
 };
 
 export const createSale = async (req: Request, res: Response) => {
-  const { assignedInventoryId, quantity, customerName, paymentStatus } = req.body;
+  const { assignedInventoryId, quantity, customerName, paymentStatus, accountingDate } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
-
-  if (requestingUser?.role !== 'Gestor') {
-    return res.status(403).json({ message: 'Access denied. Only gestors can create sales.' });
-  }
 
   if (!quantity || quantity < 1) {
     return res.status(400).json({ message: 'Quantity must be at least 1.' });
@@ -122,8 +118,8 @@ export const createSale = async (req: Request, res: Response) => {
       const saleResult = await db.query(
         `INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "productId", "soldAt", "accountingDate", "exchangeRateUsed",
           "costUSD", "costMN", "margin", "saleUSD", "baseMN", "commission", "finalMN", "paymentStatus", "customerName")
-         VALUES ($1, $2, $3, $4, NOW(), CURRENT_DATE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
-        [saleId, assignedInventoryId, requestingUser?.id, assignment.productId, exchangeRate,
+         VALUES ($1, $2, $3, $4, NOW(), COALESCE($5, CURRENT_DATE), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+        [saleId, assignedInventoryId, requestingUser?.id, assignment.productId, accountingDate || null, exchangeRate,
           costUSD, costMN, margin, saleUSD, baseMN, commission, finalMN, paymentStatus || 'PAID', customerName]
       );
       sales.push(saleResult.rows[0]);
@@ -161,6 +157,9 @@ export const markSaleAsPaid = async (req: Request, res: Response) => {
 
     await db.query('UPDATE "Sale" SET "paymentStatus" = $1 WHERE id = $2', ['PAID', saleId]);
 
+    const productResult = await db.query('SELECT "storeId" FROM "Product" WHERE id = $1', [sale.productId]);
+    const storeId = productResult.rows[0]?.storeId;
+
     await createAuditLog(
       requestingUser?.id || '',
       'MARK_SALE_PAID',
@@ -168,7 +167,7 @@ export const markSaleAsPaid = async (req: Request, res: Response) => {
       saleId,
       { paymentStatus: 'PENDING' },
       { paymentStatus: 'PAID' },
-      sale.productId
+      storeId
     );
 
     res.status(200).json({ message: 'Sale marked as paid.' });

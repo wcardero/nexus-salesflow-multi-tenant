@@ -128,20 +128,30 @@ const App: React.FC = () => {
           if (c.resolvedAt) c.resolvedAt = new Date(c.resolvedAt);
         });
 
+        const parseAccountingDate = (date: any) => {
+          if (!date) return undefined;
+          if (date instanceof Date) return date;
+          if (typeof date === 'string') {
+            if (date.length === 10) return new Date(date + 'T00:00:00');
+            return new Date(date);
+          }
+          return new Date(date);
+        };
+
         data.sales.forEach(s => {
           s.soldAt = new Date(s.soldAt);
-          if (s.accountingDate) s.accountingDate = new Date(s.accountingDate as string + 'T00:00:00');
+          if (s.accountingDate) s.accountingDate = parseAccountingDate(s.accountingDate);
         });
  
          // Convert dates in closings and their sales
          data.closings.forEach(c => {
            c.initiatedAt = new Date(c.initiatedAt);
            if (c.completedAt) c.completedAt = new Date(c.completedAt);
-           if (c.accountingDate) c.accountingDate = new Date(c.accountingDate as string + 'T00:00:00');
+           if (c.accountingDate) c.accountingDate = parseAccountingDate(c.accountingDate);
            if (c.sales && Array.isArray(c.sales)) {
              c.sales.forEach(s => {
                s.soldAt = new Date(s.soldAt);
-               if (s.accountingDate) s.accountingDate = new Date(s.accountingDate as string + 'T00:00:00');
+               if (s.accountingDate) s.accountingDate = parseAccountingDate(s.accountingDate);
              });
            }
          });

@@ -179,8 +179,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
 
 
   const salesInPeriod = useMemo(() => {
+    const isValidDate = (d: any) => d instanceof Date && !isNaN(d.getTime());
     const filtered = sales.filter(s => {
-      const targetDate = s.accountingDate instanceof Date ? s.accountingDate : s.soldAt;
+      const targetDate = isValidDate(s.accountingDate) ? s.accountingDate as Date : s.soldAt;
       const isInRange = targetDate.getTime() >= dateRange.start.getTime() && targetDate.getTime() <= dateRange.end.getTime();
       return isInRange;
     });
@@ -1665,15 +1666,15 @@ const ClosingsReportView: React.FC<{
 
   const usersById = Object.fromEntries(users.map(u => [u.id, u]));
 
-  const filteredClosings = useMemo(() => 
-    closings.filter(c => {
-      const targetDate = c.accountingDate instanceof Date ? c.accountingDate : (c.completedAt || c.initiatedAt);
+  const filteredClosings = useMemo(() => {
+    const isValidDate = (d: any) => d instanceof Date && !isNaN(d.getTime());
+    return closings.filter(c => {
+      const targetDate = isValidDate(c.accountingDate) ? c.accountingDate as Date : (c.completedAt || c.initiatedAt);
       return c.status === ClosingStatus.COMPLETED &&
              targetDate.getTime() >= dateRange.start.getTime() && 
              targetDate.getTime() <= dateRange.end.getTime();
-    }),
-    [closings, dateRange]
-  );
+    });
+  }, [closings, dateRange]);
 
   const closingMetrics = useMemo(() => {
     return filteredClosings.map(closing => {

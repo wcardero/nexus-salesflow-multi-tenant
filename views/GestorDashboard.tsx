@@ -175,6 +175,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     if (!selectedGroup) return;
 
     try {
+      const accountingDate = new Date().toISOString().split('T')[0];
       const response = await fetch('http://localhost:3001/api/sales', {
         method: 'POST',
         headers: {
@@ -185,7 +186,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
           assignedInventoryId: selectedGroup.assignedInventoryId,
           quantity,
           paymentStatus,
-          customerName
+          customerName,
+          accountingDate
         })
       });
 
@@ -215,6 +217,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     if (!window.confirm(`¿Ejecutar cierre por un total de ${formatCurrency(totalBaseMN)}?`)) return;
 
     try {
+      const accountingDate = new Date().toISOString().split('T')[0];
       const response = await fetch('http://localhost:3001/api/closings', {
         method: 'POST',
         headers: {
@@ -222,7 +225,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          saleIds: paidSales.map(s => s.id)
+          saleIds: paidSales.map(s => s.id),
+          accountingDate
         })
       });
 
@@ -593,8 +597,10 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
     end: presetRanges.esteMes.end
   });
 
+  const isValidDate = (d: any) => d instanceof Date && !isNaN(d.getTime());
+
   const filteredClosings = gestorClosings.filter(c => {
-    const targetDate = c.accountingDate instanceof Date ? c.accountingDate : (c.completedAt || c.initiatedAt);
+    const targetDate = isValidDate(c.accountingDate) ? c.accountingDate as Date : (c.completedAt || c.initiatedAt);
     return c.status === ClosingStatus.COMPLETED &&
            targetDate.getTime() >= dateRange.start.getTime() &&
            targetDate.getTime() <= dateRange.end.getTime();

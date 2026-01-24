@@ -20,22 +20,24 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
 
   // If dates are provided, prioritize them (Custom range)
   if (startDate && endDate) {
-    start = new Date(startDate as string);
-    end = new Date(endDate as string);
+    const startStr = (startDate as string).split('T')[0];
+    const endStr = (endDate as string).split('T')[0];
+    start = new Date(startStr + 'T00:00:00');
+    end = new Date(endStr + 'T23:59:59.999');
   } else {
     // Default fallback logic
     switch (period) {
       case 'today':
-        start = new Date(now.setHours(0, 0, 0, 0));
-        end = new Date(now.setHours(23, 59, 59, 999));
+        start = new Date(new Date().setHours(0, 0, 0, 0));
+        end = new Date(new Date().setHours(23, 59, 59, 999));
         break;
       case '30d':
-        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        end = new Date(now.setHours(23, 59, 59, 999));
+        start = new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000);
+        end = new Date(new Date().setHours(23, 59, 59, 999));
         break;
       default: // '7d'
-        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        end = new Date(now.setHours(23, 59, 59, 999));
+        start = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+        end = new Date(new Date().setHours(23, 59, 59, 999));
     }
   }
   
@@ -101,7 +103,10 @@ export const getDirectorMetrics = async (req: Request, res: Response) => {
         isProfitable: parseFloat(totalSalesResult.rows[0].base) > 0
       },
       salesByDay: salesByDayResult.rows.reduce((acc: any, curr: any) => {
-        acc[curr.date.toISOString().split('T')[0]] = parseFloat(curr.total);
+        const dateStr = curr.date instanceof Date 
+          ? curr.date.toISOString().split('T')[0] 
+          : String(curr.date).split('T')[0];
+        acc[dateStr] = parseFloat(curr.total);
         return acc;
       }, {}),
       managers: managersResult.rows.map((m: any) => ({
