@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
-import { formatDate, getPresetRanges } from '../dateUtils';
+import { formatDate, getPresetRanges, formatDateTime } from '../dateUtils';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 
 interface GestorDashboardProps {
@@ -626,20 +626,26 @@ const GestorReportsView: React.FC<GestorReportsViewProps> = ({ gestorSales, gest
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Fecha Contable</th>
+                <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Fecha Real</th>
                 <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Monto</th>
                 <th className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Comisión</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredClosings.map(c => (
-                <tr key={c.id}>
-                  <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{formatDate(new Date(c.completedAt!))}</td>
-                  <td className="px-4 py-4 text-sm text-right text-slate-900 dark:text-slate-100">{formatCurrency(c.totalBaseMN)}</td>
-                  <td className="px-4 py-4 text-sm text-right text-emerald-600 font-bold">{formatCurrency(c.totalCommission)}</td>
-                </tr>
-              ))}
-            </tbody>
+              <tbody>
+                {filteredClosings.map(c => (
+                  <tr key={c.id}>
+                    <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {c.accountingDate ? formatDate(new Date(c.accountingDate as Date)) : 'N/A'}
+                    </td>
+                    <td className="px-4 py-4 text-xs text-slate-500 dark:text-slate-400">
+                      {formatDateTime(new Date(c.completedAt!))}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-slate-900 dark:text-slate-100">{formatCurrency(c.totalBaseMN)}</td>
+                    <td className="px-4 py-4 text-sm text-right text-emerald-600 font-bold">{formatCurrency(c.totalCommission)}</td>
+                  </tr>
+                ))}
+              </tbody>
           </table>
         </div>
       </div>

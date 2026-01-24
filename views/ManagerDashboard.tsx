@@ -5,7 +5,7 @@ import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
-import { formatDate, getPresetRanges } from '../dateUtils';
+import { formatDate, getPresetRanges, formatDateTime } from '../dateUtils';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 import { addDays } from 'date-fns';
 
@@ -1922,7 +1922,8 @@ const ClosingsReportView: React.FC<{
               <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                 <thead className="bg-slate-50 dark:bg-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha Contable</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha Real</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gestor</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ventas</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Costo Prod (MN)</th>
@@ -1936,7 +1937,10 @@ const ClosingsReportView: React.FC<{
                   {closingMetrics.map((m, index) => (
                     <tr key={`${m.closing.id}-${index}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                        {formatDate(new Date(m.closing.completedAt!))}
+                        {m.closing.accountingDate ? formatDate(new Date(m.closing.accountingDate as Date)) : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
+                        {formatDateTime(new Date(m.closing.completedAt!))}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                         {m.gestorName}
