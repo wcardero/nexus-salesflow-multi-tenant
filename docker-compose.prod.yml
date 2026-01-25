@@ -1,0 +1,26 @@
+services:
+  # Músico 1: El Baterista (Base de Datos)
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexus-sales-db
+    restart: always
+    env_file:
+      - docker.env
+    # NOTA: En producción, no exponemos el puerto de la BD al mundo exterior
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Músico 2: El Guitarrista (Backend)
+  backend:
+    build: ./backend
+    container_name: nexus-api
+    restart: always
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env.production  # <-- ¡La magia! Apunta al manual de producción
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
