@@ -54,6 +54,10 @@ prototypes/
 
 # ====== Archivos de entorno sensibles ======
 .env
+.env.production
+.env.local
 backend/.env
+backend/.env.production
 docker.env
+docker.env.prod
 !*.env.example

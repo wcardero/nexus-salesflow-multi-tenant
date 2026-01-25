@@ -5,22 +5,26 @@ services:
     container_name: nexus-sales-db
     restart: always
     env_file:
-      - docker.env
+      - backend/docker.env.prod
     # NOTA: En producción, no exponemos el puerto de la BD al mundo exterior
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   # Músico 2: El Guitarrista (Backend)
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.prod  # Optimizado para producción
     container_name: nexus-api
     restart: always
     ports:
       - "3001:3001"
     env_file:
-      - .env.production  # <-- ¡La magia! Apunta al manual de producción
+      - backend/.env.production  # Archivo de variables de producción
     depends_on:
       - postgres
+    environment:
+      - NODE_ENV=production
 
 volumes:
   postgres_data:

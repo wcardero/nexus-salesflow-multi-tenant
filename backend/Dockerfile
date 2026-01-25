@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install build tools needed for bcrypt
 RUN apk add --no-cache python3 make g++
@@ -13,4 +13,4 @@ COPY . .
 
 EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

@@ -15,12 +15,14 @@ Sistema multi-tenant de gestión de ventas con jerarquía de roles, control de i
 - [Características](#características)
 - [Arquitectura](#arquitectura)
 - [Instalación](#instalación)
+- [Instalación con Docker (Opcional)](#instalación-con-docker-opcional)
 - [Configuración](#configuración)
 - [Uso](#uso)
 - [Flujos de Negocio](#flujos-de-negocio)
 - [API Endpoints](#api-endpoints)
 - [Base de Datos](#base-de-datos)
 - [Desarrollo](#desarrollo)
+- [Despliegue en Producción](#despliegue-en-producción)
 - [Estructura del Proyecto](#estructura-del-proyecto)
 
 ## 🎯 Descripción
@@ -310,6 +312,55 @@ npm run dev
 
 El frontend estará disponible en `http://localhost:3000`
 El backend estará disponible en `http://localhost:3001`
+
+## 🐳 Instalación con Docker (Opcional)
+
+Si prefieres no instalar PostgreSQL localmente, puedes usar Docker para la base de datos:
+
+### Configurar PostgreSQL con Docker
+
+```bash
+# 1. Crear archivo de configuración de Docker
+cp docker.env.example backend/docker.env
+
+# 2. Editar backend/docker.env con tus credenciales
+# POSTGRES_USER=tu_usuario
+# POSTGRES_PASSWORD=tu_password_seguro
+# POSTGRES_DB=nexusdb
+
+# 3. Levantar base de datos
+docker-compose up -d postgres
+
+# 4. Verificar que está corriendo
+docker ps
+```
+
+### Configurar variables de entorno con Docker
+
+En `backend/.env`, actualiza la conexión a PostgreSQL:
+
+```bash
+# DATABASE_URL debe apuntar al contenedor Docker
+DATABASE_URL=postgresql://tu_usuario:tu_password_seguro@localhost:5432/nexusdb
+```
+
+### Verificar conexión a base de datos
+
+```bash
+# Probar conexión desde el contenedor
+docker exec -it nexus-sales-db psql -U tu_usuario_db -d nexusdb -c "\dt"
+
+# Ejecutar script de inicialización
+cd backend
+npx ts-node src/init-db.ts
+```
+
+### Notas Importantes
+
+- El puerto 5432 está expuesto para desarrollo (puedes conectarte desde herramientas locales como pgAdmin)
+- Los datos persisten en volumen Docker: `postgres_data`
+- Para detener la base de datos: `docker-compose stop postgres`
+- Para eliminar base de datos y datos: `docker-compose down -v`
 
 ## ⚙️ Configuración
 
@@ -778,45 +829,221 @@ cd backend
 psql -U user -d nexusdb -f migrations/add_inventory_approval_flow.sql
 ```
 
-### Docker
+
+## 🚀 Despliegue en Producción
+
+### Configuración Previa
+
+Antes de desplegar en producción, asegúrate de:
+
+#### 1. Crear archivos de entorno de producción
 
 ```bash
-# Construir imagen
-docker build -t nexus-salesflow .
+# En la raíz del proyecto (para frontend si aplica)
+cp .env.example .env.production
+# Editar con valores reales de producción:
+# VITE_API_URL=https://api.tudominio.com
+# VITE_PORT=3000
+# VITE_APP_TITLE=Nexus Sales Flow
 
-# Ejecutar contenedor
-docker-compose up
+# En el backend
+cp backend/.env.example backend/.env.production
+# Editar con valores reales de producción:
+# PORT=3001
+# NODE_ENV=production
+# FRONTEND_URL=https://tudominio.com
 ```
 
-#### Configuración de Variables de Entorno
-
-Para ejecutar PostgreSQL con Docker, primero configura las variables de entorno:
+#### 2. Configurar credenciales de PostgreSQL
 
 ```bash
-# Copiar el archivo de ejemplo
-cp docker.env.example docker.env
+# Crear archivo de producción
+cp docker.env.example backend/docker.env.prod
 
-# Editar con tus valores de desarrollo
-# Los valores deben coincidir con los de backend/.env
-POSTGRES_USER=tu_usuario
-POSTGRES_PASSWORD=tu_password_seguro
-POSTGRES_DB=nexusdb
+# Editar con credenciales de producción:
+# POSTGRES_USER=prod_user
+# POSTGRES_PASSWORD=tu_password_muy_seguro (CAMBIAR!)
+# POSTGRES_DB=nexusdb
 ```
 
-**Nota:** El archivo `docker.env` está en `.gitignore` y nunca debe committiarse.
+⚠️ **IMPORTANTE**: Cambia todas las contraseñas por defecto antes de production.
 
-#### Levantar la Base de Datos
+#### 3. Verificar versión de Node.js
+
+Asegúrate de que estás usando Node.js 20+:
 
 ```bash
-# Iniciar solo PostgreSQL
-docker-compose up -d postgres
+node --version  # Debe ser v20.x.x o superior
 ```
 
-#### Verificar Conexión
+### Levantar en Producción con Docker
+
+#### Opción A: Usar docker-compose.prod.yml
 
 ```bash
-# Probar conexión (desde el contenedor)
-docker exec -it nexus-sales-db psql -U tu_usuario_db -d nexusdb -c "\dt"
+# Construir y levantar todos los servicios
+docker-compose -f docker-compose.prod.yml up --build -d
+
+# Ver logs
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Verificar contenedores
+docker ps
+```
+
+Esto levanta:
+- **PostgreSQL**: Contenedor optimizado con Alpine Linux
+- **Backend**: Compilado para producción, usuario no-root, optimizado
+
+#### Opción B: Despliegue manual con Docker (Opcional)
+
+```bash
+# 1. Construir imagen de producción del backend
+cd backend
+docker build -f Dockerfile.prod -t nexus-api-prod .
+
+# 2. Levantar PostgreSQL en modo producción
+cd ..
+docker-compose -f docker-compose.prod.yml up -d postgres
+
+# 3. Levantar backend con imagen compilada
+docker run -d \
+  --name nexus-api-prod \
+  --network nexus-salesflow-multi-tenant_default \
+  -p 3001:3001 \
+  --env-file backend/.env.production \
+  nexus-api-prod
+```
+
+### Verificar Despliegue
+
+#### 1. Probar conexión a la API
+
+```bash
+# Probar health check
+curl http://localhost:3001/api/users/exists
+```
+
+#### 2. Ver logs del backend
+
+```bash
+# Logs en tiempo real
+docker-compose -f docker-compose.prod.yml logs -f backend
+
+# Logs de los últimos 100 líneas
+docker-compose -f docker-compose.prod.yml logs --tail=100 backend
+```
+
+#### 3. Verificar conexión a base de datos
+
+```bash
+# Acceder al contenedor de PostgreSQL
+docker exec -it nexus-sales-db psql -U prod_user -d nexusdb
+
+# Listar tablas
+\dt
+
+# Salir
+\q
+```
+
+### Notas Importantes de Producción
+
+#### Seguridad
+
+- ✅ El puerto 5432 de PostgreSQL **NO** está expuesto al mundo exterior
+- ✅ Solo el port 3001 está expuesto para la API
+- ✅ Backend corre como usuario no-root (seguridad adicional)
+- ⚠️ **CAMBIAR** todas las contraseñas por defecto
+- ⚠️ Usa **HTTPS** en producción (configura certificados SSL)
+
+#### Rendimiento
+
+- Backend usa multi-stage build para imagen más ligera
+- Solo dependencias de producción están incluidas
+- `dumb-init` maneja señales correctamente (reinicio limpio)
+- Código compilado (no interpretación en tiempo de ejecución)
+
+#### Persistencia de Datos
+
+- Datos de PostgreSQL persisten en volumen Docker: `postgres_data`
+- Para backup: `docker exec nexus-sales-db pg_dump -U prod_user nexusdb > backup.sql`
+- Para restore: `cat backup.sql | docker exec -i nexus-sales-db psql -U prod_user nexusdb`
+
+### Reverse Proxy (Recomendado)
+
+Para producción con dominio, se recomienda usar **Nginx** como reverse proxy:
+
+#### Ejemplo de configuración Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name tudominio.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Backend API
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+### Monitoreo y Logs
+
+#### Ver recursos usados por contenedores
+
+```bash
+# Uso de CPU y memoria
+docker stats
+
+# Espacio en disco usado por volúmenes
+docker system df -v
+```
+
+#### Logs de producción
+
+```bash
+# Ver todos los logs
+docker-compose -f docker-compose.prod.yml logs
+
+# Ver solo errores
+docker-compose -f docker-compose.prod.yml logs | grep ERROR
+
+# Exportar logs a archivo
+docker-compose -f docker-compose.prod.yml logs > app.log
+```
+
+### Actualizar en Producción
+
+```bash
+# 1. Pull de cambios
+git pull origin main
+
+# 2. Reconstruir y levantar
+docker-compose -f docker-compose.prod.yml up -d --build backend
+
+# 3. Verificar que todo funciona
+curl http://localhost:3001/api/users/exists
+```
+
+### Detener Producción
+
+```bash
+# Detener todos los servicios
+docker-compose -f docker-compose.prod.yml down
+
+# Detener y eliminar volúmenes (CUIDADO: borra datos)
+docker-compose -f docker-compose.prod.yml down -v
 ```
 
 

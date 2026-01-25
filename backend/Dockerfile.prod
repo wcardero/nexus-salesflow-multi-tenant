@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 COPY . .
 RUN npm run build
@@ -16,8 +16,11 @@ WORKDIR /app
 # Instalar solo dependencias necesarias para runtime
 RUN apk add --no-cache dumb-init
 
-# Copiar dependencias y código compilado
-COPY --from=builder /app/node_modules ./node_modules
+# Copiar solo dependencias de producción
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copiar código compilado
 COPY --from=builder /app/dist ./dist
 
 # Crear usuario no-root para seguridad
