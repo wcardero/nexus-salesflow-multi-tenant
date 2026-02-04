@@ -13,6 +13,11 @@ COPY . .
 # Compilar para producción
 # Nota: Vite maneja NODE_ENV internamente, no debe estar seteada externamente
 ENV NODE_ENV=""
+
+# Argumento para la URL de la API (seteada por docker-compose)
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
 RUN npm run build
 
 # Imagen final con nginx
