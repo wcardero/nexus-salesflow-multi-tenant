@@ -39,8 +39,6 @@ services:
         VITE_API_URL: /api
     container_name: nexus-frontend
     restart: always
-    ports:
-      - "80:80"
     depends_on:
       - backend
     networks:
