@@ -26,6 +26,10 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: ${DATABASE_URL}
       FRONTEND_URL: ${FRONTEND_URL}
+    volumes:
+      - ./backend/src/init-db.ts:/app/init-db.ts:ro
+    command: >
+      sh -c "npm install -g ts-node typescript && npx ts-node /app/init-db.ts && node dist/index.js"
     depends_on:
       - postgres
     networks:
