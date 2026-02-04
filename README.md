@@ -159,7 +159,14 @@ nexus-salesflow-multi-tenant/
     │   └── init-db.ts     # Inicialización de BD
     ├── migrations/          # Migraciones de base de datos
     ├── package.json
-    └── Dockerfile
+    ├── Dockerfile         # Docker de desarrollo
+    └── Dockerfile.prod    # Docker de producción (multi-stage)
+
+├── Dockerfile.prod        # Frontend production build con nginx
+├── nginx.conf             # Configuración de nginx
+├── docker-compose.prod.yml # Orquestación de producción
+└── .github/workflows/
+    └── deploy.yml          # CI/CD pipeline (GitHub Actions)
 ```
 
 ### Tecnologías
@@ -832,218 +839,136 @@ psql -U user -d nexusdb -f migrations/add_inventory_approval_flow.sql
 
 ## 🚀 Despliegue en Producción
 
-### Configuración Previa
+El proyecto utiliza **GitHub Actions + Dokploy** para un despliegue automatizado y seguro. Este enfoque reemplaza el despliegue manual con Docker, eliminando la necesidad de acceso SSH al VPS.
 
-Antes de desplegar en producción, asegúrate de:
+> 📚 **Guía Detallada**: Para instrucciones paso a paso completas, consulta [GuiaDespliegueGithubActionsDokploy.md](./GuiaDespliegueGithubActionsDokploy.md)
 
-#### 1. Crear archivos de entorno de producción
+### Arquitectura de Despliegue
 
-```bash
-# En la raíz del proyecto (para frontend si aplica)
-cp .env.example .env.production
-# Editar con valores reales de producción:
-# VITE_API_URL=https://api.tudominio.com
-# VITE_PORT=3000
-# VITE_APP_TITLE=Nexus Sales Flow
-
-# En el backend
-cp backend/.env.example backend/.env.production
-# Editar con valores reales de producción:
-# PORT=3001
-# NODE_ENV=production
-# FRONTEND_URL=https://tudominio.com
+```
+┌─────────────┐     ┌─────────────────┐     ┌──────────────┐
+│   GitHub    │────▶│  GitHub Actions │────▶│   Dokploy    │
+│  (código)   │     │   (CI/CD build) │     │   (deploy)   │
+└─────────────┘     └─────────────────┘     └──────────────┘
+                                                      │
+                       ┌──────────────────────────────┼──────────────┐
+                       │                              │              │
+                       ▼                              ▼              ▼
+               ┌──────────────┐            ┌──────────────┐  ┌──────────────┐
+               │  PostgreSQL  │            │  Backend API │  │   Frontend   │
+               │    (DB)      │            │  (Node.js)   │  │   (Nginx)    │
+               └──────────────┘            └──────────────┘  └──────────────┘
 ```
 
-#### 2. Configurar credenciales de PostgreSQL
+### Flujo de CI/CD
+
+1. **Push a main**: Cada push a la rama `main` activa el pipeline
+2. **GitHub Actions**: Construye las imágenes Docker de frontend y backend
+3. **Dokploy**: Recibe el webhook y despliega automáticamente en el VPS
+
+### Configuración Inicial (One-time Setup)
+
+#### 1. Configurar Variables en Dokploy UI
+
+En el panel de Dokploy, configura las siguientes variables de entorno:
+
+**Variables para Frontend:**
+- `VITE_API_URL`: URL del backend (ej: `https://api.tudominio.com`)
+- `VITE_PORT`: `80` (puerto interno de nginx)
+- `NODE_ENV`: `production`
+
+**Variables para Backend:**
+- `DATABASE_URL`: URL de conexión PostgreSQL
+- `JWT_SECRET`: Clave secreta para JWT (generar valor seguro)
+- `PORT`: `3001`
+- `NODE_ENV`: `production`
+- `FRONTEND_URL`: URL del frontend
+
+**Variables para PostgreSQL:**
+- `POSTGRES_USER`: Usuario de base de datos
+- `POSTGRES_PASSWORD`: Contraseña segura
+- `POSTGRES_DB`: `nexusdb`
+
+> ⚠️ **IMPORTANTE**: Las variables se gestionan exclusivamente en Dokploy UI. No se usan archivos `.env` en producción.
+
+#### 2. Configurar Secret en GitHub
+
+En el repositorio de GitHub, ve a **Settings → Secrets and variables → Actions**:
+
+1. Crea un nuevo secret: `DOKPLOY_WEBHOOK_URL`
+2. Valor: La URL del webhook proporcionada por Dokploy
+
+> ✅ **Solo necesitas este secret**. Dokploy inyecta todas las demás variables automáticamente.
+
+### Archivos de Producción
+
+| Archivo | Descripción |
+|---------|-------------|
+| `Dockerfile.prod` (raíz) | Build de frontend con nginx |
+| `backend/Dockerfile.prod` | Build de backend multi-stage |
+| `nginx.conf` | Configuración de nginx para SPA |
+| `docker-compose.prod.yml` | Orquestación de servicios (usa variables de Dokploy) |
+| `.github/workflows/deploy.yml` | Pipeline de CI/CD |
+
+### Características del Despliegue
+
+#### ✅ Seguridad
+- **Sin acceso SSH necesario**: Todo se maneja vía webhooks
+- **Variables en Dokploy UI**: No hay archivos `.env` expuestos
+- **Build multi-stage**: Imágenes optimizadas sin código fuente innecesario
+- **Tests excluidos**: `tsconfig.json` excluye archivos de test del build
+
+#### ✅ Automatización
+- **Deploy automático**: Push a main → build → deploy
+- **Sin intervención manual**: No requiere SSH al VPS
+- **Rollback automático**: Dokploy mantiene versiones anteriores
+
+#### ✅ Optimización
+- **Frontend**: Servido por nginx (estático, rápido)
+- **Backend**: Imagen Node.js compilada (TypeScript → JavaScript)
+- **PostgreSQL**: Datos persistentes en volumen
+
+### Monitoreo
+
+#### Ver Logs en Dokploy UI
+
+1. Accede al panel de Dokploy
+2. Selecciona el servicio (frontend, backend o postgres)
+3. Ve a la pestaña "Logs"
+4. Visualiza logs en tiempo real
+
+#### Verificar Estado del Despliegue
 
 ```bash
-# Crear archivo de producción
-cp docker.env.example backend/docker.env.prod
-
-# Editar con credenciales de producción:
-# POSTGRES_USER=prod_user
-# POSTGRES_PASSWORD=tu_password_muy_seguro (CAMBIAR!)
-# POSTGRES_DB=nexusdb
+# Desde cualquier máquina, verificar endpoints
+curl https://api.tudominio.com/api/users/exists
+curl https://tudominio.com
 ```
 
-⚠️ **IMPORTANTE**: Cambia todas las contraseñas por defecto antes de production.
+### Solución de Problemas
 
-#### 3. Verificar versión de Node.js
+#### El deploy no se activa
+- Verifica que el secret `DOKPLOY_WEBHOOK_URL` esté configurado
+- Revisa los logs de GitHub Actions en la pestaña "Actions"
 
-Asegúrate de que estás usando Node.js 20+:
+#### Error de conexión a base de datos
+- Verifica que `DATABASE_URL` esté correctamente configurada en Dokploy UI
+- Asegúrate de que el servicio PostgreSQL esté corriendo
+
+#### Variables no disponibles
+- Las variables deben configurarse en Dokploy UI, NO en archivos `.env`
+- Verifica que el servicio tenga las variables asignadas
+
+### Backup y Restore
+
+Dokploy maneja automáticamente los backups de PostgreSQL. Para backups manuales:
 
 ```bash
-node --version  # Debe ser v20.x.x o superior
-```
+# Backup desde Dokploy UI (Terminal)
+pg_dump -U $POSTGRES_USER $POSTGRES_DB > backup_$(date +%Y%m%d).sql
 
-### Levantar en Producción con Docker
-
-#### Opción A: Usar docker-compose.prod.yml
-
-```bash
-# Construir y levantar todos los servicios
-docker-compose -f docker-compose.prod.yml up --build -d
-
-# Ver logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Verificar contenedores
-docker ps
-```
-
-Esto levanta:
-- **PostgreSQL**: Contenedor optimizado con Alpine Linux
-- **Backend**: Compilado para producción, usuario no-root, optimizado
-
-#### Opción B: Despliegue manual con Docker (Opcional)
-
-```bash
-# 1. Construir imagen de producción del backend
-cd backend
-docker build -f Dockerfile.prod -t nexus-api-prod .
-
-# 2. Levantar PostgreSQL en modo producción
-cd ..
-docker-compose -f docker-compose.prod.yml up -d postgres
-
-# 3. Levantar backend con imagen compilada
-docker run -d \
-  --name nexus-api-prod \
-  --network nexus-salesflow-multi-tenant_default \
-  -p 3001:3001 \
-  --env-file backend/.env.production \
-  nexus-api-prod
-```
-
-### Verificar Despliegue
-
-#### 1. Probar conexión a la API
-
-```bash
-# Probar health check
-curl http://localhost:3001/api/users/exists
-```
-
-#### 2. Ver logs del backend
-
-```bash
-# Logs en tiempo real
-docker-compose -f docker-compose.prod.yml logs -f backend
-
-# Logs de los últimos 100 líneas
-docker-compose -f docker-compose.prod.yml logs --tail=100 backend
-```
-
-#### 3. Verificar conexión a base de datos
-
-```bash
-# Acceder al contenedor de PostgreSQL
-docker exec -it nexus-sales-db psql -U prod_user -d nexusdb
-
-# Listar tablas
-\dt
-
-# Salir
-\q
-```
-
-### Notas Importantes de Producción
-
-#### Seguridad
-
-- ✅ El puerto 5432 de PostgreSQL **NO** está expuesto al mundo exterior
-- ✅ Solo el port 3001 está expuesto para la API
-- ✅ Backend corre como usuario no-root (seguridad adicional)
-- ⚠️ **CAMBIAR** todas las contraseñas por defecto
-- ⚠️ Usa **HTTPS** en producción (configura certificados SSL)
-
-#### Rendimiento
-
-- Backend usa multi-stage build para imagen más ligera
-- Solo dependencias de producción están incluidas
-- `dumb-init` maneja señales correctamente (reinicio limpio)
-- Código compilado (no interpretación en tiempo de ejecución)
-
-#### Persistencia de Datos
-
-- Datos de PostgreSQL persisten en volumen Docker: `postgres_data`
-- Para backup: `docker exec nexus-sales-db pg_dump -U prod_user nexusdb > backup.sql`
-- Para restore: `cat backup.sql | docker exec -i nexus-sales-db psql -U prod_user nexusdb`
-
-### Reverse Proxy (Recomendado)
-
-Para producción con dominio, se recomienda usar **Nginx** como reverse proxy:
-
-#### Ejemplo de configuración Nginx
-
-```nginx
-server {
-    listen 80;
-    server_name tudominio.com;
-
-    # Frontend
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:3001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-### Monitoreo y Logs
-
-#### Ver recursos usados por contenedores
-
-```bash
-# Uso de CPU y memoria
-docker stats
-
-# Espacio en disco usado por volúmenes
-docker system df -v
-```
-
-#### Logs de producción
-
-```bash
-# Ver todos los logs
-docker-compose -f docker-compose.prod.yml logs
-
-# Ver solo errores
-docker-compose -f docker-compose.prod.yml logs | grep ERROR
-
-# Exportar logs a archivo
-docker-compose -f docker-compose.prod.yml logs > app.log
-```
-
-### Actualizar en Producción
-
-```bash
-# 1. Pull de cambios
-git pull origin main
-
-# 2. Reconstruir y levantar
-docker-compose -f docker-compose.prod.yml up -d --build backend
-
-# 3. Verificar que todo funciona
-curl http://localhost:3001/api/users/exists
-```
-
-### Detener Producción
-
-```bash
-# Detener todos los servicios
-docker-compose -f docker-compose.prod.yml down
-
-# Detener y eliminar volúmenes (CUIDADO: borra datos)
-docker-compose -f docker-compose.prod.yml down -v
+# Restore
+cat backup.sql | psql -U $POSTGRES_USER $POSTGRES_DB
 ```
 
 
@@ -1094,13 +1019,19 @@ nexus-salesflow-multi-tenant/
 │   ├── migrations/         # Scripts de migración
 │   ├── db.sql             # Script SQL completo
 │   ├── init-db.ts         # Inicializador de BD (TypeScript)
-│   ├── Dockerfile
+│   ├── Dockerfile         # Docker de desarrollo
+│   ├── Dockerfile.prod    # Docker de producción (multi-stage)
 │   └── package.json
 │
 ├── .gitignore
 ├── README.md
 ├── LICENSE
-├── docker-compose.yml
+├── docker-compose.yml        # Docker de desarrollo
+├── docker-compose.prod.yml   # Docker de producción
+├── Dockerfile.prod           # Frontend production build
+├── nginx.conf                # Configuración nginx
+├── .github/workflows/
+│   └── deploy.yml            # CI/CD pipeline
 └── package.json
 ```
 
