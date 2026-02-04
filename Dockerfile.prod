@@ -11,6 +11,8 @@ RUN npm ci
 COPY . .
 
 # Compilar para producción
+# Nota: Vite maneja NODE_ENV internamente, no debe estar seteada externamente
+ENV NODE_ENV=""
 RUN npm run build
 
 # Imagen final con nginx
