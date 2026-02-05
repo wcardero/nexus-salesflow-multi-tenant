@@ -67,7 +67,7 @@ const App: React.FC = () => {
       const results: [string, any][] = [];
       for (const resource of resources) {
         try {
-          const res = await fetch(`http://localhost:3001/api/${resource}`, {
+          const res = await fetch(`import.meta.env.VITE_API_URL/api/${resource}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
@@ -187,7 +187,7 @@ const App: React.FC = () => {
           const user: User = JSON.parse(userJson);
           setCurrentUser(user);
           // Verify token is still valid by making a simple request that all roles can access
-          const response = await fetch('http://localhost:3001/api/stores', {
+          const response = await fetch('import.meta.env.VITE_API_URL/api/stores', {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
