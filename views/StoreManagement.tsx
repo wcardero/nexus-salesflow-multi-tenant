@@ -19,7 +19,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/stores', {
+      const response = await fetch('import.meta.env.VITE_API_URL/api/stores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/stores/${editingStore.id}`, {
+      const response = await fetch(`import.meta.env.VITE_API_URL/api/stores/${editingStore.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/stores/${storeId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_URL/api/stores/${storeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

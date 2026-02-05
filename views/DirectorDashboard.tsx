@@ -70,7 +70,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     try {
       const startDate = dateRange.start.toISOString();
       const endDate = dateRange.end.toISOString();
-      const response = await fetch(`http://localhost:3001/api/director/metrics?startDate=${startDate}&endDate=${endDate}&period=custom`, {
+      const response = await fetch(`import.meta.env.VITE_API_URL/api/director/metrics?startDate=${startDate}&endDate=${endDate}&period=custom`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -96,7 +96,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/users', {
+      const response = await fetch('import.meta.env.VITE_API_URL/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${editingManager.id}`, {
+      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${editingManager.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -176,7 +176,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const url = `http://localhost:3001/api/users/${managerId}`;
+      const url = `import.meta.env.VITE_API_URL/api/users/${managerId}`;
 
       const response = await fetch(url, {
         method: 'DELETE',
@@ -208,7 +208,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${passwordChangeManager.id}/password`, {
+      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${passwordChangeManager.id}/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -176,7 +176,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
     try {
       const accountingDate = new Date().toISOString().split('T')[0];
-      const response = await fetch('http://localhost:3001/api/sales', {
+      const response = await fetch('import.meta.env.VITE_API_URL/api/sales', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -218,7 +218,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
     try {
       const accountingDate = new Date().toISOString().split('T')[0];
-      const response = await fetch('http://localhost:3001/api/closings', {
+      const response = await fetch('import.meta.env.VITE_API_URL/api/closings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -303,7 +303,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
     try {
       for (const id of inventoryIds) {
-        const response = await fetch(`http://localhost:3001/api/assigned-inventory/${id}/archive`, {
+        const response = await fetch(`import.meta.env.VITE_API_URL/api/assigned-inventory/${id}/archive`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -495,7 +495,7 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
     try {
       // Mark all sales in the group as paid
       for (const saleId of saleIds) {
-        const response = await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
+        const response = await fetch(`import.meta.env.VITE_API_URL/api/sales/${saleId}/mark-as-paid`, {
           method: 'PATCH',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
@@ -715,7 +715,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   const handleConfirmInventory = async (id: string) => {
     try {
-      await fetch(`http://localhost:3001/api/assigned-inventory/${id}/confirm`, {
+      await fetch(`import.meta.env.VITE_API_URL/api/assigned-inventory/${id}/confirm`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -725,7 +725,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   const handleRejectInventory = async (id: string, reason: string) => {
     try {
-      await fetch(`http://localhost:3001/api/assigned-inventory/${id}/reject`, {
+      await fetch(`import.meta.env.VITE_API_URL/api/assigned-inventory/${id}/reject`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -739,7 +739,7 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
 
   const handleMarkAsPaid = async (saleId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/sales/${saleId}/mark-as-paid`, {
+      await fetch(`import.meta.env.VITE_API_URL/api/sales/${saleId}/mark-as-paid`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
