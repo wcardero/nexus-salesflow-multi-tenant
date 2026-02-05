@@ -1,30 +1,28 @@
--- SQL for Nexus SalesFlow Database
+-- SQL for Nexus SalesFlow Database (SAFE VERSION)
+-- This script uses CREATE TABLE IF NOT EXISTS to preserve existing data
 
--- Drop tables if they exist to ensure a clean slate
-DROP TABLE IF EXISTS "InventoryConflict", "Closing", "Sale", "InventoryItem", "ProductStock", "AssignedInventory", "Product", "ExchangeRate", "User", "Store", "_ClosingToSale", "_StoreToUser" CASCADE;
-
--- ENUMS
-DROP TYPE IF EXISTS "Role";
+-- ENUMS (safe to recreate, they don't delete data if type exists)
+DROP TYPE IF EXISTS "Role" CASCADE;
 CREATE TYPE "Role" AS ENUM ('Admin', 'Director', 'Manager', 'Gestor');
 
-DROP TYPE IF EXISTS "InventoryStatus";
+DROP TYPE IF EXISTS "InventoryStatus" CASCADE;
 CREATE TYPE "InventoryStatus" AS ENUM ('Available', 'Sold');
 
-DROP TYPE IF EXISTS "ClosingStatus";
+DROP TYPE IF EXISTS "ClosingStatus" CASCADE;
 CREATE TYPE "ClosingStatus" AS ENUM ('PENDING', 'COMPLETED');
 
-DROP TYPE IF EXISTS "SalePaymentStatus";
+DROP TYPE IF EXISTS "SalePaymentStatus" CASCADE;
 CREATE TYPE "SalePaymentStatus" AS ENUM ('PAID', 'PENDING');
 
--- Create Tables
-CREATE TABLE "Store" (
+-- Create Tables (IF NOT EXISTS to preserve data)
+CREATE TABLE IF NOT EXISTS "Store" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
     "defaultCommissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
     "directorId" TEXT
 );
 
-CREATE TABLE "User" (
+CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "password" TEXT NOT NULL,
@@ -35,9 +33,14 @@ CREATE TABLE "User" (
     CONSTRAINT "User_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
-ALTER TABLE "Store" ADD CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- Add foreign key for Store.directorId (ignore if already exists)
+DO $$ BEGIN
+    ALTER TABLE "Store" ADD CONSTRAINT "Store_directorId_fkey" FOREIGN KEY ("directorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE "ExchangeRate" (
+CREATE TABLE IF NOT EXISTS "ExchangeRate" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "rate" DOUBLE PRECISION NOT NULL,
     "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -46,7 +49,7 @@ CREATE TABLE "ExchangeRate" (
     CONSTRAINT "ExchangeRate_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE "Product" (
+CREATE TABLE IF NOT EXISTS "Product" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "costUSD" DOUBLE PRECISION,
@@ -62,7 +65,7 @@ CREATE TABLE "Product" (
     CONSTRAINT "Product_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
-CREATE TABLE "InventoryItem" (
+CREATE TABLE IF NOT EXISTS "InventoryItem" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "status" "InventoryStatus" NOT NULL DEFAULT 'Available',
@@ -72,7 +75,7 @@ CREATE TABLE "InventoryItem" (
     CONSTRAINT "InventoryItem_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE "ProductStock" (
+CREATE TABLE IF NOT EXISTS "ProductStock" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "productId" TEXT NOT NULL,
     "storeId" TEXT NOT NULL,
@@ -81,7 +84,7 @@ CREATE TABLE "ProductStock" (
     CONSTRAINT "ProductStock_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE "AssignedInventory" (
+CREATE TABLE IF NOT EXISTS "AssignedInventory" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "productId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
@@ -95,7 +98,7 @@ CREATE TABLE "AssignedInventory" (
     CONSTRAINT "AssignedInventory_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE "AuditLog" (
+CREATE TABLE IF NOT EXISTS "AuditLog" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "action" TEXT NOT NULL,
@@ -109,7 +112,7 @@ CREATE TABLE "AuditLog" (
     CONSTRAINT "AuditLog_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
-CREATE TABLE "Sale" (
+CREATE TABLE IF NOT EXISTS "Sale" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "soldAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "accountingDate" DATE,
@@ -131,7 +134,7 @@ CREATE TABLE "Sale" (
     CONSTRAINT "Sale_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE "Closing" (
+CREATE TABLE IF NOT EXISTS "Closing" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "initiatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "completedAt" TIMESTAMP(3),
@@ -144,21 +147,21 @@ CREATE TABLE "Closing" (
     CONSTRAINT "Closing_gestorId_fkey" FOREIGN KEY ("gestorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE "_ClosingToSale" (
+CREATE TABLE IF NOT EXISTS "_ClosingToSale" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
     CONSTRAINT "_ClosingToSale_A_fkey" FOREIGN KEY ("A") REFERENCES "Closing"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "_ClosingToSale_B_fkey" FOREIGN KEY ("B") REFERENCES "Sale"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE "_StoreToUser" (
+CREATE TABLE IF NOT EXISTS "_StoreToUser" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
     CONSTRAINT "_StoreToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "_StoreToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE "InventoryConflict" (
+CREATE TABLE IF NOT EXISTS "InventoryConflict" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "assignedInventoryId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
@@ -172,9 +175,7 @@ CREATE TABLE "InventoryConflict" (
     CONSTRAINT "fk_conflict_manager" FOREIGN KEY ("managerId") REFERENCES "User"("id")
 );
 
--- 4. Índices
-CREATE UNIQUE INDEX "_ClosingToSale_AB_unique" ON "_ClosingToSale"("A", "B");
-CREATE INDEX "_ClosingToSale_B_index" ON "_ClosingToSale"("B");
-CREATE UNIQUE INDEX "_StoreToUser_AB_unique" ON "_StoreToUser"("A", "B");
-CREATE INDEX "_StoreToUser_B_index" ON "_StoreToUser"("B");
-
+-- Índices (CREATE INDEX IF NOT EXISTS para evitar errores)
+CREATE INDEX IF NOT EXISTS "_ClosingToSale_B_index" ON "_ClosingToSale"("B");
+CREATE UNIQUE INDEX IF NOT EXISTS "_StoreToUser_AB_unique" ON "_StoreToUser"("A", "B");
+CREATE INDEX IF NOT EXISTS "_StoreToUser_B_index" ON "_StoreToUser"("B");
