@@ -160,6 +160,7 @@ interface SalesViewProps {
 const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSalesSinceLastClosing, productsById, currentRate, groupedInventory, refreshDb }) => {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
+  const [isExecutingClosing, setIsExecutingClosing] = useState(false);
 
   const handleOpenSellModal = (group: InventoryGroup) => {
     setSelectedGroup(group);
@@ -216,6 +217,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
     if (!window.confirm(`¿Ejecutar cierre por un total de ${formatCurrency(totalBaseMN)}?`)) return;
 
+    setIsExecutingClosing(true);
     try {
       const accountingDate = new Date().toISOString().split('T')[0];
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/closings`, {
@@ -240,6 +242,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     } catch (error) {
       console.error('Error creating closing:', error);
       alert('Error al ejecutar el cierre.');
+    } finally {
+      setIsExecutingClosing(false);
     }
   };
 
@@ -424,7 +428,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monto a Entregar</p>
               <p className="text-3xl font-black text-primary-600 dark:text-primary-400">{formatCurrency(totalStoreGain)}</p>
             </div>
-            <Button variant="primary" size="lg" onClick={handleExecuteClosing} disabled={Object.keys(salesByProduct).length === 0} className="px-10 h-16 uppercase shadow-xl">
+            <Button variant="primary" size="lg" onClick={handleExecuteClosing} isLoading={isExecutingClosing} disabled={Object.keys(salesByProduct).length === 0 || isExecutingClosing} className="px-10 h-16 uppercase shadow-xl">
               Cerrar Caja
             </Button>
           </div>
@@ -453,6 +457,7 @@ interface DebtsViewProps {
 }
 
 const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, productsById, refreshDb, user }) => {
+  const [isMarkingAsPaid, setIsMarkingAsPaid] = useState<string | null>(null);
   // Group pending debts by customer and product
   const groupedDebts = useMemo(() => {
     const pendingSales = gestorSales.filter(sale =>
@@ -492,6 +497,8 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
   }, [gestorSales, gestorClosings]);
 
   const handleMarkAsPaid = async (saleIds: string[]) => {
+    const debtKey = saleIds.join(',');
+    setIsMarkingAsPaid(debtKey);
     try {
       // Mark all sales in the group as paid
       for (const saleId of saleIds) {
@@ -508,6 +515,8 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
     } catch (error) {
       console.error(error);
       alert('Error al marcar las deudas como pagadas.');
+    } finally {
+      setIsMarkingAsPaid(null);
     }
   };
 
@@ -537,7 +546,7 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
                   <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(debt.totalAmount)}</td>
                   <td className="px-4 py-4 align-middle">
                     <div className="flex items-center justify-center">
-                      <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(debt.saleIds)}>Marcar Pagada</Button>
+                      <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(debt.saleIds)} isLoading={isMarkingAsPaid === debt.saleIds.join(',')} disabled={isMarkingAsPaid !== null}>Marcar Pagada</Button>
                     </div>
                   </td>
                 </tr>
