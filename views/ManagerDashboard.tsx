@@ -5,6 +5,7 @@ import { formatCurrency, getCurrentExchangeRate, calculateProductPrices } from '
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
+import Button from '../components/Button';
 import { formatDate, getPresetRanges, formatDateTime } from '../dateUtils';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 import { addDays } from 'date-fns';
@@ -22,6 +23,7 @@ type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'repor
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb, currentView }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
+  const [isValidatingClosing, setIsValidatingClosing] = useState<string | null>(null);
 
   useEffect(() => {
     refreshDb();
@@ -39,6 +41,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
 
   // Handlers
   const handleValidateClosing = async (closingId: string) => {
+    setIsValidatingClosing(closingId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/closings/${closingId}/complete`, {
         method: 'PATCH',
@@ -57,6 +60,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
     } catch (error: any) {
       console.error('Error completing closing:', error);
       alert('Error al completar el cierre.');
+    } finally {
+      setIsValidatingClosing(null);
     }
   };
 
@@ -98,7 +103,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   const renderContent = () => {
     switch (activeTab) {
       case 'closings':
-        return <ClosingsView closings={storeClosings} users={db.users} onValidate={handleValidateClosing} />;
+        return <ClosingsView closings={storeClosings} users={db.users} onValidate={handleValidateClosing} validatingId={isValidatingClosing} />;
       case 'inventory':
         return <InventoryView db={db} setDb={setDb} store={store} refreshDb={refreshDb} />;
       case 'products':
@@ -436,7 +441,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
 
 
 // --- CIERRES VIEW ---
-const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (id: string) => void}> = ({ closings, users, onValidate }) => {
+const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (id: string) => void, validatingId: string | null}> = ({ closings, users, onValidate, validatingId }) => {
   const pendingClosings = closings.filter(c => c.status === ClosingStatus.PENDING);
   const usersById = Object.fromEntries(users.map(u => [u.id, u]));
 
@@ -452,9 +457,9 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
               <p className="text-sm text-slate-500">Iniciado: {new Date(c.initiatedAt).toLocaleString()}</p>
               <p className="font-bold text-info-600 dark:text-info-400 mt-1">Monto a Recibir: {formatCurrency(c.totalBaseMN)}</p>
             </div>
-            <button onClick={() => onValidate(c.id)} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all">
+            <Button onClick={() => onValidate(c.id)} isLoading={validatingId === c.id} disabled={validatingId !== null} variant="primary" size="sm">
               Validar Recepción
-            </button>
+            </Button>
           </div>
         )) : <p className="text-slate-500">No hay cierres pendientes.</p>}
       </div>
@@ -543,6 +548,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [editingGestor, setEditingGestor] = useState<User | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingPassword, setEditingPassword] = useState('');
+  const [isAddingGestor, setIsAddingGestor] = useState(false);
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
 
   const isGestorHasInventory = (gestorId: string): boolean => {
@@ -556,6 +562,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
+    setIsAddingGestor(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
@@ -582,6 +589,8 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } catch (error: any) {
       console.error('Error creating gestor:', error);
       alert(`Error al crear el gestor: ${error.message}`);
+    } finally {
+      setIsAddingGestor(false);
     }
   };
 
@@ -720,7 +729,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           placeholder="Contraseña"
           className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
         />
-        <button type="submit" className="md:col-span-2 bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Agregar</button>
+        <Button type="submit" variant="primary" size="sm" isLoading={isAddingGestor} disabled={isAddingGestor} className="md:col-span-2">Agregar</Button>
       </form>
       {/* List */}
       <div className="space-y-2">
@@ -1363,6 +1372,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
   const [productId, setProductId] = useState('');
   const [gestorId, setGestorId] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [isAssigning, setIsAssigning] = useState(false);
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
 
@@ -1385,6 +1395,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
       return;
     }
 
+    setIsAssigning(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/assigned-inventory`, {
         method: 'POST',
@@ -1410,6 +1421,8 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
     } catch (error: any) {
       console.error('Error assigning inventory:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -1451,7 +1464,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
         <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
         <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
-        <button type="submit" className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Asignar</button>
+        <Button type="submit" variant="primary" size="sm" isLoading={isAssigning} disabled={isAssigning}>Asignar</Button>
        </form>
        {/* Pending inventory list */}
        <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Pendiente de Aceptación</h4>

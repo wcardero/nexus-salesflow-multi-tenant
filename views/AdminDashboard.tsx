@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
+import Button from '../components/Button';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 import { formatDate, getPresetRanges } from '../dateUtils';
 import { MockDB, Role, User } from '../types';
@@ -50,6 +51,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
   const [newDirectorName, setNewDirectorName] = useState('');
   const [newDirectorPassword, setNewDirectorPassword] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>(db.stores[0]?.id || '');
+  const [isCreatingStore, setIsCreatingStore] = useState(false);
+  const [isCreatingManager, setIsCreatingManager] = useState(false);
+  const [isCreatingDirector, setIsCreatingDirector] = useState(false);
   const presets = getPresetRanges();
   const [dateRange, setDateRange] = useState({
     start: presets.esteMes.start,
@@ -66,6 +70,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsCreatingStore(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stores`, {
         method: 'POST',
@@ -90,6 +95,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error creating store:', error);
       alert(`Error al crear la tienda: ${error.message}`);
+    } finally {
+      setIsCreatingStore(false);
     }
   };
 
@@ -99,6 +106,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsCreatingManager(true);
     try {
       // First, create the user
       const userResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
@@ -153,6 +161,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error creating manager:', error);
       alert(`Error al crear el manager: ${error.message}`);
+    } finally {
+      setIsCreatingManager(false);
     }
   };
 
@@ -168,6 +178,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
         return;
     }
 
+    setIsCreatingDirector(true);
     try {
       // First, create the user
       const userResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
@@ -220,6 +231,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error creating director:', error);
       alert(`Error al crear el director: ${error.message}`);
+    } finally {
+      setIsCreatingDirector(false);
     }
   };
 
@@ -314,7 +327,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
               <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
                  <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Añadir Nueva Tienda</h4>
                 <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <button onClick={handleCreateStore} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Añadir Tienda</button>
+                <Button onClick={handleCreateStore} isLoading={isCreatingStore} fullWidth variant="primary" size="sm">Añadir Tienda</Button>
              </div>
               {/* Create Director */}
               <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
@@ -324,7 +337,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
-                <button onClick={handleCreateDirector} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Crear Director</button>
+                <Button onClick={handleCreateDirector} isLoading={isCreatingDirector} fullWidth variant="primary" size="sm">Crear Director</Button>
               </div>
                {/* Create Manager */}
                <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
@@ -334,7 +347,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
                 <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
-                <button onClick={handleCreateManager} className="w-full bg-primary-600 text-white rounded-md py-2 text-sm font-bold hover:bg-primary-700 hover:shadow-md transition-all">Crear Manager</button>
+                <Button onClick={handleCreateManager} isLoading={isCreatingManager} fullWidth variant="primary" size="sm">Crear Manager</Button>
               </div>
           </div>
         </div>
