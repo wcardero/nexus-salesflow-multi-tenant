@@ -39,4 +39,4 @@ EXPOSE 3001
 
 # Usar dumb-init para manejar señales correctamente
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "chmod +x ./run_migrations.sh && ./run_migrations.sh && node dist/index.js"]
+CMD ["sh", "-c", "./run_migrations.sh && node dist/index.js"]
