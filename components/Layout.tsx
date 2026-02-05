@@ -231,7 +231,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
       {isSidebarCollapsed && (
         <button
           onClick={() => setIsSidebarCollapsed(false)}
-          className="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 shadow-lg hover:shadow-xl transition-shadow hover:bg-slate-100 dark:hover:bg-slate-700"
+          className="hidden md:flex fixed left-4 top-4 z-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 shadow-lg hover:shadow-xl transition-shadow hover:bg-slate-100 dark:hover:bg-slate-700"
           title="Abrir barra lateral"
         >
           <span className="material-symbols-outlined text-slate-700 dark:text-slate-300">menu</span>
