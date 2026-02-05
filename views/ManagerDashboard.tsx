@@ -40,7 +40,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
   // Handlers
   const handleValidateClosing = async (closingId: string) => {
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/closings/${closingId}/complete`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/closings/${closingId}/complete`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -62,7 +62,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
 
   const handleSetExchangeRate = async (newRate: number, startDate: Date) => {
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/exchange-rates', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/exchange-rates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -557,7 +557,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     }
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -600,7 +600,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     if (!editingGestor || !editingName.trim()) return;
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${editingGestor.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingGestor.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -638,7 +638,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     }
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${gestorId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${gestorId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -825,7 +825,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     };
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/products', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -869,7 +869,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     if (!editingProduct || !editingName.trim() || !editingCost || !editingMargin) return;
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/products/${editingProduct.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -915,7 +915,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     }
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/products/${productId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1129,7 +1129,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     if (!productId || quantity < 0) return;
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/product-stock', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/product-stock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1166,7 +1166,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     if (!editingStock || editingQuantity < 0) return;
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/product-stock', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/product-stock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1200,7 +1200,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     }
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/product-stock/${stockId}?productId=${productId}&storeId=${store.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/product-stock/${stockId}?productId=${productId}&storeId=${store.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1386,7 +1386,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
     }
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/assigned-inventory', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/assigned-inventory`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1551,7 +1551,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
     }
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/inventory-conflicts/${conflictId}/resolve`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory-conflicts/${conflictId}/resolve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

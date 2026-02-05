@@ -18,7 +18,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   useEffect(() => {
     const fetchStores = async () => {
       try {
-        const response = await fetch('import.meta.env.VITE_API_URL/api/stores/public');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stores/public`);
         const data = await response.json();
         // Ensure data is an array before setting state
         if (Array.isArray(data)) {
@@ -37,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     // Also re-check if users exist when component mounts/remounts (logout)
     const checkUsersExist = async () => {
       try {
-        const response = await fetch('import.meta.env.VITE_API_URL/api/users/exists');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/exists`);
         const data = await response.json();
         setShowCreateAdmin(!data.exists);
       } catch (error) {
@@ -58,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
     setLoading(true);
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: username, password, role: Role.ADMIN }),
@@ -67,7 +67,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const newUser: User = await response.json();
 
-      const loginResponse = await fetch('import.meta.env.VITE_API_URL/api/login', {
+      const loginResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: username, password }),
@@ -95,7 +95,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
     setLoading(true);
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/login', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: username, password, storeId: storeId || null }),

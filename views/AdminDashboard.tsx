@@ -67,7 +67,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/stores', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stores`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
 
     try {
       // First, create the user
-      const userResponse = await fetch('import.meta.env.VITE_API_URL/api/users', {
+      const userResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       if (store) {
         const updatedManagerIds = [...(store.managerIds || []), newUser.id];
 
-        const updateStoreResponse = await fetch(`import.meta.env.VITE_API_URL/api/stores/${selectedStoreId}`, {
+        const updateStoreResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/stores/${selectedStoreId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
 
     try {
       // First, create the user
-      const userResponse = await fetch('import.meta.env.VITE_API_URL/api/users', {
+      const userResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +194,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
       // Then update the store to assign this user as the director
       const store = db.stores.find(s => s.id === selectedStoreId);
       if (store) {
-        const updateStoreResponse = await fetch(`import.meta.env.VITE_API_URL/api/stores/${selectedStoreId}`, {
+        const updateStoreResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/stores/${selectedStoreId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

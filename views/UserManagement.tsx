@@ -30,7 +30,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
         requestBody.storeId = editingUserStoreId || null;
       }
 
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${editingUser.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -176,7 +176,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     }
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_URL/api/users/${passwordChangeUser.id}/password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${passwordChangeUser.id}/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
