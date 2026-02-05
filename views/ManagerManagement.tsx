@@ -35,7 +35,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const response = await fetch('import.meta.env.VITE_API_URL/api/users/' + editingManager.id, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingManager.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const url = 'import.meta.env.VITE_API_URL/api/users/' + managerId;
+      const url = `${import.meta.env.VITE_API_URL}/api/users/${managerId}`;
       const response = await fetch(url, {
         method: 'DELETE',
         headers: {
@@ -140,7 +140,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     }
 
     try {
-      const url = 'import.meta.env.VITE_API_URL/api/users/' + passwordChangeManager.id + '/password';
+      const url = `${import.meta.env.VITE_API_URL}/api/users/${passwordChangeManager.id}/password`;
 
 
       const response = await fetch(url, {
