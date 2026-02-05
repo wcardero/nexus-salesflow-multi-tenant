@@ -41,7 +41,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
       args:
-        VITE_API_URL: /api
+        VITE_API_URL: ""
     container_name: nexus-frontend
     restart: always
     depends_on:
