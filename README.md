@@ -841,7 +841,7 @@ psql -U user -d nexusdb -f migrations/add_inventory_approval_flow.sql
 
 El proyecto utiliza **GitHub Actions + Dokploy** para un despliegue automatizado y seguro. Este enfoque reemplaza el despliegue manual con Docker, eliminando la necesidad de acceso SSH al VPS.
 
-> 📚 **Guía Detallada**: Para instrucciones paso a paso completas, consulta [GuiaDespliegueGithubActionsDokploy.md](./GuiaDespliegueGithubActionsDokploy.md)
+> ✅ **Estado**: El despliegue con GitHub Actions + Dokploy está funcionando correctamente en producción.
 
 ### Arquitectura de Despliegue
 
@@ -1180,6 +1180,6 @@ Para reportar issues o solicitar features, por favor crea un issue en el [reposi
 
 ---
 
-**Última actualización:** Enero 2026
+**Última actualización:** Febrero 2026
 **Versión:** 1.0.0
 **Autor:** [wcardero](https://github.com/wcardero)
