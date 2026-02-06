@@ -8,12 +8,15 @@
 1. [Introducción](#introducción)
 2. [Primeros Pasos](#primeros-pasos)
 3. [Gestión de Gestores](#gestión-de-gestores)
-4. [Asignación de Inventario](#asignación-de-inventario)
-5. [Confirmación de Cierres](#confirmación-de-cierres)
-6. [Resolución de Conflictos](#resolución-de-conflictos)
-7. [Monitoreo y Reportes](#monitoreo-y-reportes)
-8. [Flujos de Trabajo](#flujos-de-trabajo)
-9. [Consejos y Mejores Prácticas](#consejos-y-mejores-prácticas)
+4. [Gestión de Productos](#gestión-de-productos)
+5. [Configuración de Tipo de Cambio](#configuración-de-tipo-de-cambio)
+6. [Stock Inicial](#stock-inicial)
+7. [Asignación de Inventario](#asignación-de-inventario)
+8. [Confirmación de Cierres](#confirmación-de-cierres)
+9. [Resolución de Conflictos](#resolución-de-conflictos)
+10. [Monitoreo y Reportes](#monitoreo-y-reportes)
+11. [Flujos de Trabajo](#flujos-de-trabajo)
+12. [Consejos y Mejores Prácticas](#consejos-y-mejores-prácticas)
 
 ---
 
@@ -31,12 +34,13 @@ Como **Manager**, usted es el enlace entre la dirección y los gestores. Su rol 
 
 ✅ **Puede hacer:**
 - Crear y gestionar gestores
+- Crear, editar y eliminar productos
+- Configurar y actualizar tipo de cambio
+- Gestionar stock inicial por producto
 - Asignar inventario a gestores
 - Confirmar cierres de caja
 - Resolver conflictos de inventario
 - Ver reportes de sus gestores
-- Configurar tipo de cambio (si no hay Director)
-- Gestionar productos (si no hay Director)
 
 ❌ **No puede hacer:**
 - Crear directores ni otros managers
@@ -117,11 +121,186 @@ El panel muestra:
 
 ---
 
+## GESTIÓN DE PRODUCTOS
+
+### Conceptos Importantes
+
+**Costo**: Precio de compra del producto (en USD o MN)
+**Margen**: Porcentaje de ganancia sobre el costo
+**Comisión**: Porcentaje que gana el gestor por cada venta
+**Tipo de Cambio**: Tasa USD a Moneda Nacional
+
+### Fórmula de Precios
+
+**Para producto en USD:**
+```
+Venta USD = Costo USD × (1 + Margen)
+Precio MN Base = Venta USD × Tipo de Cambio
+Comisión MN = Precio MN Base × Tasa de Comisión
+Precio Final MN = Precio MN Base + Comisión MN
+```
+
+**Ejemplo Numérico:**
+```
+Producto: Jabón
+Costo: $10.00 USD
+Margen: 30%
+Tipo de Cambio: 300 MN/USD
+Comisión: 10%
+
+Cálculo:
+Venta USD = $10 × 1.30 = $13.00 USD
+Precio MN Base = $13 × 300 = $3,900 MN
+Comisión = $3,900 × 0.10 = $390 MN
+Precio Final = $3,900 + $390 = $4,290 MN
+```
+
+### Crear un Nuevo Producto
+
+**Paso 1: Acceder**
+1. Vaya al menú **"Productos"**
+2. Haga clic en **"Nuevo Producto"**
+
+**Paso 2: Información Básica**
+1. **Nombre del Producto**: Ingrese nombre descriptivo
+2. **Moneda**: Seleccione USD o MN
+3. **Costo**: Ingrese el costo de compra
+
+**Paso 3: Configuración de Precios**
+1. **Margen**: Porcentaje de ganancia (ej: 30 para 30%)
+2. **Comisión**: Porcentaje para el gestor (ej: 10 para 10%)
+
+> **Nota**: Si no especifica comisión, se usará la comisión por defecto de la tienda.
+
+**Paso 4: Guardar**
+1. Revise los cálculos automáticos
+2. Haga clic en **"Guardar Producto"**
+
+### Editar un Producto
+
+1. Vaya a **"Productos"**
+2. Busque el producto en la lista
+3. Haga clic en el ícono de editar (✏️)
+4. Modifique los campos necesarios
+5. Haga clic en **"Guardar Cambios"**
+
+> **Importante**: Los cambios en precios solo afectan ventas futuras. Las ventas existentes mantienen los precios originales.
+
+### Eliminar un Producto
+
+> **⚠️ Precaución**: No puede eliminar productos que:
+> - Tengan stock asignado
+> - Tengan ventas registradas
+> - Estén en inventario de gestores
+
+1. Seleccione el producto
+2. Haga clic en **"Eliminar"**
+3. Confirme la acción
+
+### Lista de Productos
+
+Vaya a **"Productos"** para ver:
+- Todos los productos de la tienda
+- Costo y precios actuales
+- Margen y comisión configurados
+- Stock disponible
+- Estado del producto
+
+---
+
+## CONFIGURACIÓN DE TIPO DE CAMBIO
+
+### ¿Qué es el Tipo de Cambio?
+
+Es la tasa de conversión de USD a Moneda Nacional (MN). Este valor es crucial porque:
+- Determina el precio de venta de productos en USD
+- Afecta todas las ventas futuras
+- Se congela en cada venta (no hay efectos retroactivos)
+
+### Cuándo Actualizar el Tipo de Cambio
+
+Actualice el tipo de cambio cuando:
+- Haya fluctuaciones significativas del dólar
+- Inicie un nuevo período de ventas
+- Los precios actuales ya no sean competitivos
+
+### Cómo Configurar el Tipo de Cambio
+
+**Paso 1: Acceder**
+1. Vaya al menú **"Tipo de Cambio"**
+
+**Paso 2: Nuevo Valor**
+1. Ingrese el nuevo valor (ej: 300)
+2. Seleccione la **fecha de inicio** de vigencia
+3. Opcional: Establezca fecha de fin (para períodos específicos)
+
+**Paso 3: Confirmar**
+1. Revise el valor ingresado
+2. Haga clic en **"Guardar Cambio"**
+
+> **Nota**: El sistema guarda un historial de todos los cambios de tipo de cambio.
+
+### Historial de Tipos de Cambio
+
+Vaya a **"Tipo de Cambio"** → **"Historial"** para ver:
+- Todos los valores históricos
+- Fechas de vigencia
+- Usuario que realizó el cambio
+- Fecha del cambio
+
+---
+
+## STOCK INICIAL
+
+### Concepto
+
+El **Stock Inicial** es la cantidad total de productos disponibles en la tienda antes de asignarlos a gestores. Es el inventario base sobre el cual se hacen las asignaciones.
+
+### Configurar Stock Inicial
+
+**Paso 1: Acceder**
+1. Vaya al menú **"Stock Inicial"**
+
+**Paso 2: Seleccionar Producto**
+1. Seleccione el producto del dropdown
+2. Verá información del producto:
+   - Nombre
+   - Costo
+   - Precio actual
+
+**Paso 3: Definir Cantidad**
+1. Ingrese la cantidad disponible en tienda
+2. El sistema valida que sea un número positivo
+
+**Paso 4: Guardar**
+1. Haga clic en **"Guardar Stock"**
+2. El stock queda disponible para asignaciones
+
+### Actualizar Stock
+
+1. Vaya a **"Stock Inicial"**
+2. Busque el producto
+3. Haga clic en **"Editar"**
+4. Modifique la cantidad
+5. Haga clic en **"Guardar"**
+
+> **Importante**: No puede reducir el stock por debajo de lo ya asignado a gestores.
+
+### Control de Stock
+
+El panel de stock muestra:
+- **Stock Total**: Cantidad en tienda
+- **Asignado**: Cantidad asignada a gestores
+- **Disponible**: Stock Total - Asignado
+- **Vendido**: Cantidad ya vendida
+
+---
+
 ## ASIGNACIÓN DE INVENTARIO
 
 ### Conceptos Importantes
 
-**Stock Inicial**: Inventario total disponible en la tienda (gestionado por Director/Admin)
+**Stock Inicial**: Inventario total disponible en la tienda
 
 **Inventario Asignado**: Porción del stock que entrega a un gestor específico
 
