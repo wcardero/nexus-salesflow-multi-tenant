@@ -402,7 +402,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                     <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{productsById[sale.productId || '']?.name || 'N/A'}</td>
                     <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-center">
                       {sale.paymentMethod === 'TRANSFER' ? (
-                        <span title="Transferencia">🏦</span>
+                        <span title="Transferencia">💳</span>
                       ) : (
                         <span title="Efectivo">💵</span>
                       )}
@@ -470,7 +470,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
           
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">🏦</span>
+              <span className="text-2xl">💳</span>
               <span className="font-bold text-blue-800 dark:text-blue-200">Transferencia</span>
             </div>
             <div className="space-y-1">
@@ -703,7 +703,7 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
                     onChange={() => setPaymentMethod(PaymentMethod.TRANSFER)}
                     className="mr-2"
                   />
-                  <span className="text-sm text-slate-700 dark:text-slate-300">🏦 Transferencia</span>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">💳 Transferencia</span>
                 </label>
               </div>
             </div>
