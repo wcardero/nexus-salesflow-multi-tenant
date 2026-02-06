@@ -8,14 +8,10 @@
 1. [Introducción](#introducción)
 2. [Primeros Pasos](#primeros-pasos)
 3. [Gestión de Managers](#gestión-de-managers)
-4. [Gestión de Productos](#gestión-de-productos)
-5. [Configuración de Tipo de Cambio](#configuración-de-tipo-de-cambio)
-6. [Stock Inicial](#stock-inicial)
-7. [Asignación de Inventario](#asignación-de-inventario)
-8. [Confirmación de Cierres](#confirmación-de-cierres)
-9. [Reportes y Métricas](#reportes-y-métricas)
-10. [Flujos de Trabajo](#flujos-de-trabajo)
-11. [Consejos y Mejores Prácticas](#consejos-y-mejores-prácticas)
+4. [Confirmación de Cierres](#confirmación-de-cierres)
+5. [Reportes y Métricas](#reportes-y-métricas)
+6. [Flujos de Trabajo](#flujos-de-trabajo)
+7. [Consejos y Mejores Prácticas](#consejos-y-mejores-prácticas)
 
 ---
 
@@ -27,16 +23,16 @@ Como **Director**, usted tiene la responsabilidad general de la tienda. Es el en
 
 ✅ **Puede hacer:**
 - Crear y gestionar managers de su tienda
-- Crear, editar y eliminar productos
-- Configurar y actualizar tipo de cambio
-- Gestionar stock inicial por producto
-- Asignar inventario a gestores
 - Confirmar pagos de cierres de caja
 - Visualizar todos los reportes de la tienda
 - Acceder a auditoría completa de la tienda
+- Ver estadísticas y métricas de desempeño
 
 ❌ **No puede hacer:**
 - Crear otros directores (solo Admin)
+- Gestionar productos (eso lo hace el Manager)
+- Configurar tipo de cambio (eso lo hace el Manager)
+- Asignar inventario (eso lo hace el Manager)
 - Ver información de otras tiendas
 - Modificar cierres ya validados
 - Eliminar ventas realizadas
@@ -60,10 +56,10 @@ El panel muestra:
 - Resumen general de la tienda
 - Ventas totales del período
 - Managers activos
-- Productos configurados
-- Tipo de cambio actual
 - Cierres pendientes de confirmación
+- Deudas pendientes
 - Alertas importantes
+- Estadísticas de desempeño
 
 ---
 
@@ -114,227 +110,6 @@ El panel muestra:
 1. Seleccione el manager
 2. Haga clic en **"Eliminar"** (🗑️)
 3. Confirme la acción
-
----
-
-## GESTIÓN DE PRODUCTOS
-
-### Conceptos Importantes
-
-**Costo**: Precio de compra del producto (en USD o MN)
-**Margen**: Porcentaje de ganancia sobre el costo
-**Comisión**: Porcentaje que gana el gestor por cada venta
-**Tipo de Cambio**: Tasa USD a Moneda Nacional
-
-### Fórmula de Precios
-
-**Para producto en USD:**
-```
-Venta USD = Costo USD × (1 + Margen)
-Precio MN Base = Venta USD × Tipo de Cambio
-Comisión MN = Precio MN Base × Tasa de Comisión
-Precio Final MN = Precio MN Base + Comisión MN
-```
-
-**Ejemplo Numérico:**
-```
-Producto: Jabón
-Costo: $10.00 USD
-Margen: 30%
-Tipo de Cambio: 300 MN/USD
-Comisión: 10%
-
-Cálculo:
-Venta USD = $10 × 1.30 = $13.00 USD
-Precio MN Base = $13 × 300 = $3,900 MN
-Comisión = $3,900 × 0.10 = $390 MN
-Precio Final = $3,900 + $390 = $4,290 MN
-```
-
-### Crear un Nuevo Producto
-
-**Paso 1: Acceder**
-1. Vaya al menú **"Productos"**
-2. Haga clic en **"Nuevo Producto"**
-
-**Paso 2: Información Básica**
-1. **Nombre del Producto**: Ingrese nombre descriptivo
-2. **Moneda**: Seleccione USD o MN
-3. **Costo**: Ingrese el costo de compra
-
-**Paso 3: Configuración de Precios**
-1. **Margen**: Porcentaje de ganancia (ej: 30 para 30%)
-2. **Comisión**: Porcentaje para el gestor (ej: 10 para 10%)
-
-> **Nota**: Si no especifica comisión, se usará la comisión por defecto de la tienda.
-
-**Paso 4: Guardar**
-1. Revise los cálculos automáticos
-2. Haga clic en **"Guardar Producto"**
-
-### Editar un Producto
-
-1. Vaya a **"Productos"**
-2. Busque el producto en la lista
-3. Haga clic en el ícono de editar (✏️)
-4. Modifique los campos necesarios
-5. Haga clic en **"Guardar Cambios"**
-
-> **Importante**: Los cambios en precios solo afectan ventas futuras. Las ventas existentes mantienen los precios originales.
-
-### Eliminar un Producto
-
-> **⚠️ Precaución**: No puede eliminar productos que:
-> - Tengan stock asignado
-> - Tengan ventas registradas
-> - Estén en inventario de gestores
-
-1. Seleccione el producto
-2. Haga clic en **"Eliminar"**
-3. Confirme la acción
-
-### Lista de Productos
-
-Vaya a **"Productos"** para ver:
-- Todos los productos de la tienda
-- Costo y precios actuales
-- Margen y comisión configurados
-- Stock disponible
-- Estado del producto
-
----
-
-## CONFIGURACIÓN DE TIPO DE CAMBIO
-
-### ¿Qué es el Tipo de Cambio?
-
-Es la tasa de conversión de USD a Moneda Nacional (MN). Este valor es crucial porque:
-- Determina el precio de venta de productos en USD
-- Afecta todas las ventas futuras
-- Se congela en cada venta (no hay efectos retroactivos)
-
-### Cuándo Actualizar el Tipo de Cambio
-
-Actualice el tipo de cambio cuando:
-- Haya fluctuaciones significativas del dólar
-- Inicie un nuevo período de ventas
-- Los precios actuales ya no sean competitivos
-
-### Cómo Configurar el Tipo de Cambio
-
-**Paso 1: Acceder**
-1. Vaya al menú **"Tipo de Cambio"**
-
-**Paso 2: Nuevo Valor**
-1. Ingrese el nuevo valor (ej: 300)
-2. Seleccione la **fecha de inicio** de vigencia
-3. Opcional: Establezca fecha de fin (para períodos específicos)
-
-**Paso 3: Confirmar**
-1. Revise el valor ingresado
-2. Haga clic en **"Guardar Cambio"**
-
-> **Nota**: El sistema guarda un historial de todos los cambios de tipo de cambio.
-
-### Historial de Tipos de Cambio
-
-Vaya a **"Tipo de Cambio"** → **"Historial"** para ver:
-- Todos los valores históricos
-- Fechas de vigencia
-- Usuario que realizó el cambio
-- Fecha del cambio
-
----
-
-## STOCK INICIAL
-
-### Concepto
-
-El **Stock Inicial** es la cantidad total de productos disponibles en la tienda antes de asignarlos a gestores. Es el inventario base sobre el cual se hacen las asignaciones.
-
-### Configurar Stock Inicial
-
-**Paso 1: Acceder**
-1. Vaya al menú **"Stock Inicial"**
-
-**Paso 2: Seleccionar Producto**
-1. Seleccione el producto del dropdown
-2. Verá información del producto:
-   - Nombre
-   - Costo
-   - Precio actual
-
-**Paso 3: Definir Cantidad**
-1. Ingrese la cantidad disponible en tienda
-2. El sistema valida que sea un número positivo
-
-**Paso 4: Guardar**
-1. Haga clic en **"Guardar Stock"**
-2. El stock queda disponible para asignaciones
-
-### Actualizar Stock
-
-1. Vaya a **"Stock Inicial"**
-2. Busque el producto
-3. Haga clic en **"Editar"**
-4. Modifique la cantidad
-5. Haga clic en **"Guardar"**
-
-> **Importante**: No puede reducir el stock por debajo de lo ya asignado a gestores.
-
-### Control de Stock
-
-El panel de stock muestra:
-- **Stock Total**: Cantidad en tienda
-- **Asignado**: Cantidad asignada a gestores
-- **Disponible**: Stock Total - Asignado
-- **Vendido**: Cantidad ya vendida
-
----
-
-## ASIGNACIÓN DE INVENTARIO
-
-### El Director también puede Asignar
-
-Aunque los managers suelen hacer las asignaciones diarias, como Director también puede:
-- Asignar inventario directamente a gestores
-- Supervisar las asignaciones realizadas
-- Intervenir en casos especiales
-
-### Cómo Asignar Inventario
-
-**Paso 1: Acceder**
-1. Vaya al menú **"Asignar Inventario"**
-
-**Paso 2: Seleccionar Producto**
-1. Elija el producto del dropdown
-2. Verá:
-   - Stock disponible
-   - Precio actual
-   - Gestores disponibles
-
-**Paso 3: Seleccionar Gestor**
-1. Elija el gestor destinatario
-2. Solo verá gestores de su tienda
-
-**Paso 4: Definir Cantidad**
-1. Ingrese la cantidad a asignar
-2. El sistema valida disponibilidad
-
-**Paso 5: Confirmar**
-1. Revise el resumen
-2. Haga clic en **"Asignar"**
-
-> **Estado inicial**: PENDING (pendiente de confirmación del gestor)
-
-### Supervisión de Asignaciones
-
-Vaya a **"Inventario Asignado"** para ver:
-- Todas las asignaciones de la tienda
-- Estado (PENDING, CONFIRMED, REJECTED)
-- Gestor asignado
-- Fecha de asignación
-- Fecha de confirmación
 
 ---
 
@@ -495,13 +270,12 @@ Admin crea tienda y asigna Director
               ↓
     Director inicia sesión
               ↓
-    Configura Tipo de Cambio
-              ↓
-    Crea Productos
-              ↓
-    Establece Stock Inicial
-              ↓
     Crea Managers
+              ↓
+    Managers configuran:
+      - Productos
+      - Tipo de cambio
+      - Stock inicial
               ↓
     Configuración lista para operar
 ```
@@ -515,17 +289,17 @@ Admin crea tienda y asigna Director
 │  1. Iniciar sesión                                     │
 │  2. Revisar dashboard y alertas                        │
 │  3. Verificar cierres pendientes                       │
-│  4. Revisar stock de productos                         │
+│  4. Revisar reportes iniciales                         │
 └────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌────────────────────────────────────────────────────────┐
 │  DURANTE EL DÍA                                        │
 ├────────────────────────────────────────────────────────┤
-│  5. Supervisar operaciones                             │
-│  6. Actualizar tipo de cambio (si es necesario)        │
-│  7. Gestionar productos (crear/editar)                 │
-│  8. Revisar reportes en tiempo real                    │
+│  5. Supervisar operaciones de managers                 │
+│  6. Verificar rendimiento de gestores                  │
+│  7. Revisar reportes en tiempo real                    │
+│  8. Apoyar en validación de cierres si es necesario    │
 └────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -537,26 +311,6 @@ Admin crea tienda y asigna Director
 │  11. Verificar deudas pendientes                       │
 │  12. Planificar para el siguiente día                  │
 └────────────────────────────────────────────────────────┘
-```
-
-### Flujo de Gestión de Productos
-
-```
-Identificar necesidad de nuevo producto
-              ↓
-    Recopilar información:
-    - Nombre
-    - Costo
-    - Margen deseado
-    - Comisión para gestor
-              ↓
-    Crear producto en sistema
-              ↓
-    Configurar stock inicial
-              ↓
-    Producto disponible para asignación
-              ↓
-    Monitorear ventas y rentabilidad
 ```
 
 ### Flujo de Validación de Cierre
@@ -598,34 +352,6 @@ Gestor ejecuta cierre
 - Microgestionar a los managers
 - Ignorar reportes de desempeño
 - No proporcionar retroalimentación
-
-### Gestión de Productos
-
-✅ **Hacer:**
-- Mantener precios competitivos
-- Actualizar costos regularmente
-- Monitorear productos más vendidos
-- Eliminar productos que no se venden
-- Establecer márgenes apropiados
-
-❌ **Evitar:**
-- Precios desactualizados
-- Márgenes muy bajos que no generen ganancia
-- Acumular productos que no rotan
-- No considerar el tipo de cambio
-
-### Configuración de Tipo de Cambio
-
-✅ **Hacer:**
-- Actualizar cuando el dólar fluctúe significativamente
-- Comunicar cambios a managers y gestores
-- Mantener historial para auditoría
-- Considerar el impacto en precios
-
-❌ **Evitar:**
-- Tipos de cambio desactualizados
-- Cambios muy frecuentes que confundan
-- No informar al equipo sobre cambios
 
 ### Validación de Cierres
 
@@ -681,9 +407,6 @@ R: Puede tener múltiples registros históricos, pero solo uno es el vigente act
 **P: ¿Los cambios en el tipo de cambio afectan ventas anteriores?**
 R: No, cada venta congela el tipo de cambio al momento de realizarse. Los cambios solo afectan ventas futuras.
 
-**P: ¿Puedo asignar inventario directamente o debe hacerlo el manager?**
-R: Ambos pueden asignar inventario. Sin embargo, es recomendable que los managers manejen las asignaciones diarias.
-
 **P: ¿Qué información ve el Admin sobre mi tienda?**
 R: El Admin puede ver todas las operaciones y métricas de todas las tiendas para supervisión general.
 
@@ -691,27 +414,29 @@ R: El Admin puede ver todas las operaciones y métricas de todas las tiendas par
 
 ## EJEMPLOS PRÁCTICOS
 
-### Ejemplo 1: Configuración Completa de Producto
+### Ejemplo 1: Creación de un Manager
 
-**Nuevo Producto: Shampoo Premium**
+**Nuevo Manager: Ana García**
 
 ```
 Datos de entrada:
-- Costo: $8.00 USD
-- Margen deseado: 40%
-- Comisión para gestor: 10%
-- Tipo de Cambio: 300 MN/USD
+- Nombre: ana.garcia
+- Contraseña: Manager2024!
+- Tienda: Tienda Principal
 
-Cálculos automáticos:
-Venta USD = $8 × 1.40 = $11.20 USD
-Precio MN Base = $11.20 × 300 = $3,360 MN
-Comisión = $3,360 × 0.10 = $336 MN
-Precio Final = $3,360 + $336 = $3,696 MN
+Proceso:
+1. Director inicia sesión
+2. Accede a "Gestión de Managers"
+3. Completa formulario con datos
+4. Guarda cambios
+5. Manager puede iniciar sesión inmediatamente
 
-Distribución del dinero:
-- Base MN ($3,360): Va a la tienda
-- Comisión ($336): Se queda el gestor
-- Total cobrado al cliente: $3,696
+Responsabilidades del Manager:
+✓ Crear y gestionar gestores
+✓ Configurar productos
+✓ Establecer tipo de cambio
+✓ Asignar inventario
+✓ Validar cierres de caja
 ```
 
 ### Ejemplo 2: Análisis de Cierre
@@ -734,29 +459,38 @@ Total Comisión:    $3,998   → Ganancia del gestor
 ────────────────────────────────────────
 Total Final MN:    $43,978  → Cobró a clientes
 
-Validación:
+Validación por Director:
 ✓ Gestor entrega: $39,980 (Base)
 ✓ Gestor se queda: $3,998 (Comisión)
 ✓ Total verificado: $43,978
 ```
 
-### Ejemplo 3: Actualización de Tipo de Cambio
+### Ejemplo 3: Reporte de Desempeño
 
-**Escenario:**
+**Análisis Semanal de la Tienda:**
 
 ```
-Lunes:
-- Tipo de Cambio: 300 MN/USD
-- Producto A precio: $3,900 MN
+Período: 01/02/2026 - 07/02/2026
 
-Miércoles (dólar sube):
-- Nuevo Tipo de Cambio: 320 MN/USD
-- Producto A nuevo precio: $4,160 MN
+Resumen General:
+- Ventas Totales: $125,000 MN
+- Cierres Realizados: 15
+- Gestores Activos: 3
+- Managers Activos: 1
 
-Impacto:
-- Ventas de lunes y martes: Mantienen precio de $3,900
-- Ventas de miércoles en adelante: Usan precio de $4,160
-- Sin efectos retroactivos
+Desglose por Gestor:
+┌──────────────┬──────────┬────────────┐
+│ Gestor       │ Ventas   │ Comisión   │
+├──────────────┼──────────┼────────────┤
+│ Juan Pérez   │ $45,000  │ $4,500     │
+│ María López  │ $52,000  │ $5,200     │
+│ Pedro Ruiz   │ $28,000  │ $2,800     │
+└──────────────┴──────────┴────────────┘
+
+Acciones del Director:
+✓ Identificar a María como top performer
+✓ Capacitar a Pedro para mejorar ventas
+✓ Revisar estrategia de productos con manager
 ```
 
 ---

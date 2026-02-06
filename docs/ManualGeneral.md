@@ -42,13 +42,16 @@ El sistema cuenta con 4 niveles de usuarios:
 
 ### 👔 Director
 - Gestiona managers de su tienda
-- Administra productos y tipo de cambio
-- Supervisa reportes de la tienda
+- Supervisa reportes y estadísticas de la tienda
 - Confirma pagos de cierres
+- Visualiza auditoría de operaciones
 
 ### 👨‍💼 Manager
 - Gestiona gestores de su tienda
-- Asigna inventario
+- Crea y administra productos
+- Configura tipo de cambio
+- Gestiona stock inicial
+- Asigna inventario a gestores
 - Confirma cierres de caja
 - Resuelve conflictos de inventario
 
@@ -95,6 +98,49 @@ Cada rol verá un panel adaptado a sus funciones específicas.
    - Tienda asignada
 5. Haga clic en "Guardar"
 
+#### 2. Validación de Cierres de Caja
+
+1. Vaya a "Cierres"
+2. Revise los cierres pendientes
+3. Verifique el monto a recibir (Base MN)
+4. Cuente el dinero físico entregado
+5. Haga clic en "Validar Cierre"
+6. El estado cambia a "COMPLETED"
+
+> **Nota**: Solo valide cuando tenga físicamente el dinero en sus manos.
+
+#### 3. Reportes y Métricas
+
+El Director puede visualizar:
+- Ventas totales por período
+- Ventas por manager
+- Ventas por gestor
+- Cierres de caja
+- Productos más vendidos
+- Deudas pendientes
+- Estadísticas de desempeño
+
+**Exportar Reportes:**
+- Formatos disponibles: CSV, PDF, Excel
+- Filtros por fecha, manager, gestor, producto
+- Haga clic en el botón "Exportar" en cualquier reporte
+
+---
+
+## MANUAL DEL MANAGER
+
+### Funciones Principales
+
+#### 1. Gestión de Gestores
+
+**Crear un Gestor:**
+1. Vaya a "Gestores"
+2. Haga clic en "Crear Gestor"
+3. Ingrese:
+   - Nombre de usuario
+   - Contraseña
+4. El gestor se asigna automáticamente a su tienda
+
 #### 2. Gestión de Productos
 
 **Crear un Producto:**
@@ -121,7 +167,7 @@ Precio Final = Precio MN + Comisión
 3. Seleccione fecha de inicio de vigencia
 4. Haga clic en "Guardar Cambio"
 
-> **Nota**: Los cambios solo afectan ventas futuras. Las ventas existentes mantienen el tipo de cambio original.
+> **Nota**: Los cambios solo afectan ventas futuras.
 
 #### 4. Stock Inicial
 
@@ -130,37 +176,7 @@ Precio Final = Precio MN + Comisión
 3. Ingrese la cantidad disponible
 4. Haga clic en "Guardar"
 
-#### 5. Reportes y Métricas
-
-El Director puede visualizar:
-- Ventas totales por período
-- Ventas por gestor
-- Cierres de caja
-- Productos más vendidos
-- Deudas pendientes
-
-**Exportar Reportes:**
-- Formatos disponibles: CSV, PDF, Excel
-- Filtros por fecha, gestor, producto
-- Haga clic en el botón "Exportar" en cualquier reporte
-
----
-
-## MANUAL DEL MANAGER
-
-### Funciones Principales
-
-#### 1. Gestión de Gestores
-
-**Crear un Gestor:**
-1. Vaya a "Gestores"
-2. Haga clic en "Crear Gestor"
-3. Ingrese:
-   - Nombre de usuario
-   - Contraseña
-4. El gestor se asigna automáticamente a su tienda
-
-#### 2. Asignación de Inventario
+#### 5. Asignación de Inventario
 
 **Asignar Inventario a un Gestor:**
 
@@ -178,7 +194,7 @@ Gestor Confirma → Estado: CONFIRMED
 Inventario disponible para ventas
 ```
 
-#### 3. Confirmación de Cierres
+#### 6. Confirmación de Cierres
 
 **Validar un Cierre de Caja:**
 
@@ -191,7 +207,7 @@ Inventario disponible para ventas
 4. Haga clic en "Validar Cierre"
 5. El estado cambia a "COMPLETED"
 
-#### 4. Gestión de Conflictos
+#### 7. Gestión de Conflictos
 
 **Resolver un Conflicto de Inventario:**
 
@@ -307,20 +323,28 @@ Cuando un gestor rechaza inventario asignado:
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Admin: Crea Tienda → Asigna Director/Manager           │
+│  Admin: Crea Tienda → Asigna Director                   │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Director/Manager:                                      │
+│  Director: Crea Managers                                │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  Manager:                                               │
 │  • Configura Tipo de Cambio                             │
 │  • Crea Productos                                       │
 │  • Define Stock Inicial                                 │
+│  • Crea Gestores                                        │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
+                          │
+                          ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Manager: Crea Gestores → Asigna Inventario             │
+│  Manager: Asigna Inventario a Gestores                  │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -335,7 +359,7 @@ Cuando un gestor rechaza inventario asignado:
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Manager: Valida Cierre → Registra Recepción            │
+│  Manager/Director: Valida Cierre → Registra Recepción   │
 └─────────────────────────────────────────────────────────┘
 ```
 
