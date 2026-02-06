@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 
 import db from './db';
 import { generalLimiter } from './middleware/rate-limit.middleware';
+import { runMigrations } from './utils/migrations';
 import authRoutes from './routes/auth.routes';
 import usersRoutes from './routes/users.routes';
 import storesRoutes from './routes/stores.routes';
@@ -14,6 +15,12 @@ import closingsRoutes from './routes/closings.routes';
 import directorRoutes from './routes/director.routes';
 import productsRoutes from './routes/products.routes';
 import auditRoutes from './routes/audit.routes';
+
+runMigrations().then(() => {
+  console.log('Database migrations check completed');
+}).catch(err => {
+  console.error('Failed to run migrations:', err);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;

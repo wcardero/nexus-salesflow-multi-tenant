@@ -53,7 +53,7 @@ export const getSales = async (req: Request, res: Response) => {
 };
 
 export const createSale = async (req: Request, res: Response) => {
-  const { assignedInventoryId, quantity, customerName, paymentStatus, accountingDate } = req.body;
+  const { assignedInventoryId, quantity, customerName, paymentStatus, paymentMethod, transferSurchargePercent, accountingDate } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!quantity || quantity < 1) {
@@ -98,6 +98,7 @@ export const createSale = async (req: Request, res: Response) => {
     const commissionRate = product.commissionRate || 0;
 
     let saleUSD = 0, baseMN = 0, commission = 0, finalMN = 0;
+    let transferSurchargeAmount = 0;
 
     if (product.currency === 'USD') {
       saleUSD = costUSD * (1 + margin);
@@ -111,16 +112,29 @@ export const createSale = async (req: Request, res: Response) => {
       finalMN = baseMN + commission;
     }
 
+    // Calcular recargo por transferencia si aplica
+    // El recargo se calcula sobre (baseMN + commission)
+    if (paymentMethod === 'TRANSFER' && transferSurchargePercent > 0) {
+      const subtotal = baseMN + commission;
+      transferSurchargeAmount = subtotal * (transferSurchargePercent / 100);
+      finalMN = subtotal + transferSurchargeAmount;
+    }
+
     // Create multiple sales, one per unit
     const sales = [];
     for (let i = 0; i < quantity; i++) {
       const saleId = `sale-${Date.now()}-${i}`;
+      const effectivePaymentMethod = paymentMethod || 'CASH';
+      const effectiveSurchargePercent = (effectivePaymentMethod === 'TRANSFER' ? (transferSurchargePercent || 0) : 0);
+      
       const saleResult = await db.query(
         `INSERT INTO "Sale" (id, "inventoryItemId", "gestorId", "productId", "soldAt", "accountingDate", "exchangeRateUsed",
-          "costUSD", "costMN", "margin", "saleUSD", "baseMN", "commission", "finalMN", "paymentStatus", "customerName")
-         VALUES ($1, $2, $3, $4, NOW(), COALESCE($5, CURRENT_DATE), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+          "costUSD", "costMN", "margin", "saleUSD", "baseMN", "commission", "finalMN",
+          "paymentStatus", "paymentMethod", "transferSurchargePercent", "transferSurchargeAmount", "customerName")
+         VALUES ($1, $2, $3, $4, NOW(), COALESCE($5, CURRENT_DATE), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
         [saleId, assignedInventoryId, requestingUser?.id, assignment.productId, accountingDate || null, exchangeRate,
-          costUSD, costMN, margin, saleUSD, baseMN, commission, finalMN, paymentStatus || 'PAID', customerName]
+          costUSD, costMN, margin, saleUSD, baseMN, commission, finalMN,
+          paymentStatus || 'PAID', effectivePaymentMethod, effectiveSurchargePercent, transferSurchargeAmount, customerName]
       );
       sales.push(saleResult.rows[0]);
       await auditSaleCreation(requestingUser?.id || '', saleId, saleResult.rows[0], assignment.storeId);

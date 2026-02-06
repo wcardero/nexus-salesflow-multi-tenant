@@ -217,7 +217,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
       const gestorSalesInPeriod = salesInPeriod.filter(s => s.gestorId === gestor.id);
       const totalSalesCount = gestorSalesInPeriod.length;
       const totalFinalMNGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.finalMN, 0);
-      const totalBaseMNGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.baseMN, 0);
+      const totalBaseMNGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.baseMN + (s.transferSurchargeAmount || 0), 0);
       const totalCommissionGestor = gestorSalesInPeriod.reduce((sum, s) => sum + s.commission, 0);
 
       return {

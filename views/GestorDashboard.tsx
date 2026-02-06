@@ -1,6 +1,6 @@
 // views/GestorDashboard.tsx
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate, SalePaymentStatus } from '../types';
+import { User, Store, MockDB, InventoryItem, Product, Role, Sale, ClosingStatus, Closing, AssignedInventory, InventoryConflict, InventoryGroup, ExchangeRate, SalePaymentStatus, PaymentMethod } from '../types';
 import { calculateProductPrices, formatCurrency, getCurrentExchangeRate } from '../utils';
 import SellModal from '../components/SellModal';
 import Button from '../components/Button';
@@ -172,7 +172,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     setIsSellModalOpen(false);
   };
 
-  const handleSell = async (quantity: number, paymentStatus: SalePaymentStatus, customerName?: string) => {
+  const handleSell = async (quantity: number, paymentStatus: SalePaymentStatus, paymentMethod: PaymentMethod, transferSurchargePercent: number, customerName?: string) => {
     if (!selectedGroup) return;
 
     try {
@@ -187,6 +187,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
           assignedInventoryId: selectedGroup.assignedInventoryId,
           quantity,
           paymentStatus,
+          paymentMethod,
+          transferSurchargePercent,
           customerName,
           accountingDate
         })
@@ -213,7 +215,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
       return;
     }
 
-    const totalBaseMN = paidSales.reduce((sum, s) => sum + s.baseMN, 0);
+    const totalBaseMN = paidSales.reduce((sum, s) => sum + s.baseMN + (s.transferSurchargeAmount || 0), 0);
 
     if (!window.confirm(`¿Ejecutar cierre por un total de ${formatCurrency(totalBaseMN)}?`)) return;
 
@@ -270,9 +272,9 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         const quantitySold = 1; // Cada venta individual representa 1 unidad
         
         groups[key].quantity += quantitySold;
-        groups[key].total += sale.finalMN; // finalMN ya es el precio por unidad
-        groups[key].gestorGain += sale.commission; // commission ya es la comisión por unidad
-        groups[key].storeGain += sale.baseMN; // baseMN ya es el precio base por unidad
+        groups[key].total += sale.finalMN;
+        groups[key].gestorGain += sale.commission;
+        groups[key].storeGain += sale.baseMN + (sale.transferSurchargeAmount || 0);
         
         // Guardamos el precio unitario y comisión unitaria (de la primera venta del producto)
         if (groups[key].unitPrice === 0) {
@@ -379,7 +381,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         </div>
       </div>
 
-      {Object.keys(salesByProduct).length > 0 && (
+      {gestorSalesSinceLastClosing.length > 0 && (
         <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
           <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-800 dark:text-slate-100 uppercase tracking-tight">Ventas del Período (Desde Último Cierre)</h2>
           <div className="overflow-x-auto">
@@ -387,29 +389,56 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
               <thead className="bg-slate-50 dark:bg-slate-900/50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Producto</th>
-                  <th className="px-4 py-3 text-center text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cant.</th>
-                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Precio</th>
-                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Comisión</th>
+                  <th className="px-4 py-3 text-center text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Método</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Base</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Com.</th>
+                  <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Recargo</th>
                   <th className="px-4 py-3 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {Object.entries(salesByProduct).map(([productId, data]: [string, SalesGroup]) => (
-                  <tr key={productId}>
-                    <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{productsById[productId]?.name}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-center">{data.quantity}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.quantity * data.unitPrice)}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(data.quantity * data.unitCommission)}</td>
-                    <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(data.total)}</td>
+                {gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID).map((sale) => (
+                  <tr key={sale.id}>
+                    <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">{productsById[sale.productId || '']?.name || 'N/A'}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-center">
+                      {sale.paymentMethod === 'TRANSFER' ? (
+                        <span title="Transferencia">🏦</span>
+                      ) : (
+                        <span title="Efectivo">💵</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(sale.baseMN)}</td>
+                    <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400 text-right">{formatCurrency(sale.commission)}</td>
+                    <td className="px-4 py-4 text-sm text-blue-600 dark:text-blue-400 text-right">
+                      {sale.transferSurchargeAmount > 0 ? formatCurrency(sale.transferSurchargeAmount) : '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(sale.finalMN)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-slate-50 dark:bg-slate-900/50 font-black">
                 <tr>
                   <td colSpan={2} className="px-4 py-4 text-slate-500 text-xs uppercase tracking-widest">Total Período</td>
-                  <td className="px-4 py-4 text-right text-slate-500">{formatCurrency(totalStoreGain)}</td>
-                  <td className="px-4 py-4 text-right text-slate-500">{formatCurrency(totalGestorGain)}</td>
-                  <td className="px-4 py-4 text-right text-primary-600 dark:text-primary-400">{formatCurrency(totalSalesAmount)}</td>
+                  <td className="px-4 py-4 text-right text-slate-500">
+                    {formatCurrency(gestorSalesSinceLastClosing
+                      .filter(s => s.paymentStatus === SalePaymentStatus.PAID)
+                      .reduce((sum, s) => sum + s.baseMN, 0))}
+                  </td>
+                  <td className="px-4 py-4 text-right text-slate-500">
+                    {formatCurrency(gestorSalesSinceLastClosing
+                      .filter(s => s.paymentStatus === SalePaymentStatus.PAID)
+                      .reduce((sum, s) => sum + s.commission, 0))}
+                  </td>
+                  <td className="px-4 py-4 text-right text-blue-600">
+                    {formatCurrency(gestorSalesSinceLastClosing
+                      .filter(s => s.paymentStatus === SalePaymentStatus.PAID)
+                      .reduce((sum, s) => sum + (s.transferSurchargeAmount || 0), 0))}
+                  </td>
+                  <td className="px-4 py-4 text-right text-primary-600 dark:text-primary-400">
+                    {formatCurrency(gestorSalesSinceLastClosing
+                      .filter(s => s.paymentStatus === SalePaymentStatus.PAID)
+                      .reduce((sum, s) => sum + s.finalMN, 0))}
+                  </td>
                 </tr>
               </tfoot>
             </table>
@@ -418,20 +447,63 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
       )}
 
       <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl border-2 border-primary-500/20">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase">Cierre de Caja</h2>
-            <p className="text-slate-500 text-sm">Resumen de dinero a entregar al manager.</p>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monto a Entregar</p>
-              <p className="text-3xl font-black text-primary-600 dark:text-primary-400">{formatCurrency(totalStoreGain)}</p>
+        <div className="mb-6">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase">Cierre de Caja</h2>
+          <p className="text-slate-500 text-sm">Resumen de dinero a entregar al manager.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">💵</span>
+              <span className="font-bold text-green-800 dark:text-green-200">Efectivo</span>
             </div>
-            <Button variant="primary" size="lg" onClick={handleExecuteClosing} isLoading={isExecutingClosing} disabled={Object.keys(salesByProduct).length === 0 || isExecutingClosing} className="px-10 h-16 uppercase shadow-xl">
-              Cerrar Caja
-            </Button>
+            <p className="text-2xl font-black text-green-700 dark:text-green-400">
+              {formatCurrency(gestorSalesSinceLastClosing
+                .filter(s => s.paymentStatus === SalePaymentStatus.PAID && s.paymentMethod !== 'TRANSFER')
+                .reduce((sum, s) => sum + s.baseMN, 0))}
+            </p>
+            <p className="text-xs text-green-600 dark:text-green-500">
+              {gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID && s.paymentMethod !== 'TRANSFER').length} ventas
+            </p>
           </div>
+          
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">🏦</span>
+              <span className="font-bold text-blue-800 dark:text-blue-200">Transferencia</span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg font-black text-blue-700 dark:text-blue-400">
+                {formatCurrency(gestorSalesSinceLastClosing
+                  .filter(s => s.paymentStatus === SalePaymentStatus.PAID && s.paymentMethod === 'TRANSFER')
+                  .reduce((sum, s) => sum + s.baseMN + (s.transferSurchargeAmount || 0), 0))}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-500">
+                Base: {formatCurrency(gestorSalesSinceLastClosing
+                  .filter(s => s.paymentStatus === SalePaymentStatus.PAID && s.paymentMethod === 'TRANSFER')
+                  .reduce((sum, s) => sum + s.baseMN, 0))}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-500">
+                Recargo: {formatCurrency(gestorSalesSinceLastClosing
+                  .filter(s => s.paymentStatus === SalePaymentStatus.PAID && s.paymentMethod === 'TRANSFER')
+                  .reduce((sum, s) => sum + (s.transferSurchargeAmount || 0), 0))}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-slate-200 dark:border-slate-700 pt-6">
+          <div className="text-right md:text-left">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total a Entregar</p>
+            <p className="text-3xl font-black text-primary-600 dark:text-primary-400">{formatCurrency(totalStoreGain)}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              (Base: {formatCurrency(gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID).reduce((sum, s) => sum + s.baseMN, 0))} + Recargos: {formatCurrency(gestorSalesSinceLastClosing.filter(s => s.paymentStatus === SalePaymentStatus.PAID).reduce((sum, s) => sum + (s.transferSurchargeAmount || 0), 0))})
+            </p>
+          </div>
+          <Button variant="primary" size="lg" onClick={handleExecuteClosing} isLoading={isExecutingClosing} disabled={Object.keys(salesByProduct).length === 0 || isExecutingClosing} className="px-10 h-16 uppercase shadow-xl">
+            Cerrar Caja
+          </Button>
         </div>
       </div>
 
@@ -441,6 +513,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
         onSell={handleSell}
         product={selectedGroup ? productsById[selectedGroup.productId] : null}
         inventoryGroup={selectedGroup}
+        storeCommissionRate={store?.defaultCommissionRate || 0.1}
       />
     </div>
   );

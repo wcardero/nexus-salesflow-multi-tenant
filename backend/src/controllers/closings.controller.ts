@@ -75,7 +75,7 @@ export const createClosing = async (req: Request, res: Response) => {
 
     let totalBaseMN = 0, totalCommission = 0, totalFinalMN = 0;
     for (const sale of salesResult.rows) {
-      totalBaseMN += sale.baseMN;
+      totalBaseMN += sale.baseMN + (sale.transferSurchargeAmount || 0);
       totalCommission += sale.commission;
       totalFinalMN += sale.finalMN;
     }
