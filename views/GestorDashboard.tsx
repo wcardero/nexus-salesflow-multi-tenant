@@ -531,6 +531,11 @@ interface DebtsViewProps {
 
 const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, productsById, refreshDb, user }) => {
   const [isMarkingAsPaid, setIsMarkingAsPaid] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedDebt, setSelectedDebt] = useState<{saleIds: string[], customerName: string, totalAmount: number} | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CASH);
+  const [transferSurchargePercent, setTransferSurchargePercent] = useState<number>(0);
+
   // Group pending debts by customer and product
   const groupedDebts = useMemo(() => {
     const pendingSales = gestorSales.filter(sale =>
@@ -569,22 +574,46 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
     return Object.values(groups);
   }, [gestorSales, gestorClosings]);
 
-  const handleMarkAsPaid = async (saleIds: string[]) => {
-    const debtKey = saleIds.join(',');
+  const handleOpenPaymentModal = (debt: {saleIds: string[], customerName: string, totalAmount: number}) => {
+    setSelectedDebt(debt);
+    setPaymentMethod(PaymentMethod.CASH);
+    setTransferSurchargePercent(0);
+    setShowPaymentModal(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedDebt(null);
+    setPaymentMethod(PaymentMethod.CASH);
+    setTransferSurchargePercent(0);
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedDebt) return;
+    
+    const debtKey = selectedDebt.saleIds.join(',');
     setIsMarkingAsPaid(debtKey);
     try {
       // Mark all sales in the group as paid
-      for (const saleId of saleIds) {
+      for (const saleId of selectedDebt.saleIds) {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sales/${saleId}/mark-as-paid`, {
           method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          headers: { 
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            paymentMethod,
+            transferSurchargePercent: paymentMethod === PaymentMethod.TRANSFER ? transferSurchargePercent : 0
+          })
         });
         if (!response.ok) {
           console.error(`Failed to mark sale ${saleId} as paid`);
         }
       }
       await refreshDb();
-      alert(`${saleIds.length} deuda(s) pagada(s) correctamente.`);
+      alert(`${selectedDebt.saleIds.length} deuda(s) pagada(s) correctamente.`);
+      handleClosePaymentModal();
     } catch (error) {
       console.error(error);
       alert('Error al marcar las deudas como pagadas.');
@@ -592,6 +621,15 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
       setIsMarkingAsPaid(null);
     }
   };
+
+  const calculatedTotal = useMemo(() => {
+    if (!selectedDebt) return 0;
+    if (paymentMethod !== PaymentMethod.TRANSFER || transferSurchargePercent <= 0) {
+      return selectedDebt.totalAmount;
+    }
+    const surcharge = selectedDebt.totalAmount * (transferSurchargePercent / 100);
+    return selectedDebt.totalAmount + surcharge;
+  }, [selectedDebt, paymentMethod, transferSurchargePercent]);
 
   return (
     <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -619,13 +657,112 @@ const DebtsView: React.FC<DebtsViewProps> = ({ gestorSales, gestorClosings, db, 
                   <td className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 text-right font-black">{formatCurrency(debt.totalAmount)}</td>
                   <td className="px-4 py-4 align-middle">
                     <div className="flex items-center justify-center">
-                      <Button variant="success" size="xs" onClick={() => handleMarkAsPaid(debt.saleIds)} isLoading={isMarkingAsPaid === debt.saleIds.join(',')} disabled={isMarkingAsPaid !== null}>Marcar Pagada</Button>
+                      <Button variant="success" size="xs" onClick={() => handleOpenPaymentModal(debt)}>Marcar Pagada</Button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showPaymentModal && selectedDebt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-50 dark:bg-slate-800 p-4 md:p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Pagar Deuda</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+              Cliente: <span className="font-bold text-slate-900 dark:text-slate-100">{selectedDebt.customerName}</span>
+            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+              Monto original: <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(selectedDebt.totalAmount)}</span>
+            </p>
+
+            <div className="my-4">
+              <label className="block text-xs md:text-sm font-medium text-slate-700 dark:text-slate-400 mb-2">
+                Método de pago
+              </label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="debtPaymentMethod"
+                    value={PaymentMethod.CASH}
+                    checked={paymentMethod === PaymentMethod.CASH}
+                    onChange={() => setPaymentMethod(PaymentMethod.CASH)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">💵 Efectivo</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="debtPaymentMethod"
+                    value={PaymentMethod.TRANSFER}
+                    checked={paymentMethod === PaymentMethod.TRANSFER}
+                    onChange={() => setPaymentMethod(PaymentMethod.TRANSFER)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">🏦 Transferencia</span>
+                </label>
+              </div>
+            </div>
+
+            {paymentMethod === PaymentMethod.TRANSFER && (
+              <div className="my-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <label htmlFor="debtSurcharge" className="block text-xs md:text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  % Recargo por transferencia
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    id="debtSurcharge"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={transferSurchargePercent}
+                    onChange={(e) => setTransferSurchargePercent(Number(e.target.value))}
+                    className="block w-24 rounded-md border-blue-300 dark:border-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-xs md:text-sm dark:bg-slate-700 py-2 px-3"
+                  />
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">%</span>
+                </div>
+                {transferSurchargePercent > 0 && (
+                  <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-700 dark:text-blue-300">Monto original:</span>
+                      <span className="font-medium">{formatCurrency(selectedDebt.totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                      <span>Recargo ({transferSurchargePercent}%):</span>
+                      <span className="font-medium">{formatCurrency(selectedDebt.totalAmount * transferSurchargePercent / 100)}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                      <span className="text-blue-800 dark:text-blue-200">TOTAL A PAGAR:</span>
+                      <span className="text-blue-900 dark:text-blue-100">{formatCurrency(calculatedTotal)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 flex-wrap mt-6">
+              <Button
+                variant="neutral"
+                onClick={handleClosePaymentModal}
+                disabled={isMarkingAsPaid !== null}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="success"
+                onClick={handleMarkAsPaid}
+                isLoading={isMarkingAsPaid === selectedDebt.saleIds.join(',')}
+                disabled={isMarkingAsPaid !== null}
+              >
+                Confirmar Pago
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -773,18 +910,21 @@ const GestorDashboard: React.FC<GestorDashboardProps> = ({ user, store, db, setD
       .forEach(ai => {
         const key = `${ai.productId}-${ai.gestorId}`;
         if (!groups[key]) {
-          groups[key] = { 
-            productId: ai.productId, 
-            quantity: 0, 
-            priceMN: ai.priceMN || 0, 
-            assignedAt: ai.assignedAt, 
-            assignedInventoryId: ai.id,
+          groups[key] = {
+            productId: ai.productId,
+            quantity: 0,
+            priceMN: ai.priceMN || 0,
+            assignedAt: ai.assignedAt,
+            assignedInventoryId: ai.quantity > 0 ? ai.id : '',
             inventoryIds: [],
-            items: [] 
+            items: []
           };
         }
         groups[key].quantity += ai.quantity;
         groups[key].inventoryIds?.push(ai.id);
+        if (groups[key].assignedInventoryId === '' && ai.quantity > 0) {
+          groups[key].assignedInventoryId = ai.id;
+        }
         for (let i = 0; i < ai.quantity; i++) {
           groups[key].items.push({ id: `${ai.id}-${i}`, productId: ai.productId, gestorId: ai.gestorId, assignedAt: ai.assignedAt, status: 'Available' });
         }

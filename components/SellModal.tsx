@@ -2,6 +2,7 @@
 import React from 'react';
 import { Product, InventoryGroup, SalePaymentStatus, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils';
+import Button from './Button';
 
 interface SellModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ const SellModal: React.FC<SellModalProps> = ({ isOpen, onClose, onSell, product,
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(PaymentMethod.CASH);
   const [transferSurchargePercent, setTransferSurchargePercent] = React.useState<number>(0);
   const [customerName, setCustomerName] = React.useState('');
+  const [isSelling, setIsSelling] = React.useState(false);
 
   const calculation = React.useMemo(() => {
     if (!product) return null;
@@ -49,14 +51,19 @@ const SellModal: React.FC<SellModalProps> = ({ isOpen, onClose, onSell, product,
     };
   }, [product, paymentMethod, transferSurchargePercent, storeCommissionRate]);
 
-  const handleSell = () => {
-    onSell(
-      quantity, 
-      paymentStatus, 
-      paymentMethod,
-      transferSurchargePercent,
-      paymentStatus === SalePaymentStatus.PENDING ? customerName : undefined
-    );
+  const handleSell = async () => {
+    setIsSelling(true);
+    try {
+      await onSell(
+        quantity, 
+        paymentStatus, 
+        paymentMethod,
+        transferSurchargePercent,
+        paymentStatus === SalePaymentStatus.PENDING ? customerName : undefined
+      );
+    } finally {
+      setIsSelling(false);
+    }
   };
 
   if (!isOpen || !product || !inventoryGroup) return null;
@@ -183,14 +190,15 @@ const SellModal: React.FC<SellModalProps> = ({ isOpen, onClose, onSell, product,
             >
               Cancelar
             </button>
-            <button
+            <Button
               type="button"
               onClick={handleSell}
-              disabled={quantity <= 0 || quantity > inventoryGroup.quantity || (paymentStatus === SalePaymentStatus.PENDING && !customerName.trim())}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
+              isLoading={isSelling}
+              disabled={quantity <= 0 || quantity > inventoryGroup.quantity || (paymentStatus === SalePaymentStatus.PENDING && !customerName.trim()) || isSelling}
+              variant="primary"
             >
               Vender
-            </button>
+            </Button>
           </div>
        </div>
      </div>

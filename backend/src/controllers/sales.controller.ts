@@ -153,6 +153,7 @@ export const createSale = async (req: Request, res: Response) => {
 
 export const markSaleAsPaid = async (req: Request, res: Response) => {
   const { saleId } = req.params;
+  const { paymentMethod, transferSurchargePercent } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {
@@ -169,7 +170,18 @@ export const markSaleAsPaid = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Sale is already paid.' });
     }
 
-    await db.query('UPDATE "Sale" SET "paymentStatus" = $1 WHERE id = $2', ['PAID', saleId]);
+    const effectivePaymentMethod = paymentMethod || 'CASH';
+    const effectiveSurchargePercent = (effectivePaymentMethod === 'TRANSFER' ? (transferSurchargePercent || 0) : 0);
+    
+    // Calculate surcharge
+    const subtotal = sale.baseMN + sale.commission;
+    const transferSurchargeAmount = subtotal * (effectiveSurchargePercent / 100);
+    const finalMN = subtotal + transferSurchargeAmount;
+
+    await db.query(
+      'UPDATE "Sale" SET "paymentStatus" = $1, "paymentMethod" = $2, "transferSurchargePercent" = $3, "transferSurchargeAmount" = $4, "finalMN" = $5 WHERE id = $6',
+      ['PAID', effectivePaymentMethod, effectiveSurchargePercent, transferSurchargeAmount, finalMN, saleId]
+    );
 
     const productResult = await db.query('SELECT "storeId" FROM "Product" WHERE id = $1', [sale.productId]);
     const storeId = productResult.rows[0]?.storeId;
@@ -179,12 +191,12 @@ export const markSaleAsPaid = async (req: Request, res: Response) => {
       'MARK_SALE_PAID',
       'Sale',
       saleId,
-      { paymentStatus: 'PENDING' },
-      { paymentStatus: 'PAID' },
+      { paymentStatus: 'PENDING', paymentMethod: sale.paymentMethod, finalMN: sale.finalMN },
+      { paymentStatus: 'PAID', paymentMethod: effectivePaymentMethod, finalMN },
       storeId
     );
 
-    res.status(200).json({ message: 'Sale marked as paid.' });
+    res.status(200).json({ message: 'Sale marked as paid.', finalMN, transferSurchargeAmount });
   } catch (error) {
     console.error('Mark sale as paid error:', error);
     res.status(500).json({ message: 'Internal server error' });
