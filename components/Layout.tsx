@@ -240,8 +240,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
           <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}>
             <span className="material-symbols-outlined">menu</span>
           </button>
