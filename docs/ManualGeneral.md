@@ -25,7 +25,9 @@
 - **Multi-Tenant**: Múltiples tiendas independientes con datos aislados
 - **Jerarquía de Roles**: Estructura clara de permisos
 - **Control de Inventario**: Asignación y seguimiento en tiempo real
-- **Ventas al Contado y Crédito**: Flexibilidad en métodos de pago
+- **Ventas al Contado, Transferencia y Crédito**: Flexibilidad en métodos de pago
+  - **Transferencia**: Permite agregar recargo configurable que se suma a la ganancia de la tienda
+  - **Deudas**: Pueden pagarse en efectivo o transferencia
 - **Cierre de Caja Automatizado**: Cálculos precisos de comisiones
 - **Auditoría Completa**: Registro de todas las operaciones
 
@@ -57,9 +59,11 @@ El sistema cuenta con 4 niveles de usuarios:
 
 ### 💼 Gestor
 - Recibe y confirma inventario
-- Realiza ventas (contado y crédito)
-- Gestiona deudas pendientes
-- Ejecuta cierres de caja
+- Realiza ventas al contado (efectivo)
+- Realiza ventas por transferencia (con recargo configurable)
+- Realiza ventas al crédito
+- Gestiona deudas pendientes (pago en efectivo o transferencia)
+- Ejecuta cierres de caja con desglose por método de pago
 
 ---
 
@@ -250,17 +254,36 @@ Cuando un gestor rechaza inventario asignado:
 
 #### 2. Realizar Ventas
 
-**Venta al Contado:**
+**Venta al Contado (Efectivo):**
 
 1. Vaya a "Nueva Venta"
 2. Seleccione el producto
 3. Ingrese la cantidad
-4. Seleccione "Pago al Contado"
+4. Seleccione "💵 Pago al Contado (efectivo)"
 5. Revise el precio calculado:
    - Precio Base
    - Comisión
    - Total
 6. Haga clic en "Confirmar Venta"
+
+**Venta por Transferencia:**
+
+1. Vaya a "Nueva Venta"
+2. Seleccione el producto
+3. Ingrese la cantidad
+4. Seleccione "💳 Pago por transferencia"
+5. Ingrese el **% de recargo** (ej: 5, 10, 15)
+6. Revise el cálculo completo:
+   ```
+   Precio Base: $3,900.00
+   Comisión: $390.00
+   Subtotal: $4,290.00
+   Recargo (10%): $429.00
+   ───────────────────
+   TOTAL: $4,719.00
+   ```
+7. Haga clic en "Vender"
+8. El recargo se suma a la ganancia de la tienda
 
 **Venta al Crédito:**
 
@@ -278,8 +301,14 @@ Cuando un gestor rechaza inventario asignado:
 
 1. Vaya a "Deudas Pendientes"
 2. Busque la venta al crédito
-3. Cuando el cliente pague, haga clic en "Marcar como Pagada"
-4. El estado cambia a "PAID"
+3. Haga clic en "Marcar como Pagada"
+4. Seleccione método de pago:
+   - **💵 Efectivo**: Pago normal, mismo monto
+   - **💳 Transferencia**: Permite agregar % de recargo
+5. Si es transferencia, ingrese el % de recargo (opcional)
+6. Revise el cálculo final
+7. Confirme el pago
+8. El estado cambia a "PAID" con el método seleccionado
 
 #### 4. Cierre de Caja
 
@@ -289,14 +318,23 @@ Cuando un gestor rechaza inventario asignado:
 
 1. Vaya a "Cierres"
 2. Haga clic en "Ejecutar Cierre"
-3. Revise el resumen:
+3. Revise el resumen con desglose por método de pago:
    ```
-   Total Base MN: Suma de precios base
-   Total Comisión: Suma de comisiones
-   Total Final MN: Total Base + Comisiones
+   💵 EFECTIVO:
+      Base MN: $25,000.00
+   
+   💳 TRANSFERENCIAS:
+      Base MN: $15,000.00
+      Recargos: $1,500.00
+   
+   ─────────────────────────
+   Total Base MN: $41,500.00 (entrega al manager)
+   Total Comisión: $4,000.00 (su ganancia)
+   ─────────────────────────
+   Total Final MN: $45,500.00
    ```
 4. Confirme que entregará al manager:
-   - **Base MN** (lo que entrega)
+   - **Base MN** (incluye recargos por transferencia)
    - Se queda con **Comisión** (su ganancia)
 5. Haga clic en "Confirmar Cierre"
 
@@ -403,6 +441,17 @@ Cuando un gestor rechaza inventario asignado:
 - Tipo de cambio actual
 - Comisión del producto
 
+### El recargo por transferencia no se calcula
+
+**Verifique:**
+- Haya seleccionado "Pago por transferencia"
+- Ingresado un % de recargo válido (mayor a 0)
+- El sistema mostrará el cálculo antes de confirmar
+
+### No veo desglose por método de pago en el cierre
+
+**Nota:** El desglose por método de pago (efectivo vs transferencia) aparece automáticamente cuando hay ventas de ambos tipos en el período.
+
 ---
 
 ## REGLAS IMPORTANTES
@@ -432,5 +481,22 @@ Para reportar problemas técnicos o solicitar ayuda:
 
 ---
 
-**Documento versión 1.0**
+## HISTORIAL DE VERSIONES
+
+### v1.1 (Febrero 2026)
+- **Nuevo**: Método de pago por transferencia con recargo configurable
+- **Nuevo**: Pago de deudas por transferencia
+- **Nuevo**: Desglose por método de pago en cierres de caja
+- **Nuevo**: Reportes de ventas por método de pago
+- **Actualizado**: Procedimientos de venta y cierre
+
+### v1.0 (Enero 2026)
+- Lanzamiento inicial del sistema
+- Documentación de roles y funciones básicas
+- Flujos de trabajo estándar
+
+---
+
+**Documento versión 1.1**
 **Fecha: Febrero 2026**
+**Sistema: Nexus SalesFlow**

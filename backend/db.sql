@@ -14,6 +14,9 @@ CREATE TYPE "ClosingStatus" AS ENUM ('PENDING', 'COMPLETED');
 DROP TYPE IF EXISTS "SalePaymentStatus" CASCADE;
 CREATE TYPE "SalePaymentStatus" AS ENUM ('PAID', 'PENDING');
 
+DROP TYPE IF EXISTS "PaymentMethod" CASCADE;
+CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT');
+
 -- Create Tables (IF NOT EXISTS to preserve data)
 CREATE TABLE IF NOT EXISTS "Store" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -128,6 +131,9 @@ CREATE TABLE IF NOT EXISTS "Sale" (
     "inventoryItemId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
     "paymentStatus" "SalePaymentStatus" NOT NULL DEFAULT 'PAID',
+    "paymentMethod" "PaymentMethod" NOT NULL DEFAULT 'CASH',
+    "transferSurchargePercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "transferSurchargeAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "customerName" TEXT,
     CONSTRAINT "Sale_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "AssignedInventory"("id") ON DELETE RESTRICT ON UPDATE CASCADE,

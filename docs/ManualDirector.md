@@ -155,10 +155,22 @@ Haga clic en un cierre para ver:
 │  Manager: Ana García                                │
 │  Fecha: 05/02/2026                                  │
 │                                                     │
-│  Total Base MN:     $45,000.00                      │
+│  ─── DESGLOSE POR MÉTODO DE PAGO ───               │
+│                                                     │
+│  💵 EFECTIVO:                                       │
+│     Base MN:        $25,000.00                      │
+│                                                     │
+│  💳 TRANSFERENCIAS:                                 │
+│     Base MN:        $15,000.00                      │
+│     Recargos:       $2,000.00                       │
+│                                                     │
+│  ─────────────────────────────────                  │
+│  Total Base MN:     $42,000.00                      │
+│  (incluye recargos)                                 │
+│                                                     │
 │  Total Comisión:    $4,500.00                       │
 │  ─────────────────────────────────                  │
-│  Total Final MN:    $49,500.00                      │
+│  Total Final MN:    $46,500.00                      │
 │                                                     │
 │  Ventas incluidas: 15                               │
 │  Período: 01/02/2026 - 05/02/2026                   │
@@ -166,8 +178,10 @@ Haga clic en un cierre para ver:
 ```
 
 **Paso 3: Verificar Dinero Físico**
-- El gestor debe entregar: **$45,000.00** (Base MN)
+- El gestor debe entregar: **$42,000.00** (Base MN + Recargos por transferencia)
 - El gestor se queda con: **$4,500.00** (Comisión)
+
+> **Nota**: El monto "Base MN" ahora incluye los recargos por transferencia. El dinero físico debe coincidir con este total.
 
 **Paso 4: Confirmar Validación**
 1. Cuente el dinero físico recibido
@@ -197,6 +211,8 @@ Su panel principal muestra métricas clave:
 - Total de ventas del período
 - Ventas por manager
 - Ventas por gestor
+- Desglose por método de pago (efectivo vs transferencia)
+- Total de recargos por transferencia
 - Cierres realizados
 - Deudas pendientes
 
@@ -228,6 +244,13 @@ Su panel principal muestra métricas clave:
 - Acceso: Reportes → Cierres
 - Filtros: Fecha, gestor, estado
 - Columnas: Fecha, gestor, base MN, comisión, total
+- **Nuevo**: Desglose por método de pago (efectivo/transferencia)
+
+**5. Ventas por Método de Pago**
+- Acceso: Reportes → Métodos de Pago
+- Muestra: Comparativa entre efectivo y transferencia
+- Columnas: Método, cantidad de ventas, monto total, recargos
+- Permite identificar preferencias de pago de clientes
 
 **5. Deudas Pendientes**
 - Acceso: Reportes → Deudas
@@ -445,24 +468,34 @@ Responsabilidades del Manager:
 
 ```
 Ventas del período:
-┌──────────────┬──────────┬────────────┬───────────┬──────────┐
-│ Producto     │ Cantidad │ Base MN    │ Comisión  │ Final MN │
-├──────────────┼──────────┼────────────┼───────────┼──────────┤
-│ Jabón        │ 5        │ $19,500    │ $1,950    │ $21,450  │
-│ Shampoo      │ 3        │ $10,080    │ $1,008    │ $11,088  │
-│ Crema        │ 2        │ $10,400    │ $1,040    │ $11,440  │
-└──────────────┴──────────┴────────────┴───────────┴──────────┘
+┌──────────────┬──────────┬──────────┬────────────┬───────────┬──────────┐
+│ Producto     │ Cantidad │ Método   │ Base MN    │ Comisión  │ Final MN │
+├──────────────┼──────────┼──────────┼────────────┼───────────┼──────────┤
+│ Jabón        │ 3        │ Efectivo │ $11,700    │ $1,170    │ $12,870  │
+│ Jabón        │ 2        │ Transf.  │ $7,800     │ $780      │ $8,580   │
+│ Shampoo      │ 3        │ Efectivo │ $10,080    │ $1,008    │ $11,088  │
+│ Crema        │ 2        │ Transf.  │ $10,400    │ $1,040    │ $11,440  │
+└──────────────┴──────────┴──────────┴────────────┴───────────┴──────────┘
+
+Desglose por método de pago:
+💵 EFECTIVO:              $21,780
+   - Base MN:              $21,780
+💳 TRANSFERENCIAS:        $22,108
+   - Base MN:              $18,200
+   - Recargos (10%):       $1,820
+   - Comisiones:           $2,088
 
 Totales del Cierre:
-Total Base MN:     $39,980  → Entrega a tienda
+Total Base MN:     $42,628  → Entrega a tienda
+  (incluye $1,820 de recargos por transferencia)
 Total Comisión:    $3,998   → Ganancia del gestor
 ────────────────────────────────────────
-Total Final MN:    $43,978  → Cobró a clientes
+Total Final MN:    $46,626  → Cobró a clientes
 
 Validación por Director:
-✓ Gestor entrega: $39,980 (Base)
+✓ Gestor entrega: $42,628 (Base + Recargos)
 ✓ Gestor se queda: $3,998 (Comisión)
-✓ Total verificado: $43,978
+✓ Total verificado: $46,626
 ```
 
 ### Ejemplo 3: Reporte de Desempeño
@@ -474,6 +507,9 @@ Período: 01/02/2026 - 07/02/2026
 
 Resumen General:
 - Ventas Totales: $125,000 MN
+  💵 Efectivo: $75,000 (60%)
+  💳 Transferencia: $50,000 (40%)
+- Recargos por Transferencia: $4,500
 - Cierres Realizados: 15
 - Gestores Activos: 3
 - Managers Activos: 1
@@ -487,14 +523,41 @@ Desglose por Gestor:
 │ Pedro Ruiz   │ $28,000  │ $2,800     │
 └──────────────┴──────────┴────────────┘
 
+Desglose por Método de Pago:
+┌──────────────┬──────────┬───────────┬──────────────┐
+│ Método       │ Ventas   │ Monto     │ % del Total  │
+├──────────────┼──────────┼───────────┼──────────────┤
+│ 💵 Efectivo  │ 45       │ $75,000   │ 60%          │
+│ 💳 Transfer  │ 30       │ $50,000   │ 40%          │
+│   (recargos) │          │ $4,500    │              │
+└──────────────┴──────────┴───────────┴──────────────┘
+
 Acciones del Director:
 ✓ Identificar a María como top performer
 ✓ Capacitar a Pedro para mejorar ventas
+✓ Analizar preferencia de pago (60% efectivo, 40% transferencia)
 ✓ Revisar estrategia de productos con manager
 ```
 
 ---
 
-**Manual del Director - Versión 1.0**
+**Manual del Director - Versión 1.1**
 **Fecha: Febrero 2026**
 **Sistema: Nexus SalesFlow**
+
+---
+
+## HISTORIAL DE CAMBIOS
+
+### v1.1 (Febrero 2026)
+- **Nuevo**: Desglose por método de pago en reportes de cierre
+- **Nuevo**: Visualización de recargos por transferencia
+- **Nuevo**: Reporte de ventas por método de pago
+- **Actualizado**: Ejemplos incluyendo transferencias con recargo
+- **Actualizado**: Procedimientos de validación de cierres
+
+### v1.0 (Enero 2026)
+- Lanzamiento inicial del manual
+- Documentación de gestión de managers
+- Proceso de validación de cierres
+- Reportes y métricas disponibles
