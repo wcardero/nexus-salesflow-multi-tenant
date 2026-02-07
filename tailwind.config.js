@@ -5,12 +5,12 @@ export default {
     "./index.html",
     "./App.tsx",
     "./index.tsx",
-    "./components/Layout.tsx",
-    "./views/AdminDashboard.tsx",
-    "./views/GestorDashboard.tsx",
-    "./views/Login.tsx",
-    "./views/ManagerDashboard.tsx",
-    "./views/DirectorDashboard.tsx",
+    "./components/**/*.tsx",
+    "./components/**/*.ts",
+    "./views/**/*.tsx",
+    "./views/**/*.ts",
+    "./*.tsx",
+    "./*.ts",
   ],
   theme: {
     extend: {
