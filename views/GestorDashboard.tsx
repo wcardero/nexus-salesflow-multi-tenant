@@ -176,7 +176,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     if (!selectedGroup) return;
 
     try {
-      const accountingDate = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const accountingDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sales`, {
         method: 'POST',
         headers: {
@@ -221,7 +222,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
 
     setIsExecutingClosing(true);
     try {
-      const accountingDate = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const accountingDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/closings`, {
         method: 'POST',
         headers: {

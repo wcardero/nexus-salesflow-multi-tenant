@@ -6,7 +6,7 @@ import DateRangeSelector from '../components/DateRangeSelector';
 import ExportButton from '../components/ExportButton';
 import ReportCard from '../components/ReportCard';
 import Button from '../components/Button';
-import { formatDate, getPresetRanges, formatDateTime } from '../dateUtils';
+import { formatDate, getPresetRanges, formatDateTime, formatAccountingDate } from '../dateUtils';
 import { exportToCSV, exportToPDF, exportToExcel } from '../exportUtils';
 import { addDays } from 'date-fns';
 
@@ -233,22 +233,26 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales, gestores, products, as
   }, [gestores, salesInPeriod]);
 
   const productsByQuantity = useMemo(() => {
-    const productSales: Record<string, number> = {};
+    const productSales: Record<string, { quantity: number; totalAmount: number }> = {};
     const productsById = Object.fromEntries(products.map(p => [p.id, p.name]));
 
     salesInPeriod.forEach(sale => {
       const assignedInv = assignedInventory.find(ai => sale.inventoryItemId.startsWith(ai.id));
-      if (assignedInv) {
-        productSales[assignedInv.productId] = (productSales[assignedInv.productId] || 0) + 1;
+      if (assignedInv && sale.productId) {
+        if (!productSales[sale.productId]) {
+          productSales[sale.productId] = { quantity: 0, totalAmount: 0 };
+        }
+        productSales[sale.productId].quantity += 1;
+        productSales[sale.productId].totalAmount += sale.finalMN;
       }
     });
 
     return Object.entries(productSales)
-      .map(([productId, quantity]) => ({
+      .map(([productId, data]) => ({
         productId,
         productName: productsById[productId] || 'Producto desconocido',
-        quantity,
-        totalAmount: quantity * (products.find(p => p.id === productId)?.priceMN || 0)
+        quantity: data.quantity,
+        totalAmount: data.totalAmount
       }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
@@ -470,7 +474,8 @@ const ClosingsView: React.FC<{closings: Closing[], users: User[], onValidate: (i
 // --- EXCHANGE RATE VIEW ---
 const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: number, startDate: Date) => void }> = ({ store, onSetExchangeRate }) => {
   const [newRate, setNewRate] = useState<string>('');
-  const [effectiveDate, setEffectiveDate] = useState<string>(new Date().toISOString().split('T')[0]); // Default to today
+  const today = new Date();
+  const [effectiveDate, setEffectiveDate] = useState<string>(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`); // Default to today
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1681,11 +1686,38 @@ const ClosingsReportView: React.FC<{
 
   const filteredClosings = useMemo(() => {
     const isValidDate = (d: any) => d instanceof Date && !isNaN(d.getTime());
+    
+    // Normalize date to YYYY-MM-DD string for comparison
+    const normalizeDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const normalizedStart = normalizeDate(dateRange.start);
+    const normalizedEnd = normalizeDate(dateRange.end);
+    
     return closings.filter(c => {
-      const targetDate = isValidDate(c.accountingDate) ? c.accountingDate as Date : (c.completedAt || c.initiatedAt);
+      // accountingDate comes as YYYY-MM-DD string from backend
+      let targetDateStr: string;
+      
+      if (typeof c.accountingDate === 'string' && c.accountingDate.length === 10) {
+        // It's already a YYYY-MM-DD string
+        targetDateStr = c.accountingDate;
+      } else if (isValidDate(c.accountingDate)) {
+        // It's a Date object (fallback)
+        const d = c.accountingDate as Date;
+        targetDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      } else {
+        // Fallback to completedAt or initiatedAt
+        const fallbackDate = c.completedAt || c.initiatedAt;
+        targetDateStr = normalizeDate(fallbackDate);
+      }
+      
       return c.status === ClosingStatus.COMPLETED &&
-             targetDate.getTime() >= dateRange.start.getTime() && 
-             targetDate.getTime() <= dateRange.end.getTime();
+             targetDateStr >= normalizedStart && 
+             targetDateStr <= normalizedEnd;
     });
   }, [closings, dateRange]);
 
@@ -1950,7 +1982,7 @@ const ClosingsReportView: React.FC<{
                   {closingMetrics.map((m, index) => (
                     <tr key={`${m.closing.id}-${index}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-200">
-                        {m.closing.accountingDate ? formatDate(new Date(m.closing.accountingDate as Date)) : 'N/A'}
+                        {m.closing.accountingDate ? formatAccountingDate(m.closing.accountingDate) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
                         {formatDateTime(new Date(m.closing.completedAt!))}

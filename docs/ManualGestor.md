@@ -22,7 +22,7 @@
 Como **Gestor**, usted es quien está en contacto directo con los clientes y realiza las operaciones de venta. Su rol es fundamental para:
 
 - Recibir y gestionar inventario asignado
-- Realizar ventas al contado y al crédito
+- Realizar ventas al contado, por transferencia (con recargo) y al crédito
 - Mantener registro de deudas pendientes
 - Ejecutar cierres de caja diarios
 - Generar sus comisiones
@@ -31,7 +31,8 @@ Como **Gestor**, usted es quien está en contacto directo con los clientes y rea
 
 ✅ **Puede hacer:**
 - Confirmar o rechazar inventario asignado
-- Realizar ventas al contado
+- Realizar ventas al contado (efectivo)
+- Realizar ventas por transferencia (con recargo configurable)
 - Realizar ventas al crédito
 - Ver sus deudas pendientes
 - Marcar deudas como pagadas
@@ -154,16 +155,16 @@ Cada producto muestra:
 
 ## REALIZAR VENTAS
 
-### Venta al Contado
+### Venta al Contado (Efectivo)
 
-El cliente paga inmediatamente.
+El cliente paga inmediatamente en efectivo.
 
 **Pasos:**
 
 1. Vaya al menú **"Nueva Venta"**
 2. Seleccione el **producto** del dropdown
 3. Ingrese la **cantidad**
-4. Seleccione **"Pago al Contado"**
+4. Seleccione **"💵 Pago al Contado (efectivo)"**
 5. Revise el cálculo automático:
    ```
    Cantidad: 2 unidades
@@ -175,6 +176,34 @@ El cliente paga inmediatamente.
 7. El sistema registrará la venta con estado **PAID**
 
 > **La venta se descuenta inmediatamente de su inventario disponible.**
+
+### Venta por Transferencia
+
+El cliente paga mediante transferencia bancaria. El sistema permite agregar un recargo por este método de pago.
+
+**Pasos:**
+
+1. Vaya al menú **"Nueva Venta"**
+2. Seleccione el **producto** del dropdown
+3. Ingrese la **cantidad**
+4. Seleccione **"💳 Pago por transferencia"**
+5. Ingrese el **% de recargo** (ej: 5, 10, 15):
+   ```
+   Ejemplo con 10% de recargo:
+   
+   Cantidad: 1 unidad
+   Precio base: $3,900.00 MN
+   Comisión (10%): $390.00 MN
+   Subtotal: $4,290.00 MN
+   Recargo transferencia (10%): $429.00 MN
+   ─────────────────────────────────────
+   TOTAL A PAGAR: $4,719.00 MN
+   ```
+6. Revise el desglose completo del cálculo
+7. Haga clic en **"Vender"**
+8. El sistema registrará la venta con método **TRANSFER**
+
+> **Nota**: El recargo por transferencia se suma a la ganancia de la tienda. Usted solo recibe su comisión habitual.
 
 ### Venta al Crédito
 
@@ -222,16 +251,31 @@ Vaya a **"Deudas Pendientes"** para ver:
 
 ### Marcar Deuda como Pagada
 
-Cuando el cliente le pague:
+Cuando el cliente le pague, puede registrar el pago como efectivo o transferencia.
+
+**Pasos:**
 
 1. Vaya a **"Deudas Pendientes"**
 2. Busque la venta del cliente
 3. Haga clic en **"Marcar como Pagada"** (💰)
-4. Confirme el pago
-5. El estado cambia a **PAID**
-6. El dinero se suma a su próximo cierre
+4. Seleccione el **método de pago**:
+   - **💵 Efectivo**: Pago normal, mismo monto de la deuda
+   - **💳 Transferencia**: Permite agregar % de recargo
+5. Si selecciona transferencia, ingrese el **% de recargo** (opcional)
+6. Revise el cálculo final:
+   ```
+   Ejemplo deuda con transferencia y 10% recargo:
+   
+   Monto original: $5,720.00 MN
+   Recargo (10%): $572.00 MN
+   ─────────────────────────────
+   TOTAL A PAGAR: $6,292.00 MN
+   ```
+7. Confirme el pago
+8. El estado cambia a **PAID** con el método seleccionado
+9. El dinero se suma a su próximo cierre
 
-> **Consejo**: Siempre emita un recibo al cliente cuando pague una deuda.
+> **Consejo**: Siempre emita un recibo al cliente cuando pague una deuda, especialmente si hay recargo por transferencia.
 
 ### Seguimiento de Deudas
 
@@ -280,15 +324,26 @@ El sistema mostrará:
 │                                                     │
 │  Ventas incluidas: 12                               │
 │                                                     │
-│  ───── DESGLOSE DE MONTOS ─────                    │
+│  ───── DESGLOSE POR MÉTODO DE PAGO ─────           │
 │                                                     │
-│  Total Base MN:     $52,000.00  → Entrega al       │
-│                                               manager│
+│  💵 EFECTIVO:                                      │
+│     Base MN:        $30,000.00                     │
 │                                                     │
-│  Total Comisión:    $5,200.00   → Su ganancia      │
+│  💳 TRANSFERENCIAS:                                │
+│     Base MN:        $15,000.00                     │
+│     Recargos:       $2,500.00                      │
+│     Subtotal:       $17,500.00                     │
 │                                                     │
 │  ─────────────────────────────────                  │
-│  Total Final MN:    $57,200.00  → Lo cobró a       │
+│                                                     │
+│  Total Base MN:     $47,500.00  → Entrega al       │
+│                                               manager│
+│  (incluye recargos por transferencia)              │
+│                                                     │
+│  Total Comisión:    $4,750.00   → Su ganancia      │
+│                                                     │
+│  ─────────────────────────────────                  │
+│  Total Final MN:    $52,250.00  → Lo cobró a       │
 │                                               clientes│
 │                                                     │
 └─────────────────────────────────────────────────────┘
@@ -321,17 +376,19 @@ Vaya a **"Cierres"** → **"Historial"** para ver:
 
 **Ejemplo de Cierre:**
 
-| Venta | Producto | Base MN | Comisión | Final MN |
-|-------|----------|---------|----------|----------|
-| 1 | Jabón | $3,900 | $390 | $4,290 |
-| 2 | Champú | $2,500 | $250 | $2,750 |
-| 3 | Crema | $5,200 | $520 | $5,720 |
-| **TOTAL** | | **$11,600** | **$1,160** | **$12,760** |
+| Venta | Producto | Método | Base MN | Recargo | Comisión | Final MN |
+|-------|----------|--------|---------|---------|----------|----------|
+| 1 | Jabón | Efectivo | $3,900 | - | $390 | $4,290 |
+| 2 | Champú | Transferencia (10%) | $2,500 | $275 | $250 | $3,025 |
+| 3 | Crema | Efectivo | $5,200 | - | $520 | $5,720 |
+| **TOTAL** | | | **$11,600** | **$275** | **$1,160** | **$13,035** |
 
 **Resultado del Cierre:**
-- **Entrega al Manager**: $11,600.00 (Base MN)
+- **Entrega al Manager**: $11,875.00 (Base MN + Recargos)
 - **Su Comisión**: $1,160.00 (Su ganancia)
-- **Total que cobró**: $12,760.00 (a clientes)
+- **Total que cobró**: $13,035.00 (a clientes)
+
+> **Importante**: Los recargos por transferencia se suman al "Base MN" que entrega al manager, aumentando la ganancia total de la tienda.
 
 ---
 
@@ -394,10 +451,11 @@ Ventas al crédito:
 ┌────────────────────────────────────────────────────────┐
 │  DURANTE EL DÍA - VENTAS                               │
 ├────────────────────────────────────────────────────────┤
-│  4. Realizar ventas al contado                         │
-│  5. Realizar ventas al crédito (anotar datos cliente)  │
-│  6. Registrar pagos de deudas                          │
-│  7. Verificar inventario periódicamente                │
+│  4. Realizar ventas al contado (efectivo)              │
+│  5. Realizar ventas por transferencia (con recargo)    │
+│  6. Realizar ventas al crédito (anotar datos cliente)  │
+│  7. Registrar pagos de deudas (efectivo o transfer)    │
+│  8. Verificar inventario periódicamente                │
 └────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -427,7 +485,11 @@ Seleccionar producto
         ↓
 Ingresar cantidad
         ↓
-Seleccionar "Pago al Contado"
+Seleccionar método de pago:
+   • 💵 Efectivo
+   • 💳 Transferencia
+        ↓
+Si es transferencia → Ingresar % recargo
         ↓
 Cobrar al cliente (Precio Final)
         ↓
@@ -608,23 +670,27 @@ R: No, solo puede vender el inventario que le fue asignado y confirmado.
 
 **Ventas del día:**
 1. Venta contado: 2 jabones → $8,580
-2. Venta contado: 1 champú → $2,750
+2. Venta transferencia (10% recargo): 1 champú → $3,025
 3. Venta crédito: 3 jabones → $12,870 (pendiente)
 
 **Deuda pagada:**
-- Cliente Juan paga deuda anterior → $5,000
+- Cliente Juan paga deuda anterior (efectivo) → $5,000
+- Cliente María paga deuda (transferencia 10%) → $6,292
 
 **Cierre del día:**
 ```
-Ventas contado:     $11,330
-Deuda pagada:       $5,000
-───────────────────────────
-Total ventas:       $16,330
+Ventas contado:           $8,580
+Ventas transferencia:     $3,025
+Deudas pagadas efectivo:  $5,000
+Deudas pagadas transfer:  $6,292
+────────────────────────────────
+Total ventas:             $22,897
 
-Base MN:            $14,845  → Entrega al manager
-Comisión (10%):     $1,485   → Su ganancia
-───────────────────────────
-Total cobrado:      $16,330
+Base MN:                  $20,815  → Entrega al manager
+  (incluye $525 de recargos)
+Comisión (10%):           $2,082   → Su ganancia
+────────────────────────────────
+Total cobrado:            $22,897
 ```
 
 ### Ejemplo 2: Venta al Crédito y Cobro
@@ -652,6 +718,22 @@ Comisión:           $1,429   → Su ganancia
 
 ---
 
-**Manual del Gestor - Versión 1.0**
+**Manual del Gestor - Versión 1.1**
 **Fecha: Febrero 2026**
 **Sistema: Nexus SalesFlow**
+
+---
+
+## HISTORIAL DE CAMBIOS
+
+### v1.1 (Febrero 2026)
+- **Nuevo**: Método de pago por transferencia con recargo configurable
+- **Nuevo**: Opción de pago de deudas por transferencia
+- **Nuevo**: Desglose por método de pago (efectivo/transferencia) en cierre de caja
+- **Actualizado**: Ejemplos y cálculos incluyendo recargos por transferencia
+
+### v1.0 (Enero 2026)
+- Lanzamiento inicial del manual
+- Documentación de ventas al contado y crédito
+- Proceso de cierre de caja
+- Gestión de deudas

@@ -147,7 +147,8 @@ const App: React.FC = () => {
          data.closings.forEach(c => {
            c.initiatedAt = new Date(c.initiatedAt);
            if (c.completedAt) c.completedAt = new Date(c.completedAt);
-           if (c.accountingDate) c.accountingDate = parseAccountingDate(c.accountingDate);
+           // accountingDate now comes as YYYY-MM-DD string from backend
+           // Keep it as string to avoid timezone issues
            if (c.sales && Array.isArray(c.sales)) {
              c.sales.forEach(s => {
                s.soldAt = new Date(s.soldAt);
