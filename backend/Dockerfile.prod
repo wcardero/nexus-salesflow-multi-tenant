@@ -27,10 +27,6 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/init-db.ts ./init-db.ts
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/db.sql ./db.sql
-COPY --from=builder /app/run_migrations.sh ./run_migrations.sh
-
-# Dar permisos de ejecución antes de cambiar a usuario no-root
-RUN chmod +x ./run_migrations.sh
 
 # Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs
