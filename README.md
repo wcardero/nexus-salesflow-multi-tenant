@@ -31,7 +31,7 @@ Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples t
 
 - **Jerarquía de 4 roles**: Admin → Director → Manager → Gestor
 - **Control de inventario**: Asignación, confirmación y seguimiento
-- **Ventas al contado y crédito**: Con seguimiento de deudas
+- **Ventas al contado, crédito y transferencia**: Con seguimiento de deudas y recargo por transferencia
 - **Cierre de caja**: Automatizado con cálculos de comisiones y fecha contable precisa
 - **Tipo de cambio persistente**: Historial de cambios por tienda
 - **Auditoría completa**: Registro de todas las operaciones
@@ -74,10 +74,10 @@ Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples t
 
 #### 💼 Gestor
 - ✅ Confirmación/rechazo de inventario asignado
-- ✅ Ventas al contado y crédito
-- ✅ Gestión de deudas pendientes
+- ✅ Ventas al contado, crédito y transferencia (con recargo configurable)
+- ✅ Gestión de deudas pendientes (pago en efectivo o transferencia)
 - ✅ Eliminación de ventas antes de cierre
-- ✅ Ejecución de cierres de caja
+- ✅ Ejecución de cierres de caja con desglose por método de pago
 - ✅ Consulta de inventario disponible
 
 ### Inventario y Productos
@@ -90,15 +90,23 @@ Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples t
 - **Conflictos de inventario**: Gestión automática de rechazos
 
 ### Ventas y Pagos
-- **Ventas al contado**: Pago inmediato (PAID)
+- **Ventas al contado**: Pago inmediato en efectivo (CASH)
+- **Ventas por transferencia**: Pago con recargo configurable (TRANSFER)
+  - El gestor define el % de recargo (ej: 5%, 10%)
+  - El recargo se calcula sobre el subtotal (base + comisión)
+  - El recargo se suma a la ganancia de la tienda
 - **Ventas al crédito**: Registro de deuda (PENDING) con nombre del cliente
 - **Seguimiento de deudas**: Tabla "Deudas Pendientes" para créditos
-- **Pago de deudas**: Los gestores pueden registrar pagos de ventas al crédito
-- **Cálculo automático**: Precio base + comisión según tipo de cambio
+- **Pago de deudas**: Los gestores pueden registrar pagos en efectivo o transferencia
+- **Cálculo automático**: Precio base + comisión + recargo (si aplica)
 
 ### Cierre de Caja
 - **Ejecución de cierre**: Gestor agrupa ventas y genera resumen
-- **Cálculos automáticos**: Total base MN, total comisión, total final MN
+- **Desglose por método de pago**: Separación entre efectivo y transferencias
+- **Cálculos automáticos**: 
+  - Total base MN (incluyendo recargos por transferencia)
+  - Total comisión
+  - Total final MN
 - **Fecha Contable**: Se registra la fecha local del negocio, independiente de la hora del servidor
 - **Estado del cierre**: PENDING (esperando dinero) → COMPLETED (dinero recibido)
 - **Confirmación de recepción**: Manager marca cuando recibe dinero físico
@@ -428,14 +436,23 @@ Manager: Confirma recepción → Estado: COMPLETED
 #### Venta al Contado
 1. Gestor selecciona producto
 2. Ingresas cantidad
-3. Selecciona "Pago al contado"
+3. Selecciona "💵 Pago al contado (efectivo)"
 4. Sistema calcula: Precio base + Comisión = Precio final
 5. Venta se registra inmediatamente
+
+#### Venta por Transferencia
+1. Gestor selecciona producto
+2. Ingresas cantidad
+3. Selecciona "💳 Pago por transferencia"
+4. Ingresas % de recargo (ej: 5%, 10%)
+5. Sistema calcula: Precio base + Comisión + Recargo = Precio final
+6. El recargo se suma a la ganancia de la tienda
+7. Venta se registra con método TRANSFER
 
 #### Venta al Crédito
 1. Gestor selecciona producto
 2. Ingresas cantidad
-3. Selecciona "Venta al crédito"
+3. Selecciona "📝 Venta al crédito"
 4. Ingresas nombre y apellidos del cliente
 5. Venta se registra como PENDING (deuda)
 6. Aparece en tab "Deudas Pendientes"
@@ -444,7 +461,10 @@ Manager: Confirma recepción → Estado: COMPLETED
 1. Gestor va a "Deudas Pendientes"
 2. Busca venta al crédito
 3. Clic en "Marcar como pagada"
-4. Sistema actualiza estado a PAID
+4. Selecciona método de pago:
+   - 💵 Efectivo: Pago normal sin recargo
+   - 💳 Transferencia: Permite agregar % de recargo
+5. Sistema actualiza estado a PAID con el método seleccionado
 
 ### Cierre de Caja
 
@@ -685,6 +705,9 @@ Sistema: Conflicto pasa a "Resolved"
 - commission (DOUBLE PRECISION)
 - finalMN (DOUBLE PRECISION)
 - paymentStatus (ENUM: PAID, PENDING)
+- paymentMethod (ENUM: CASH, TRANSFER, CREDIT) - Método de pago
+- transferSurchargePercent (DOUBLE PRECISION) - % de recargo por transferencia
+- transferSurchargeAmount (DOUBLE PRECISION) - Monto del recargo
 - customerName (TEXT)
 ```
 
@@ -822,6 +845,8 @@ npm test
 
 Las migraciones de base de datos se encuentran en `/backend/migrations/`:
 
+- `004_add_transfer_payment.sql` - Método de pago por transferencia con recargo
+- `005_ensure_transfer_payment_columns.sql` - Verificación de columnas de transferencia
 - `add_inventory_approval_flow.sql` - Flujo de aprobación de inventario
 - `add_product_additional_columns.sql` - Columnas adicionales de productos
 - `add_createdBy_to_user.sql` - Rastreo de creador de usuarios
@@ -835,6 +860,23 @@ Para ejecutar migraciones:
 cd backend
 psql -U user -d nexusdb -f migrations/add_inventory_approval_flow.sql
 ```
+
+### Sistema de Migraciones Automáticas
+
+El backend incluye un sistema automático de migraciones que se ejecuta al iniciar:
+
+- **Ubicación**: `/backend/src/utils/migrations.ts`
+- **Funcionamiento**: Al iniciar el servidor, se ejecutan automáticamente las migraciones pendientes
+- **Tracking**: Se registra en la tabla `_Migrations` cuáles ya se ejecutaron
+- **Idempotencia**: Las migraciones usan `IF NOT EXISTS` para evitar errores
+- **Orden**: Se ejecutan en orden alfabético (001, 002, 003, etc.)
+
+**Convención de nombres:**
+```
+XXX_descripcion_corta.sql
+```
+- `XXX` = Número secuencial de 3 dígitos
+- `descripcion_corta` = Descripción del cambio
 
 
 ## 🚀 Despliegue en Producción
@@ -1044,18 +1086,33 @@ nexus-salesflow-multi-tenant/
 Venta USD = Costo USD × (1 + Margen)
 Precio MN Base = Venta USD × Tipo de Cambio
 Comisión = Precio MN Base × Tasa de Comisión
-Precio Final = Precio MN Base + Comisión
+Subtotal = Precio MN Base + Comisión
+
+// Si es transferencia:
+Recargo = Subtotal × % Recargo Transferencia
+Precio Final = Subtotal + Recargo
+
+// Si es efectivo:
+Precio Final = Subtotal
 ```
 
 **Para producto en MN:**
 ```
 Precio MN Base = Costo MN × (1 + Margen)
 Comisión = Precio MN Base × Tasa de Comisión
-Precio Final = Precio MN Base + Comisión
+Subtotal = Precio MN Base + Comisión
+
+// Si es transferencia:
+Recargo = Subtotal × % Recargo Transferencia
+Precio Final = Subtotal + Recargo
+
+// Si es efectivo:
+Precio Final = Subtotal
 ```
 
 ### Ejemplo Numérico
 
+**Caso 1: Pago en Efectivo**
 Producto: Jabón
 - Costo: $10 USD
 - Margen: 30%
@@ -1066,17 +1123,38 @@ Producto: Jabón
 Venta USD = $10 × 1.30 = $13
 Precio MN Base = $13 × 300 = 3,900 MN
 Comisión = 3,900 × 0.10 = 390 MN
-Precio Final = 3,900 + 390 = 4,290 MN
+Precio Final (Efectivo) = 3,900 + 390 = 4,290 MN
+```
+
+**Caso 2: Pago por Transferencia (10% de recargo)**
+Producto: Jabón (mismo producto)
+- Costo: $10 USD
+- Margen: 30%
+- Tipo de cambio: 300 MN/USD
+- Comisión: 10%
+- Recargo por transferencia: 10%
+
+```
+Venta USD = $10 × 1.30 = $13
+Precio MN Base = $13 × 300 = 3,900 MN
+Comisión = 3,900 × 0.10 = 390 MN
+Subtotal = 3,900 + 390 = 4,290 MN
+Recargo = 4,290 × 0.10 = 429 MN
+Precio Final (Transferencia) = 4,290 + 429 = 4,719 MN
+
+Distribución:
+- Gestor recibe: 390 MN (comisión)
+- Tienda recibe: 3,900 + 429 = 4,329 MN (base + recargo)
 ```
 
 ### Cierre de Caja
 
 ```
-Total Base MN = Σ (Precio Base de todas las ventas)
+Total Base MN = Σ (Precio Base + Recargos de todas las ventas)
 Total Comisión = Σ (Comisión de todas las ventas)
 Total Final MN = Σ (Precio Final de todas las ventas)
 
-Monto a entregar = Total Base MN
+Monto a entregar = Total Base MN (incluye recargos por transferencia)
 Monto que se queda el gestor = Total Comisión
 ```
 
@@ -1181,5 +1259,28 @@ Para reportar issues o solicitar features, por favor crea un issue en el [reposi
 ---
 
 **Última actualización:** Febrero 2026
-**Versión:** 1.0.0
+**Versión:** 1.1.0
 **Autor:** [wcardero](https://github.com/wcardero)
+
+## 📝 Changelog
+
+### v1.1.0 (Febrero 2026)
+- ✨ **Nuevo**: Método de pago por transferencia con recargo configurable
+- ✨ **Nuevo**: Sistema automático de migraciones de base de datos
+- ✨ **Nuevo**: Modal de pago de deudas con opción de transferencia
+- ✨ **Nuevo**: Desglose por método de pago en cierre de caja (efectivo vs transferencia)
+- ✨ **Nuevo**: Favicon personalizado (N verde esmeralda)
+- ♻️ **Mejorado**: Loading en botón de venta
+- ♻️ **Mejorado**: Icono de transferencia cambiado de 🏦 a 💳
+- 🐛 **Corregido**: Cálculo de "Base a Pagar" incluye recargos por transferencia
+- 🐛 **Corregido**: Error de stock insuficiente al vender última unidad
+- 🐛 **Corregido**: Mensaje de confirmación en cierre de caja muestra total correcto
+
+### v1.0.0 (Enero 2026)
+- 🎉 **Lanzamiento inicial**: Sistema multi-tenant de gestión de ventas
+- ✨ Gestión de inventario con flujo de aprobación
+- ✨ Ventas al contado y crédito
+- ✨ Cierre de caja automatizado
+- ✨ Jerarquía de 4 roles (Admin, Director, Manager, Gestor)
+- ✨ Reportes exportables (CSV, PDF, Excel)
+- ✨ Auditoría completa de operaciones

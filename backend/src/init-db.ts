@@ -29,6 +29,7 @@ CREATE TYPE "Role" AS ENUM ('Admin', 'Director', 'Manager', 'Gestor');
 CREATE TYPE "InventoryStatus" AS ENUM ('Available', 'Sold');
 CREATE TYPE "ClosingStatus" AS ENUM ('PENDING', 'COMPLETED');
 CREATE TYPE "SalePaymentStatus" AS ENUM ('PAID', 'PENDING');
+CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT');
 
 -- 3. Tablas Base
 CREATE TABLE "Store" (
@@ -139,6 +140,9 @@ CREATE TABLE "Sale" (
     "inventoryItemId" TEXT NOT NULL,
     "gestorId" TEXT NOT NULL,
     "paymentStatus" "SalePaymentStatus" NOT NULL DEFAULT 'PAID',
+    "paymentMethod" "PaymentMethod" NOT NULL DEFAULT 'CASH',
+    "transferSurchargePercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "transferSurchargeAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "customerName" TEXT,
     CONSTRAINT "Sale_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Sale_inventoryItemId_fkey" FOREIGN KEY ("inventoryItemId") REFERENCES "AssignedInventory"("id") ON DELETE RESTRICT ON UPDATE CASCADE,

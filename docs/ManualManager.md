@@ -396,6 +396,32 @@ Manager valida recepción
 Haga clic en un cierre para ver:
 
 ```
+┌─────────────────────────────────────────────────────┐
+│  RESUMEN DEL CIERRE                                 │
+├─────────────────────────────────────────────────────┤
+│  Gestor: Juan Pérez                                 │
+│  Fecha: 05/02/2026                                  │
+│                                                     │
+│  ─── DESGLOSE POR MÉTODO DE PAGO ───               │
+│                                                     │
+│  💵 EFECTIVO:                                       │
+│     Base MN:        $25,000.00                      │
+│                                                     │
+│  💳 TRANSFERENCIAS:                                 │
+│     Base MN:        $15,000.00                      │
+│     Recargos:       $2,000.00                       │
+│                                                     │
+│  ─────────────────────────────────                  │
+│  Total Base MN:     $42,000.00      │
+│  (incluye recargos)                                 │
+│                                                     │
+│  Total Comisión:    $4,500.00                       │
+│  ─────────────────────────────────                  │
+│  Total Final MN:    $46,500.00                      │
+│                                                     │
+│  Ventas incluidas: 15                               │
+└─────────────────────────────────────────────────────┘
+```
 ┌─────────────────────────────────────┐
 │  RESUMEN DEL CIERRE                 │
 ├─────────────────────────────────────┤
@@ -412,8 +438,13 @@ Haga clic en un cierre para ver:
 ```
 
 **Paso 3: Verificar Dinero Físico**
-- El gestor debe entregar: **$45,000.00** (Base MN)
+- El gestor debe entregar: **$42,000.00** (Base MN + Recargos por transferencia)
 - El gestor se queda con: **$4,500.00** (Comisión)
+
+> **Nota**: El "Base MN" ahora incluye los recargos por transferencia. En el ejemplo:
+> - Efectivo: $25,000
+> - Transferencias (base + recargo): $15,000 + $2,000 = $17,000
+> - **Total a recibir**: $42,000
 
 **Paso 4: Confirmar Validación**
 1. Una vez recibido el dinero, haga clic en **"Validar Cierre"**
@@ -688,6 +719,22 @@ R: No, primero debe asegurarse de que no tenga ventas ni cierres pendientes.
 
 ---
 
-**Manual del Manager - Versión 1.0**
+**Manual del Manager - Versión 1.1**
 **Fecha: Febrero 2026**
 **Sistema: Nexus SalesFlow**
+
+---
+
+## HISTORIAL DE CAMBIOS
+
+### v1.1 (Febrero 2026)
+- **Nuevo**: Cierre de caja con desglose por método de pago (efectivo vs transferencia)
+- **Nuevo**: Visualización de recargos por transferencia en cierres
+- **Actualizado**: Cálculo de "Base MN" ahora incluye recargos por transferencia
+- **Actualizado**: Ejemplos y procedimientos de validación de cierres
+
+### v1.0 (Enero 2026)
+- Lanzamiento inicial del manual
+- Documentación de gestión de gestores y productos
+- Proceso de validación de cierres de caja
+- Gestión de conflictos de inventario

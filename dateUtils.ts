@@ -6,6 +6,28 @@ export const formatDate = (date: Date): string => {
   return format(date, 'dd/MM/yy', { locale: es });
 };
 
+// Format accounting date without timezone conversion
+// Accounting dates are stored as DATE (without time) in the database
+// and should be displayed exactly as stored, without UTC conversion
+export const formatAccountingDate = (date: Date | string): string => {
+  if (typeof date === 'string') {
+    // If it's already a string like "2025-02-06", parse it directly
+    if (date.length === 10) {
+      const [year, month, day] = date.split('-');
+      return `${day}/${month}/${year.slice(2)}`;
+    }
+    // Otherwise convert to Date first
+    date = new Date(date);
+  }
+  
+  // For Date objects, extract components in local time to avoid UTC conversion
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(2);
+  
+  return `${day}/${month}/${year}`;
+};
+
 export const formatDateTime = (date: Date): string => {
   return format(date, 'dd/MM/yy HH:mm', { locale: es });
 };

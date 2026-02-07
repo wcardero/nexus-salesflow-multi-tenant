@@ -143,6 +143,9 @@ export interface Sale {
   commission: number;
   finalMN: number;
   paymentStatus: SalePaymentStatus;
+  paymentMethod: PaymentMethod;
+  transferSurchargePercent: number;
+  transferSurchargeAmount: number;
   accountingDate?: string | Date;
   customerName?: string;
   productId?: string;
@@ -162,6 +165,15 @@ export enum ClosingStatus {
 export enum SalePaymentStatus {
   PAID = 'PAID', // Pago al contado
   PENDING = 'PENDING' // Venta al crédito
+}
+
+/**
+ * Métodos de pago disponibles.
+ */
+export enum PaymentMethod {
+  CASH = 'CASH', // Efectivo/Contado
+  TRANSFER = 'TRANSFER', // Transferencia bancaria
+  CREDIT = 'CREDIT' // Venta al crédito
 }
 
 /**
