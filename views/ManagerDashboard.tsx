@@ -965,10 +965,10 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   return (
     <div>
       <h3 className="text-base md:text-lg font-bold mb-4">Gestionar Productos</h3>
-       {!currentExchangeRate && (
+       {currency === 'USD' && !currentExchangeRate && (
         <div className="mb-4 p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-md">
           <p className="text-warning-800 dark:text-warning-200 text-sm font-medium">
-            ⚠️ No hay un tipo de cambio vigente. Configure uno en la pestaña "Tipo de Cambio".
+            ⚠️ No hay un tipo de cambio vigente. Configure uno en la pestaña "Tipo de Cambio" para agregar productos en USD.
           </p>
         </div>
       )}
@@ -1069,7 +1069,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={!currentExchangeRate} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md shadow-md transition-all disabled:shadow-none">Agregar Producto</button>
+          <button type="submit" disabled={currency === 'USD' && !currentExchangeRate} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md shadow-md transition-all disabled:shadow-none">Agregar Producto</button>
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
