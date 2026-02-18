@@ -520,9 +520,9 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 text-xs md:text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <button type="submit" disabled={isUpdatingRate} className="w-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg disabled:shadow-none text-xs md:text-sm">
-          {isUpdatingRate ? 'Actualizando...' : 'Actualizar Tipo de Cambio'}
-        </button>
+        <Button type="submit" variant="primary" fullWidth isLoading={isUpdatingRate} disabled={isUpdatingRate} className="text-xs md:text-sm">
+          Actualizar Tipo de Cambio
+        </Button>
       </form>
 
       <h4 className="font-bold text-base md:text-lg mb-2 md:mb-3">Historial de Tipos de Cambio</h4>
@@ -1079,7 +1079,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={(currency === 'USD' && !currentExchangeRate) || isAddingProduct} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md shadow-md transition-all disabled:shadow-none">{isAddingProduct ? 'Agregando...' : 'Agregar Producto'}</button>
+          <Button type="submit" variant="primary" isLoading={isAddingProduct} disabled={(currency === 'USD' && !currentExchangeRate) || isAddingProduct}>Agregar Producto</Button>
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
