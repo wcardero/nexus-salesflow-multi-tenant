@@ -476,16 +476,22 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
   const [newRate, setNewRate] = useState<string>('');
   const today = new Date();
   const [effectiveDate, setEffectiveDate] = useState<string>(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`); // Default to today
+  const [isUpdatingRate, setIsUpdatingRate] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const rate = parseFloat(newRate);
     if (isNaN(rate) || rate <= 0) {
       alert('Por favor, introduce un tipo de cambio válido y positivo.');
       return;
     }
-    onSetExchangeRate(rate, new Date(effectiveDate));
-    setNewRate('');
+    setIsUpdatingRate(true);
+    try {
+      await onSetExchangeRate(rate, new Date(effectiveDate));
+      setNewRate('');
+    } finally {
+      setIsUpdatingRate(false);
+    }
   };
 
   return (
@@ -514,8 +520,8 @@ const ExchangeRateView: React.FC<{ store: Store; onSetExchangeRate: (rate: numbe
             className="mt-1 block w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 text-xs md:text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <button type="submit" className="w-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg text-xs md:text-sm">
-          Actualizar Tipo de Cambio
+        <button type="submit" disabled={isUpdatingRate} className="w-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-all shadow-md hover:shadow-lg disabled:shadow-none text-xs md:text-sm">
+          {isUpdatingRate ? 'Actualizando...' : 'Actualizar Tipo de Cambio'}
         </button>
       </form>
 
@@ -787,6 +793,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [editingMargin, setEditingMargin] = useState('');
   const [editingCommission, setEditingCommission] = useState('');
   const [editingCurrency, setEditingCurrency] = useState<'USD' | 'MN'>('USD');
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
 
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const currentExchangeRate = getCurrentExchangeRate(store);
@@ -806,6 +813,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
+    setIsAddingProduct(true);
     const parsedMargin = parseFloat(margin) / 100;
     let priceMN: number;
     let gestorCommissionMN: number;
@@ -860,6 +868,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } catch (error: any) {
       console.error('Error creating product:', error);
       alert(`Error al crear el producto: ${error.message}`);
+    } finally {
+      setIsAddingProduct(false);
     }
   };
 
@@ -1069,7 +1079,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             step="0.1"
             className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
           />
-          <button type="submit" disabled={currency === 'USD' && !currentExchangeRate} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md shadow-md transition-all disabled:shadow-none">Agregar Producto</button>
+          <button type="submit" disabled={(currency === 'USD' && !currentExchangeRate) || isAddingProduct} className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md shadow-md transition-all disabled:shadow-none">{isAddingProduct ? 'Agregando...' : 'Agregar Producto'}</button>
         </form>
       <ul className="space-y-2">
         {storeProducts.map(p => {
