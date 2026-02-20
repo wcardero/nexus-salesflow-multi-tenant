@@ -48,15 +48,31 @@ interface PendingInventoryViewProps {
 const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInventory, productsById, onConfirm, onReject }) => {
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [isConfirming, setIsConfirming] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
 
-  const handleReject = (id: string) => {
+  const handleConfirm = async (id: string) => {
+    setIsConfirming(id);
+    try {
+      await onConfirm(id);
+    } finally {
+      setIsConfirming(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
     if (!rejectionReason.trim()) {
       alert('Por favor, ingresa una razón para rechazar.');
       return;
     }
-    onReject(id, rejectionReason);
-    setRejecting(null);
-    setRejectionReason('');
+    setIsRejecting(true);
+    try {
+      await onReject(id, rejectionReason);
+      setRejecting(null);
+      setRejectionReason('');
+    } finally {
+      setIsRejecting(false);
+    }
   };
 
   return (
@@ -92,7 +108,9 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                         <Button
                           variant="success"
                           size="xs"
-                          onClick={() => onConfirm(ai.id)}
+                          onClick={() => handleConfirm(ai.id)}
+                          isLoading={isConfirming === ai.id}
+                          disabled={isConfirming !== null}
                         >
                           Aceptar
                         </Button>
@@ -100,6 +118,7 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
                           variant="danger"
                           size="xs"
                           onClick={() => setRejecting(ai.id)}
+                          disabled={isConfirming !== null}
                         >
                           Rechazar
                         </Button>
@@ -126,13 +145,15 @@ const PendingInventoryView: React.FC<PendingInventoryViewProps> = ({ pendingInve
               <Button
                 variant="neutral"
                 onClick={() => { setRejecting(null); setRejectionReason(''); }}
+                disabled={isRejecting}
               >
                 Cancelar
               </Button>
               <Button
                 variant="danger"
                 onClick={() => handleReject(rejecting)}
-                disabled={!rejectionReason.trim()}
+                isLoading={isRejecting}
+                disabled={!rejectionReason.trim() || isRejecting}
               >
                 Confirmar Rechazo
               </Button>
@@ -161,6 +182,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<InventoryGroup | null>(null);
   const [isExecutingClosing, setIsExecutingClosing] = useState(false);
+  const [cleaningInventoryIds, setCleaningInventoryIds] = useState<string[]>([]);
 
   const handleOpenSellModal = (group: InventoryGroup) => {
     setSelectedGroup(group);
@@ -309,6 +331,7 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
       return;
     }
 
+    setCleaningInventoryIds(inventoryIds);
     try {
       for (const id of inventoryIds) {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/assigned-inventory/${id}/archive`, {
@@ -329,6 +352,8 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
     } catch (error) {
       console.error('Error cleaning inventory:', error);
       alert('Error al limpiar el inventario.');
+    } finally {
+      setCleaningInventoryIds([]);
     }
   };
 
@@ -360,13 +385,16 @@ const SalesView: React.FC<SalesViewProps> = ({ user, store, db, setDb, gestorSal
                         {group.quantity > 0 ? (
                           <Button variant="success" size="xs" onClick={() => handleOpenSellModal(group)}>Vender</Button>
                         ) : (
-                          <button 
+                          <Button 
+                            variant="neutral"
+                            size="xs"
                             onClick={() => handleCleanInventory(group.inventoryIds || [])}
-                            className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                            isLoading={cleaningInventoryIds.length > 0 && group.inventoryIds?.some(id => cleaningInventoryIds.includes(id))}
+                            disabled={cleaningInventoryIds.length > 0}
                             title="Limpiar inventario agotado"
                           >
                             <span className="material-symbols-outlined text-lg">delete</span>
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>

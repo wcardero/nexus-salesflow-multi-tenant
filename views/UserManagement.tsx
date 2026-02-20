@@ -21,6 +21,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordChangeUser, setPasswordChangeUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const currentUserId = JSON.parse(localStorage.getItem('user') || '{}').id;
 
   const handleCreateUser = async () => {
@@ -29,6 +33,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsCreatingUser(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
@@ -61,6 +66,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error creating user:', error);
       alert(`Error al crear el usuario: ${error.message}`);
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -70,6 +77,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsUpdatingUser(true);
     try {
       const requestBody: any = {
         name: editingUserName.trim()
@@ -101,6 +109,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error updating user:', error);
       alert(`Error al actualizar el usuario: ${error.message}`);
+    } finally {
+      setIsUpdatingUser(false);
     }
   };
 
@@ -123,6 +133,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsDeletingUser(userId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${userId}`, {
         method: 'DELETE',
@@ -142,6 +153,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error deleting user:', error);
       alert(`Error al eliminar el usuario: ${error.message}`);
+    } finally {
+      setIsDeletingUser(null);
     }
   };
 
@@ -175,6 +188,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsChangingPassword(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${passwordChangeUser.id}/password`, {
         method: 'PUT',
@@ -199,6 +213,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error changing password:', error);
       alert(`Error al actualizar la contraseña: ${error.message}`);
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -266,7 +282,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
           </div>
         </div>
         <div className="flex justify-end">
-          <Button variant="primary" onClick={handleCreateUser}>
+          <Button variant="primary" onClick={handleCreateUser} isLoading={isCreatingUser} disabled={isCreatingUser}>
             Crear Usuario
           </Button>
         </div>
@@ -326,10 +342,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
             )}
           </div>
           <div className="flex gap-2 justify-end">
-            <Button variant="primary" onClick={handleUpdateUser}>
+            <Button variant="primary" onClick={handleUpdateUser} isLoading={isUpdatingUser} disabled={isUpdatingUser}>
               Guardar Cambios
             </Button>
-            <Button variant="neutral" onClick={cancelEditing}>
+            <Button variant="neutral" onClick={cancelEditing} disabled={isUpdatingUser}>
               Cancelar
             </Button>
           </div>
@@ -361,25 +377,32 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{user.role}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{store?.name || 'N/A'}</td>
                     <td className="px-4 py-3 flex gap-2">
-                      <button 
+                      <Button
+                        variant="neutral"
+                        size="xs"
                         onClick={() => startEditing(user)}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                        disabled={isDeletingUser !== null}
                       >
                         Editar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="success"
+                        size="xs"
                         onClick={() => openPasswordChangeModal(user)}
-                        className="text-green-600 hover:text-green-800 font-medium text-sm"
+                        disabled={isDeletingUser !== null}
                       >
-                        Cambiar Contraseña
-                      </button>
+                        Contraseña
+                      </Button>
                       {user.id !== currentUserId && (
-                        <button
+                        <Button
+                          variant="danger"
+                          size="xs"
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-800 font-medium text-sm"
+                          isLoading={isDeletingUser === user.id}
+                          disabled={isDeletingUser !== null}
                         >
                           Eliminar
-                        </button>
+                        </Button>
                       )}
                     </td>
                   </tr>
@@ -410,10 +433,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ db, refreshDb }) => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="neutral" onClick={closePasswordModal}>
+              <Button variant="neutral" onClick={closePasswordModal} disabled={isChangingPassword}>
                 Cancelar
               </Button>
-              <Button variant="primary" onClick={handleChangePassword}>
+              <Button variant="primary" onClick={handleChangePassword} isLoading={isChangingPassword} disabled={isChangingPassword}>
                 Guardar Contraseña
               </Button>
             </div>

@@ -16,6 +16,10 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordChangeManager, setPasswordChangeManager] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [isCreatingManager, setIsCreatingManager] = useState(false);
+  const [isUpdatingManager, setIsUpdatingManager] = useState(false);
+  const [isDeletingManager, setIsDeletingManager] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const [managers, setManagers] = useState<User[]>([]);
 
@@ -34,6 +38,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       return;
     }
 
+    setIsCreatingManager(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST',
@@ -61,6 +66,8 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     } catch (error: any) {
       console.error('Error creating manager:', error);
       alert('Error al crear el manager: ' + error.message);
+    } finally {
+      setIsCreatingManager(false);
     }
   };
 
@@ -70,6 +77,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       return;
     }
 
+    setIsUpdatingManager(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingManager.id}`, {
         method: 'PUT',
@@ -94,6 +102,8 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     } catch (error: any) {
       console.error('Error updating manager:', error);
       alert('Error al actualizar el manager: ' + error.message);
+    } finally {
+      setIsUpdatingManager(false);
     }
   };
 
@@ -111,6 +121,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       return;
     }
 
+    setIsDeletingManager(managerId);
     try {
       const url = `${import.meta.env.VITE_API_URL}/api/users/${managerId}`;
       const response = await fetch(url, {
@@ -130,6 +141,8 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     } catch (error: any) {
       console.error('Error deleting manager:', error);
       alert('Error al eliminar el manager: ' + error.message);
+    } finally {
+      setIsDeletingManager(null);
     }
   };
 
@@ -139,6 +152,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
       return;
     }
 
+    setIsChangingPassword(true);
     try {
       const url = `${import.meta.env.VITE_API_URL}/api/users/${passwordChangeManager.id}/password`;
 
@@ -167,6 +181,8 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
     } catch (error: any) {
       console.error('Error changing password:', error);
       alert('Error al cambiar contraseña: ' + error.message);
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -213,7 +229,7 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
             onChange={e => setNewManagerPassword(e.target.value)}
             className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded'
           />
-          <Button variant="primary" onClick={handleCreateManager} size="md">
+          <Button variant="primary" onClick={handleCreateManager} size="md" isLoading={isCreatingManager} disabled={isCreatingManager}>
             Crear Manager
           </Button>
         </div>
@@ -247,22 +263,22 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
                   <td className='px-4 py-3 text-center'>
                     {editingManager?.id === manager.id ? (
                       <div className='flex gap-2 justify-center'>
-                        <Button variant="success" onClick={handleUpdateManager} size="xs">
+                        <Button variant="success" onClick={handleUpdateManager} size="xs" isLoading={isUpdatingManager} disabled={isUpdatingManager}>
                           Guardar
                         </Button>
-                        <Button variant="neutral" onClick={cancelEditing} size="xs">
+                        <Button variant="neutral" onClick={cancelEditing} size="xs" disabled={isUpdatingManager}>
                           Cancelar
                         </Button>
                       </div>
                     ) : (
                       <div className='flex gap-2 justify-center'>
-                        <Button variant="primary" onClick={() => startEditing(manager)} size="xs">
+                        <Button variant="primary" onClick={() => startEditing(manager)} size="xs" disabled={isDeletingManager !== null}>
                           Editar
                         </Button>
-                        <Button variant="warning" onClick={() => openPasswordModal(manager)} size="xs">
+                        <Button variant="warning" onClick={() => openPasswordModal(manager)} size="xs" disabled={isDeletingManager !== null}>
                           Contraseña
                         </Button>
-                        <Button variant="danger" onClick={() => handleDeleteManager(manager.id)} size="xs">
+                        <Button variant="danger" onClick={() => handleDeleteManager(manager.id)} size="xs" isLoading={isDeletingManager === manager.id} disabled={isDeletingManager !== null}>
                           Eliminar
                         </Button>
                       </div>
@@ -292,10 +308,10 @@ const ManagerManagement: React.FC<ManagerManagementProps> = ({ db, refreshDb, cu
               />
             </div>
             <div className='flex gap-4'>
-              <Button variant="primary" onClick={handleChangePassword} fullWidth>
+              <Button variant="primary" onClick={handleChangePassword} fullWidth isLoading={isChangingPassword} disabled={isChangingPassword}>
                 Cambiar
               </Button>
-              <Button variant="neutral" onClick={closePasswordModal} fullWidth>
+              <Button variant="neutral" onClick={closePasswordModal} fullWidth disabled={isChangingPassword}>
                 Cancelar
               </Button>
             </div>
