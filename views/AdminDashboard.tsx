@@ -326,28 +326,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ db, refreshDb }) => {
               {/* Add Store */}
               <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
                  <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Añadir Nueva Tienda</h4>
-                <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <Button onClick={handleCreateStore} isLoading={isCreatingStore} fullWidth variant="primary" size="sm">Añadir Tienda</Button>
+                <input type="text" placeholder="Nombre de la tienda" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <Button onClick={handleCreateStore} isLoading={isCreatingStore} fullWidth variant="primary" size="md">Añadir Tienda</Button>
              </div>
               {/* Create Director */}
               <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
                   <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Director</h4>
-                <input type="text" placeholder="Nombre del Director" value={newDirectorName} onChange={e => setNewDirectorName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <input type="password" placeholder="Contraseña" value={newDirectorPassword} onChange={e => setNewDirectorPassword(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
+                <input type="text" placeholder="Nombre del Director" value={newDirectorName} onChange={e => setNewDirectorName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <input type="password" placeholder="Contraseña" value={newDirectorPassword} onChange={e => setNewDirectorPassword(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
-                <Button onClick={handleCreateDirector} isLoading={isCreatingDirector} fullWidth variant="primary" size="sm">Crear Director</Button>
+                <Button onClick={handleCreateDirector} isLoading={isCreatingDirector} fullWidth variant="primary" size="md">Crear Director</Button>
               </div>
                {/* Create Manager */}
                <div className="flex flex-col items-start gap-2 md:gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
                   <h4 className="text-slate-800 dark:text-slate-200 text-sm font-bold">Crear Manager</h4>
-                <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <input type="password" placeholder="Contraseña" value={newManagerPassword} onChange={e => setNewManagerPassword(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
-                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
+                <input type="text" placeholder="Nombre del Manager" value={newManagerName} onChange={e => setNewManagerName(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <input type="password" placeholder="Contraseña" value={newManagerPassword} onChange={e => setNewManagerPassword(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm"/>
+                <select value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm">
                   {db.stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
                 </select>
-                <Button onClick={handleCreateManager} isLoading={isCreatingManager} fullWidth variant="primary" size="sm">Crear Manager</Button>
+                <Button onClick={handleCreateManager} isLoading={isCreatingManager} fullWidth variant="primary" size="md">Crear Manager</Button>
               </div>
           </div>
         </div>

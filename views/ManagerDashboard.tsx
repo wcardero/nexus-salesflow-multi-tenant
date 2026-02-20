@@ -699,7 +699,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div>
@@ -709,7 +709,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   value={editingPassword}
                   onChange={e => setEditingPassword(e.target.value)}
                   placeholder="Dejar vacío para no cambiar"
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -731,16 +731,16 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Nombre de usuario del nuevo gestor"
-          className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
+          className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2 text-sm"
         />
         <input
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
           placeholder="Contraseña"
-          className="w-full bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2"
+          className="w-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm p-2 text-sm"
         />
-        <Button type="submit" variant="primary" size="sm" isLoading={isAddingGestor} disabled={isAddingGestor} className="md:col-span-2">Agregar</Button>
+        <Button type="submit" variant="primary" size="md" isLoading={isAddingGestor} disabled={isAddingGestor} className="md:col-span-2">Agregar</Button>
       </form>
       {/* List */}
       <div className="space-y-2">
@@ -994,7 +994,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <select
                   value={editingCurrency}
                   onChange={e => setEditingCurrency(e.target.value as 'USD' | 'MN')}
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 >
                   <option value="USD">USD</option>
                   <option value="MN">MN</option>
@@ -1005,7 +1005,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div>
@@ -1017,7 +1017,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   onChange={e => setEditingCost(e.target.value)}
                   type="number"
                   placeholder={`Costo (${editingCurrency})`}
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div>
@@ -1026,7 +1026,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   value={editingMargin}
                   onChange={e => setEditingMargin(e.target.value)}
                   type="number"
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div>
@@ -1041,7 +1041,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                   max="100"
                   step="0.1"
                   placeholder="Comisión gestor % (default: 0%)"
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -1058,17 +1058,17 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       )}
 
         <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6 items-end">
-          <select value={currency} onChange={e => setCurrency(e.target.value as 'USD' | 'MN')} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600">
+          <select value={currency} onChange={e => setCurrency(e.target.value as 'USD' | 'MN')} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm">
             <option value="USD">USD</option>
             <option value="MN">MN</option>
           </select>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"/>
           {currency === 'USD' ? (
-            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (USD)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"/>
           ) : (
-            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (MN)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+            <input value={cost} onChange={e => setCost(e.target.value)} placeholder="Costo (MN)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"/>
           )}
-          <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
+          <input value={margin} onChange={e => setMargin(e.target.value)} placeholder="Margen (%)" type="number" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"/>
           <input
             value={commission}
             onChange={e => setCommission(e.target.value)}
@@ -1077,7 +1077,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
             min="0"
             max="100"
             step="0.1"
-            className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+            className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
           />
           <Button type="submit" variant="primary" isLoading={isAddingProduct} disabled={(currency === 'USD' && !currentExchangeRate) || isAddingProduct}>Agregar Producto</Button>
         </form>
@@ -1274,7 +1274,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                 <input
                   value={db.products.find(p => p.id === editingStock.productId)?.name || ''}
                   disabled
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600 opacity-60"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 opacity-60 text-sm"
                 />
               </div>
               <div>
@@ -1284,7 +1284,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                   onChange={e => setEditingQuantity(parseInt(e.target.value) || 0)}
                   type="number"
                   min="0"
-                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+                  className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -1304,7 +1304,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
         <select
           value={productId}
           onChange={e => setProductId(e.target.value)}
-          className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+          className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
         >
           <option value="">Seleccionar producto</option>
           {storeProducts.map(p => (
@@ -1317,7 +1317,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
           type="number"
           min="0"
           placeholder="Cantidad"
-          className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"
+          className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
         />
         <button type="submit" className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Actualizar Stock</button>
       </form>
@@ -1476,10 +1476,10 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
     <div>
       <h3 className="text-base md:text-lg font-bold mb-4">Asignar Inventario a Gestores</h3>
       <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6 items-end">
-        <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
-        <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
-        <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border-slate-300 dark:border-slate-600"/>
-        <Button type="submit" variant="primary" size="sm" isLoading={isAssigning} disabled={isAssigning}>Asignar</Button>
+        <select value={productId} onChange={e => setProductId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"><option value="">Seleccionar producto</option>{storeProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
+        <select value={gestorId} onChange={e => setGestorId(e.target.value)} className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"><option value="">Seleccionar gestor</option>{storeGestores.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
+        <input value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} type="number" min="1" placeholder="Cantidad" className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"/>
+        <Button type="submit" variant="primary" size="md" isLoading={isAssigning} disabled={isAssigning}>Asignar</Button>
        </form>
        {/* Pending inventory list */}
        <h4 className="font-bold mt-4 md:mt-6 mb-2 text-sm md:text-base">Inventario Pendiente de Aceptación</h4>
