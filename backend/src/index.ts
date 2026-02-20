@@ -16,14 +16,8 @@ import directorRoutes from './routes/director.routes';
 import productsRoutes from './routes/products.routes';
 import auditRoutes from './routes/audit.routes';
 
-runMigrations().then(() => {
-  console.log('Database migrations check completed');
-}).catch(err => {
-  console.error('Failed to run migrations:', err);
-});
-
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || '3001', 10);
 
 app.use(cors());
 app.use(express.json());
@@ -51,8 +45,19 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    await runMigrations();
+    console.log('Database migrations check completed');
+  } catch (err) {
+    console.error('Failed to run migrations:', err);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer();
 
 export default app;

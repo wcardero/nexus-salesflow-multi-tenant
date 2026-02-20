@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_BASE_URL = (window as any).process?.env?.API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface UseApiReturn {
   get: (endpoint: string) => Promise<any>;
