@@ -11,6 +11,9 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [newStoreName, setNewStoreName] = useState('');
   const [editingStoreName, setEditingStoreName] = useState('');
+  const [isCreatingStore, setIsCreatingStore] = useState(false);
+  const [isUpdatingStore, setIsUpdatingStore] = useState(false);
+  const [isDeletingStore, setIsDeletingStore] = useState<string | null>(null);
 
   const handleCreateStore = async () => {
     if (!newStoreName.trim()) {
@@ -18,6 +21,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsCreatingStore(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stores`, {
         method: 'POST',
@@ -42,6 +46,8 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error creating store:', error);
       alert(`Error al crear la tienda: ${error.message}`);
+    } finally {
+      setIsCreatingStore(false);
     }
   };
 
@@ -51,6 +57,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsUpdatingStore(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stores/${editingStore.id}`, {
         method: 'PUT',
@@ -76,6 +83,8 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error updating store:', error);
       alert(`Error al actualizar la tienda: ${error.message}`);
+    } finally {
+      setIsUpdatingStore(false);
     }
   };
 
@@ -84,6 +93,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
       return;
     }
 
+    setIsDeletingStore(storeId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stores/${storeId}`, {
         method: 'DELETE',
@@ -102,6 +112,8 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
     } catch (error: any) {
       console.error('Error deleting store:', error);
       alert(`Error al eliminar la tienda: ${error.message}`);
+    } finally {
+      setIsDeletingStore(null);
     }
   };
 
@@ -140,7 +152,7 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
             onChange={e => setNewStoreName(e.target.value)} 
             className="flex-1 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
           />
-          <Button variant="primary" onClick={handleCreateStore} size="md">
+          <Button variant="primary" onClick={handleCreateStore} size="md" isLoading={isCreatingStore} disabled={isCreatingStore}>
             Crear Tienda
           </Button>
         </div>
@@ -162,10 +174,10 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
               className="flex-1 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm"
             />
             <div className="flex gap-2">
-              <Button variant="primary" onClick={handleUpdateStore} size="md">
+              <Button variant="primary" onClick={handleUpdateStore} size="md" isLoading={isUpdatingStore} disabled={isUpdatingStore}>
                 Guardar Cambios
               </Button>
-              <Button variant="neutral" onClick={cancelEditing} size="md">
+              <Button variant="neutral" onClick={cancelEditing} size="md" disabled={isUpdatingStore}>
                 Cancelar
               </Button>
             </div>
@@ -199,18 +211,23 @@ const StoreManagement: React.FC<StoreManagementProps> = ({ db, refreshDb }) => {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{director?.name || 'Sin director'}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{managers.length} managers</td>
                     <td className="px-4 py-3 flex gap-2">
-                      <button 
+                      <Button
+                        variant="neutral"
+                        size="xs"
                         onClick={() => startEditing(store)}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                        disabled={isDeletingStore !== null}
                       >
                         Editar
-                      </button>
-                      <button 
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="xs"
                         onClick={() => handleDeleteStore(store.id)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        isLoading={isDeletingStore === store.id}
+                        disabled={isDeletingStore !== null}
                       >
                         Eliminar
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );

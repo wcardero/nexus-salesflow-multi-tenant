@@ -196,6 +196,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             size="lg"
             fullWidth
             isLoading={loading}
+            disabled={loading}
           >
             {buttonText}
           </Button>

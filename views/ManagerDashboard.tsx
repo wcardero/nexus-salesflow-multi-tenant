@@ -560,6 +560,8 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [editingName, setEditingName] = useState('');
   const [editingPassword, setEditingPassword] = useState('');
   const [isAddingGestor, setIsAddingGestor] = useState(false);
+  const [isUpdatingGestor, setIsUpdatingGestor] = useState(false);
+  const [isDeletingGestor, setIsDeletingGestor] = useState<string | null>(null);
   const storeGestores = db.users.filter(u => u.role === Role.GESTOR && u.storeId === store.id);
 
   const isGestorHasInventory = (gestorId: string): boolean => {
@@ -619,6 +621,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     e.preventDefault();
     if (!editingGestor || !editingName.trim()) return;
 
+    setIsUpdatingGestor(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingGestor.id}`, {
         method: 'PUT',
@@ -644,6 +647,8 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } catch (error: any) {
       console.error('Error updating gestor:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsUpdatingGestor(false);
     }
   };
 
@@ -657,6 +662,7 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
+    setIsDeletingGestor(gestorId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${gestorId}`, {
         method: 'DELETE',
@@ -675,6 +681,8 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } catch (error: any) {
       console.error('Error deleting gestor:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsDeletingGestor(null);
     }
   };
 
@@ -713,12 +721,12 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
+                <Button type="button" variant="neutral" onClick={cancelEdit} disabled={isUpdatingGestor}>
                   Cancelar
-                </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all">
+                </Button>
+                <Button type="submit" variant="primary" isLoading={isUpdatingGestor} disabled={isUpdatingGestor}>
                   Guardar Cambios
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -757,20 +765,23 @@ const GestoresView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 )}
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="neutral"
+                  size="xs"
                   onClick={() => handleEdit(g)}
-                  disabled={hasInventory}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                  disabled={hasInventory || isDeletingGestor !== null}
                 >
                   Editar
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
+                  size="xs"
                   onClick={() => handleDelete(g.id)}
-                  disabled={hasInventory}
-                  className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                  isLoading={isDeletingGestor === g.id}
+                  disabled={hasInventory || isDeletingGestor !== null}
                 >
                   Eliminar
-                </button>
+                </Button>
               </div>
             </li>
           );
@@ -794,6 +805,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
   const [editingCommission, setEditingCommission] = useState('');
   const [editingCurrency, setEditingCurrency] = useState<'USD' | 'MN'>('USD');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isUpdatingProduct, setIsUpdatingProduct] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState<string | null>(null);
 
   const storeProducts = db.products.filter(p => p.storeId === store.id);
   const currentExchangeRate = getCurrentExchangeRate(store);
@@ -892,6 +905,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     e.preventDefault();
     if (!editingProduct || !editingName.trim() || !editingCost || !editingMargin) return;
 
+    setIsUpdatingProduct(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${editingProduct.id}`, {
         method: 'PUT',
@@ -925,6 +939,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } catch (error: any) {
       console.error('Error updating product:', error);
       alert(`Error al actualizar el producto: ${error.message}`);
+    } finally {
+      setIsUpdatingProduct(false);
     }
   };
 
@@ -938,6 +954,7 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
       return;
     }
 
+    setIsDeletingProduct(productId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${productId}`, {
         method: 'DELETE',
@@ -956,6 +973,8 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
     } catch (error: any) {
       console.error('Error deleting product:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsDeletingProduct(null);
     }
   };
 
@@ -1045,12 +1064,12 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
+                <Button type="button" variant="neutral" onClick={cancelEdit} disabled={isUpdatingProduct}>
                   Cancelar
-                </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all">
+                </Button>
+                <Button type="submit" variant="primary" isLoading={isUpdatingProduct} disabled={isUpdatingProduct}>
                   Guardar Cambios
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -1115,20 +1134,23 @@ const ProductsView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store
                     </div>
                   )}
                   <div className="flex gap-2 justify-end mt-2">
-                    <button
+                    <Button
+                      variant="neutral"
+                      size="xs"
                       onClick={() => handleEdit(p)}
-                      disabled={assigned}
-                      className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      disabled={assigned || isDeletingProduct !== null}
                     >
                       Editar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="xs"
                       onClick={() => handleDelete(p.id)}
-                      disabled={assigned}
-                      className="text-red-600 hover:text-red-800 font-medium text-sm disabled:text-slate-400 disabled:cursor-not-allowed"
+                      isLoading={isDeletingProduct === p.id}
+                      disabled={assigned || isDeletingProduct !== null}
                     >
                       Eliminar
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1146,12 +1168,16 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
   const [quantity, setQuantity] = useState(0);
   const [editingStock, setEditingStock] = useState<any | null>(null);
   const [editingQuantity, setEditingQuantity] = useState(0);
+  const [isSettingStock, setIsSettingStock] = useState(false);
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false);
+  const [isDeletingStock, setIsDeletingStock] = useState<string | null>(null);
   const storeProducts = db.products.filter(p => p.storeId === store.id);
 
   const handleSetStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productId || quantity < 0) return;
 
+    setIsSettingStock(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/product-stock`, {
         method: 'POST',
@@ -1177,6 +1203,8 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     } catch (error: any) {
       console.error('Error setting stock:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsSettingStock(false);
     }
   };
 
@@ -1189,6 +1217,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     e.preventDefault();
     if (!editingStock || editingQuantity < 0) return;
 
+    setIsUpdatingStock(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/product-stock`, {
         method: 'POST',
@@ -1215,6 +1244,8 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     } catch (error: any) {
       console.error('Error updating stock:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsUpdatingStock(false);
     }
   };
 
@@ -1223,6 +1254,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
       return;
     }
 
+    setIsDeletingStock(stockId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/product-stock/${stockId}?productId=${productId}&storeId=${store.id}`, {
         method: 'DELETE',
@@ -1241,6 +1273,8 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
     } catch (error: any) {
       console.error('Error deleting stock:', error);
       alert(`Error: ${error.message}`);
+    } finally {
+      setIsDeletingStock(null);
     }
   };
 
@@ -1288,12 +1322,12 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={cancelEditStock} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">
+                <Button type="button" variant="neutral" onClick={cancelEditStock} disabled={isUpdatingStock}>
                   Cancelar
-                </button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 rounded-md shadow-md transition-all">
+                </Button>
+                <Button type="submit" variant="primary" isLoading={isUpdatingStock} disabled={isUpdatingStock}>
                   Guardar
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -1319,7 +1353,7 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
           placeholder="Cantidad"
           className="w-full bg-slate-200 dark:bg-slate-700 p-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm"
         />
-        <button type="submit" className="bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-all">Actualizar Stock</button>
+        <Button type="submit" variant="primary" isLoading={isSettingStock} disabled={isSettingStock}>Actualizar Stock</Button>
       </form>
 
       {/* Current stock list */}
@@ -1354,18 +1388,23 @@ const StockView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'store' |
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
                     <div className="flex gap-2">
-                      <button
+                      <Button
+                        variant="neutral"
+                        size="xs"
                         onClick={() => handleEditStock(stock)}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                        disabled={isDeletingStock !== null}
                       >
                         Editar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="xs"
                         onClick={() => handleDeleteStock(stock.id, stock.productId)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        isLoading={isDeletingStock === stock.id}
+                        disabled={isDeletingStock !== null}
                       >
                         Eliminar
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -1565,6 +1604,7 @@ const InventoryView: React.FC<Pick<ManagerDashboardProps, 'db' | 'setDb' | 'stor
 // --- AUDIT LOGS VIEW ---
 const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product[], refreshDb: () => Promise<void>}> = ({ conflicts, products, refreshDb }) => {
   const productsById = Object.fromEntries(products.map(p => [p.id, p]));
+  const [resolvingConflictId, setResolvingConflictId] = useState<string | null>(null);
 
   const handleResolve = async (conflictId: string, action: 'resolve' | 'cancel') => {
     let newQuantity = 0;
@@ -1578,6 +1618,7 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
       }
     }
 
+    setResolvingConflictId(conflictId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory-conflicts/${conflictId}/resolve`, {
         method: 'POST',
@@ -1598,6 +1639,8 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
     } catch (error) {
       console.error('Error resolving conflict:', error);
       alert('Error al resolver el conflicto.');
+    } finally {
+      setResolvingConflictId(null);
     }
   };
 
@@ -1637,18 +1680,24 @@ const ConflictsView: React.FC<{conflicts: InventoryConflict[], products: Product
                 <td className="px-6 py-4 text-center whitespace-nowrap">
                   {conflict.status === 'Pending' ? (
                     <div className="flex gap-2 justify-center">
-                      <button
+                      <Button
+                        variant="primary"
+                        size="xs"
                         onClick={() => handleResolve(conflict.id, 'resolve')}
-                        className="bg-primary-600 hover:bg-primary-700 text-white text-xs px-3 py-1 rounded shadow-sm"
+                        isLoading={resolvingConflictId === conflict.id}
+                        disabled={resolvingConflictId !== null}
                       >
                         Reasignar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="xs"
                         onClick={() => handleResolve(conflict.id, 'cancel')}
-                        className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow-sm"
+                        isLoading={resolvingConflictId === conflict.id}
+                        disabled={resolvingConflictId !== null}
                       >
                         Cancelar
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <span className="text-green-600 dark:text-green-400 text-xs font-bold uppercase">Resuelto</span>
