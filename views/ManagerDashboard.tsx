@@ -19,7 +19,7 @@ interface ManagerDashboardProps {
   currentView?: string;
 }
 
-type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'conflicts' | 'reporte-ventas' | 'reporte-cierres';
+type Tabs = 'closings' | 'inventory' | 'products' | 'gestores' | 'rate' | 'reports' | 'stock' | 'conflicts' | 'reporte-ventas' | 'reporte-cierres' | 'stock-gestores';
 
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, setDb, refreshDb, currentView }) => {
   const [activeTab, setActiveTab] = useState<Tabs>('closings');
@@ -120,6 +120,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
          return <ConflictsView conflicts={db.inventoryConflicts} products={db.products} refreshDb={refreshDb} />;
         case 'reporte-cierres':
          return <ClosingsReportView closings={storeClosings} users={db.users} products={storeProducts} assignedInventory={db.assignedInventory} />;
+        case 'stock-gestores':
+         return <StockGestoresView />;
         default:
         return null;
     }
@@ -139,6 +141,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ user, store, db, se
             <TabButton name="Productos" tab="products" activeTab={activeTab} onClick={setActiveTab} />
             <TabButton name="Gestores" tab="gestores" activeTab={activeTab} onClick={setActiveTab} />
             <TabButton name="Tipo de Cambio" tab="rate" activeTab={activeTab} onClick={setActiveTab} />
+            <TabButton name="Stock Gestores" tab="stock-gestores" activeTab={activeTab} onClick={setActiveTab} />
           </nav>
         </div>
       )}
@@ -2155,6 +2158,290 @@ const ClosingsReportView: React.FC<{
               </table>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- STOCK GESTORES VIEW ---
+interface GestorOption {
+  id: string;
+  name: string;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+}
+
+interface StockData {
+  gestorId: string;
+  gestorName: string;
+  productId: string;
+  productName: string;
+  asignacionHistorica: number;
+  ventasCerradas: number;
+  pendiente: number;
+}
+
+const StockGestoresView: React.FC = () => {
+  const [selectedGestor, setSelectedGestor] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [gestores, setGestores] = useState<GestorOption[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [stockData, setStockData] = useState<StockData | null>(null);
+  const [isLoadingGestores, setIsLoadingGestores] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingStock, setIsLoadingStock] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load gestores on mount
+  useEffect(() => {
+    const fetchGestores = async () => {
+      setIsLoadingGestores(true);
+      setError(null);
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/manager/gestores`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) throw new Error('Error al cargar gestores');
+        const data = await response.json();
+        setGestores(data);
+      } catch (err) {
+        console.error('Error fetching gestores:', err);
+        setError('No se pudieron cargar los gestores');
+      } finally {
+        setIsLoadingGestores(false);
+      }
+    };
+    fetchGestores();
+  }, []);
+
+  // Load products when gestor changes
+  useEffect(() => {
+    if (!selectedGestor) {
+      setProducts([]);
+      setSelectedProduct('');
+      setStockData(null);
+      return;
+    }
+
+    const fetchProducts = async () => {
+      setIsLoadingProducts(true);
+      setError(null);
+      setStockData(null);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/manager/gestor-products?gestorId=${selectedGestor}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        if (!response.ok) throw new Error('Error al cargar productos');
+        const data = await response.json();
+        setProducts(data);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('No se pudieron cargar los productos');
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+    fetchProducts();
+  }, [selectedGestor]);
+
+  // Load stock data when both gestor and product are selected
+  useEffect(() => {
+    if (!selectedGestor || !selectedProduct) {
+      setStockData(null);
+      return;
+    }
+
+    const fetchStockData = async () => {
+      setIsLoadingStock(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/manager/stock-gestores?gestorId=${selectedGestor}&productId=${selectedProduct}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        if (!response.ok) throw new Error('Error al cargar stock');
+        const data = await response.json();
+        setStockData(data);
+      } catch (err) {
+        console.error('Error fetching stock data:', err);
+        setError('No se pudo cargar la informacion de stock');
+      } finally {
+        setIsLoadingStock(false);
+      }
+    };
+    fetchStockData();
+  }, [selectedGestor, selectedProduct]);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+        Stock por Gestor
+      </h2>
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        Consulta el inventario pendiente de cada gestor. Selecciona un gestor y luego un producto para ver el detalle.
+      </p>
+
+      {/* Selectores en cascada */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Selector de Gestor */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Gestor
+          </label>
+          <select
+            value={selectedGestor}
+            onChange={(e) => {
+              setSelectedGestor(e.target.value);
+              setSelectedProduct('');
+              setStockData(null);
+            }}
+            disabled={isLoadingGestores}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-700 dark:text-white disabled:opacity-50"
+          >
+            <option value="">Selecciona un gestor...</option>
+            {gestores.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+          {isLoadingGestores && (
+            <p className="mt-1 text-sm text-slate-500">Cargando gestores...</p>
+          )}
+        </div>
+
+        {/* Selector de Producto */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Producto
+          </label>
+          <select
+            value={selectedProduct}
+            onChange={(e) => setSelectedProduct(e.target.value)}
+            disabled={!selectedGestor || isLoadingProducts}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">
+              {!selectedGestor ? 'Primero selecciona un gestor...' : 'Selecciona un producto...'}
+            </option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          {isLoadingProducts && (
+            <p className="mt-1 text-sm text-slate-500">Cargando productos...</p>
+          )}
+        </div>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
+      {/* Loading indicator */}
+      {isLoadingStock && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <span className="ml-3 text-slate-600 dark:text-slate-400">Cargando informacion de stock...</span>
+        </div>
+      )}
+
+      {/* Results table */}
+      {stockData && !isLoadingStock && (
+        <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 border-b border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white">
+              Resultado
+            </h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Informacion de stock para {stockData.gestorName} - {stockData.productName}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
+                    Gestor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
+                    Producto
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
+                    Asignacion Historica
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
+                    Ventas Cerradas
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
+                    Pendiente
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
+                    {stockData.gestorName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
+                    {stockData.productName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white text-right">
+                    {stockData.asignacionHistorica}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white text-right">
+                    {stockData.ventasCerradas}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-right">
+                    <span className={
+                      stockData.pendiente > 0 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : stockData.pendiente < 0 
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-slate-900 dark:text-white'
+                    }>
+                      {stockData.pendiente}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-4 sm:px-6 bg-slate-50 dark:bg-slate-700">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              <strong>Formula:</strong> Pendiente = Asignacion Historica - Ventas Cerradas
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
+              Solo se consideran asignaciones confirmadas y cierres completados (dinero recibido).
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* No data message */}
+      {selectedGestor && selectedProduct && !stockData && !isLoadingStock && !error && (
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+          No hay datos disponibles para mostrar.
         </div>
       )}
     </div>
