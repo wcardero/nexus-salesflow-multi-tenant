@@ -1,34 +1,40 @@
 # Multi-stage para producción
 FROM node:20-alpine AS builder
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+RUN corepack enable
 
-COPY . .
-RUN npm run build
+WORKDIR /app
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY backend/package.json ./backend/
+
+RUN pnpm install --frozen-lockfile
+
+COPY backend/ ./backend/
+
+WORKDIR /app/backend
+RUN pnpm build
 
 # Imagen final ligera
 FROM node:20-alpine AS production
 
+RUN corepack enable
+
 WORKDIR /app
 
-# Instalar solo dependencias necesarias para runtime
 RUN apk add --no-cache dumb-init bash postgresql-client
 
-# Copiar solo dependencias de producción
-COPY package*.json ./
-RUN npm ci --only=production
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY backend/package.json ./backend/
 
-# Copiar código compilado
-COPY --from=builder /app/dist ./dist
+RUN pnpm install --frozen-lockfile --prod
 
-# Copiar archivos necesarios para inicialización de BD
-COPY --from=builder /app/src/init-db.ts ./init-db.ts
-COPY --from=builder /app/migrations ./migrations
-COPY --from=builder /app/db.sql ./db.sql
+COPY --from=builder /app/backend/dist ./dist
 
-# Crear usuario no-root para seguridad
+COPY --from=builder /app/backend/src/init-db.ts ./init-db.ts
+COPY --from=builder /app/backend/migrations ./migrations
+COPY --from=builder /app/backend/db.sql ./db.sql
+
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nexus -u 1001
 
@@ -36,6 +42,5 @@ USER nexus
 
 EXPOSE 3001
 
-# Usar dumb-init para manejar señales correctamente
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/index.js"]

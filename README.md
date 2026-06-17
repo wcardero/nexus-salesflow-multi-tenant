@@ -133,29 +133,28 @@ Nexus SalesFlow es una plataforma completa para gestionar ventas en múltiples t
 ## 🏗️ Arquitectura
 
 ```
-nexus-salesflow-multi-tenant/
-├── frontend/                 # React + Vite + Tailwind
-│   ├── views/               # Componentes de vista por rol
-│   │   ├── Login.tsx
-│   │   ├── AdminDashboard.tsx
-│   │   ├── DirectorDashboard.tsx
-│   │   ├── ManagerDashboard.tsx
-│   │   └── GestorDashboard.tsx
-│   ├── components/          # Componentes reutilizables
-│   │   ├── Layout.tsx
-│   │   ├── SellModal.tsx
-│   │   ├── ExportButton.tsx
-│   │   ├── DateRangeSelector.tsx
-│   │   └── ReportCard.tsx
-│   ├── hooks/               # Custom hooks
-│   │   └── useApi.ts       # Hook centralizado de API
-│   ├── App.tsx              # Componente principal
-│   ├── types.ts             # Definiciones TypeScript
-│   ├── utils.ts             # Utilidades de cálculo
-│   ├── exportUtils.ts       # Exportación de reportes
-│   └── dateUtils.ts         # Utilidades de fecha
+nexus-salesflow-multi-tenant/         # Raíz del monorepo
+├── views/               # Componentes de vista por rol (frontend)
+│   ├── Login.tsx
+│   ├── AdminDashboard.tsx
+│   ├── DirectorDashboard.tsx
+│   ├── ManagerDashboard.tsx
+│   └── GestorDashboard.tsx
+├── components/          # Componentes reutilizables (frontend)
+│   ├── Layout.tsx
+│   ├── SellModal.tsx
+│   ├── ExportButton.tsx
+│   ├── DateRangeSelector.tsx
+│   └── ReportCard.tsx
+├── hooks/               # Custom hooks (frontend)
+│   └── useApi.ts       # Hook centralizado de API
+├── App.tsx              # Componente principal (frontend)
+├── types.ts             # Definiciones TypeScript
+├── utils.ts             # Utilidades de cálculo
+├── exportUtils.ts       # Exportación de reportes
+├── dateUtils.ts         # Utilidades de fecha
 │
-└── backend/                 # Express + TypeScript + PostgreSQL
+└── backend/             # Express + TypeScript + PostgreSQL
     ├── src/
     │   ├── index.ts         # API principal y endpoints
     │   ├── db.ts           # Conexión a PostgreSQL
@@ -173,6 +172,7 @@ nexus-salesflow-multi-tenant/
 ├── Dockerfile.prod        # Frontend production build con nginx
 ├── nginx.conf             # Configuración de nginx
 ├── docker-compose.prod.yml # Orquestación de producción
+├── pnpm-workspace.yaml    # Configuración del workspace pnpm
 └── .github/workflows/
     └── deploy.yml          # CI/CD pipeline (GitHub Actions)
 ```
@@ -266,7 +266,9 @@ cd backend && npx ts-node src/init-db.ts
 ### Prerrequisitos
 - Node.js 20+
 - PostgreSQL 14+
-- npm o yarn
+- pnpm 10+
+
+> El proyecto es un monorepo gestionado con [pnpm workspaces](https://pnpm.io/workspaces). Tanto el frontend (raíz) como el backend (`backend/`) usan pnpm. **No uses `npm install` en ningún directorio**.
 
 ### 1. Clonar el repositorio
 ```bash
@@ -282,7 +284,7 @@ createdb nexusdb
 
 # Ejecutar script de inicialización
 cd backend
-npx ts-node src/init-db.ts
+pnpm exec ts-node src/init-db.ts
 ```
 
 ### 3. Configurar variables de entorno
@@ -305,12 +307,8 @@ PORT=3001
 ### 4. Instalar dependencias
 
 ```bash
-# Instalar dependencias del frontend
-npm install
-
-# Instalar dependencias del backend
-cd backend
-npm install
+# Desde la raíz del proyecto, instala frontend y backend en un solo comando
+pnpm install
 ```
 
 ### 5. Iniciar el proyecto
@@ -318,11 +316,11 @@ npm install
 ```bash
 # Terminal 1: Iniciar backend
 cd backend
-npm run dev
+pnpm dev
 
 # Terminal 2: Iniciar frontend
 cd ..
-npm run dev
+pnpm dev
 ```
 
 El frontend estará disponible en `http://localhost:3000`
@@ -367,7 +365,7 @@ docker exec -it nexus-sales-db psql -U tu_usuario_db -d nexusdb -c "\dt"
 
 # Ejecutar script de inicialización
 cd backend
-npx ts-node src/init-db.ts
+pnpm exec ts-node src/init-db.ts
 ```
 
 ### Notas Importantes
@@ -815,30 +813,30 @@ Relaciona ventas con su cierre correspondiente.
 
 ### Scripts Disponibles
 
-#### Frontend
+#### Frontend (raíz)
 ```bash
-npm run dev      # Inicia servidor de desarrollo
-npm run build    # Compila para producción
-npm run preview  # Previsualiza build de producción
-npm run test     # Ejecuta tests con Vitest
+pnpm dev      # Inicia servidor de desarrollo
+pnpm build    # Compila para producción
+pnpm preview  # Previsualiza build de producción
+pnpm test     # Ejecuta tests con Vitest
 ```
 
-#### Backend
+#### Backend (backend/)
 ```bash
-npm run dev      # Inicia servidor de desarrollo (ts-node-dev)
-npm run build    # Compila TypeScript
-npm run start    # Ejecuta build compilado
+pnpm dev      # Inicia servidor de desarrollo (ts-node-dev)
+pnpm build    # Compila TypeScript
+pnpm start    # Ejecuta build compilado
 ```
 
 ### Testing
 
 ```bash
 # Frontend tests
-npm run test
+pnpm test
 
 # Backend tests (cuando estén implementados)
 cd backend
-npm test
+pnpm test
 ```
 
 ### Migraciones
@@ -1018,34 +1016,33 @@ cat backup.sql | psql -U $POSTGRES_USER $POSTGRES_DB
 
 ```
 nexus-salesflow-multi-tenant/
-├── frontend/
-│   ├── components/          # Componentes reutilizables
-│   │   ├── Layout.tsx       # Layout principal con sidebar
-│   │   ├── SellModal.tsx    # Modal de venta
-│   │   ├── ExportButton.tsx # Botón de exportación
-│   │   ├── DateRangeSelector.tsx
-│   │   └── ReportCard.tsx
-│   ├── views/               # Vistas por rol
-│   │   ├── Login.tsx
-│   │   ├── AdminDashboard.tsx
-│   │   ├── DirectorDashboard.tsx
-│   │   ├── ManagerDashboard.tsx
-│   │   ├── GestorDashboard.tsx
-│   │   ├── UserManagement.tsx
-│   │   ├── StoreManagement.tsx
-│   │   └── ManagerManagement.tsx
-│   ├── hooks/               # Custom hooks
-│   │   └── useApi.ts       # Hook centralizado de API
-│   ├── utils.ts             # Utilidades de cálculo
-│   ├── exportUtils.ts       # Exportación CSV/PDF/Excel
-│   ├── dateUtils.ts         # Utilidades de fecha
-│   ├── types.ts             # Definiciones TypeScript
-│   ├── App.tsx              # Componente principal
-│   ├── main.tsx             # Entry point
-│   ├── index.css            # Estilos globales
-│   ├── vite.config.ts       # Configuración de Vite
-│   ├── tailwind.config.js   # Configuración de Tailwind
-│   └── package.json
+├── views/               # Vistas por rol (frontend)
+│   ├── Login.tsx
+│   ├── AdminDashboard.tsx
+│   ├── DirectorDashboard.tsx
+│   ├── ManagerDashboard.tsx
+│   ├── GestorDashboard.tsx
+│   ├── ManagerManagement.tsx
+│   ├── StoreManagement.tsx
+│   └── UserManagement.tsx
+├── components/          # Componentes reutilizables (frontend)
+│   ├── Layout.tsx       # Layout principal con sidebar
+│   ├── SellModal.tsx    # Modal de venta
+│   ├── ExportButton.tsx # Botón de exportación
+│   ├── DateRangeSelector.tsx
+│   └── ReportCard.tsx
+├── hooks/               # Custom hooks
+│   └── useApi.ts       # Hook centralizado de API
+├── utils.ts             # Utilidades de cálculo
+├── exportUtils.ts       # Exportación CSV/PDF/Excel
+├── dateUtils.ts         # Utilidades de fecha
+├── types.ts             # Definiciones TypeScript
+├── App.tsx              # Componente principal
+├── index.tsx            # Entry point
+├── index.css            # Estilos globales
+├── vite.config.ts       # Configuración de Vite
+├── tailwind.config.js   # Configuración de Tailwind
+├── package.json
 │
 ├── backend/
 │   ├── src/
@@ -1072,6 +1069,8 @@ nexus-salesflow-multi-tenant/
 ├── docker-compose.prod.yml   # Docker de producción
 ├── Dockerfile.prod           # Frontend production build
 ├── nginx.conf                # Configuración nginx
+├── pnpm-workspace.yaml       # Configuración pnpm workspace
+├── pnpm-lock.yaml           # Lockfile pnpm
 ├── .github/workflows/
 │   └── deploy.yml            # CI/CD pipeline
 └── package.json
