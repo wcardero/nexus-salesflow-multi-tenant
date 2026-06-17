@@ -65,3 +65,5 @@ docker.env.prod
 
 # AI assistant files
 .sisyphus/
+.omo/
+.opencode/

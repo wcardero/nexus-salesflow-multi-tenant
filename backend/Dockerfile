@@ -1,16 +1,20 @@
 FROM node:20-alpine
 
-# Install build tools needed for bcrypt
+RUN corepack enable
+
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY backend/package.json ./backend/
 
-RUN npm install
+RUN pnpm install
 
-COPY . .
+COPY backend/ ./backend/
+
+WORKDIR /app/backend
 
 EXPOSE 3001
 
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "dev"]
