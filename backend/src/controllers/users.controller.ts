@@ -85,7 +85,7 @@ export const updateUser = [
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { name, role, storeId } = req.body;
     const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -243,7 +243,7 @@ export const changePassword = [
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { oldPassword, password, newPassword } = req.body;
     const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -310,7 +310,7 @@ export const changePassword = [
 // ============================================================================
 
 export const deleteUser = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (requestingUser?.role !== 'Admin') {

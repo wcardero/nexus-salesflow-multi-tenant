@@ -122,7 +122,7 @@ export const updateStore = [
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { name, directorId } = req.body;
     const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -159,7 +159,7 @@ export const updateStore = [
 ];
 
 export const deleteStore = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!isAdmin(requestingUser?.role)) {
@@ -226,7 +226,7 @@ export const assignManagerToStore = [
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
-    const { storeId } = req.params;
+    const { storeId } = req.params as { storeId: string };
     const { userId } = req.body;
     const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -272,7 +272,7 @@ export const assignManagerToStore = [
 ];
 
 export const removeManagerFromStore = async (req: Request, res: Response) => {
-  const { storeId, userId } = req.params;
+  const { storeId, userId } = req.params as { storeId: string; userId: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!isAdmin(requestingUser?.role)) {

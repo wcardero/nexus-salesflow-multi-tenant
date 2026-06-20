@@ -145,7 +145,7 @@ export const createOrUpdateProductStock = [
 ];
 
 export const deleteProductStock = async (req: Request, res: Response) => {
-  const { stockId } = req.params;
+  const { stockId } = req.params as { stockId: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (requestingUser?.role !== 'Manager' && requestingUser?.role !== 'Director') {
@@ -329,7 +329,7 @@ export const assignInventory = [
 ];
 
 export const confirmInventory = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {
@@ -375,7 +375,7 @@ export const confirmInventory = async (req: Request, res: Response) => {
 };
 
 export const rejectInventory = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { reason } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -467,7 +467,7 @@ export const rejectInventory = async (req: Request, res: Response) => {
 };
 
 export const archiveInventory = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {
@@ -570,7 +570,7 @@ export const getInventoryConflicts = async (req: Request, res: Response) => {
 };
 
 export const resolveInventoryConflict = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { action, newQuantity } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
