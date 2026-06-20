@@ -113,7 +113,7 @@ export const createClosing = async (req: Request, res: Response) => {
 };
 
 export const completeClosing = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {

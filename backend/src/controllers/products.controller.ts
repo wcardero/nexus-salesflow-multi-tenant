@@ -98,7 +98,7 @@ export const createProduct = async (req: Request, res: Response) => {
 };
 
 export const updateProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { name, costUSD, costMN, margin, currency, commissionRate, priceMN, gestorCommissionMN } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -169,7 +169,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 };
 
 export const deleteProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   if (!isDirector(requestingUser?.role) && !isManager(requestingUser?.role)) {

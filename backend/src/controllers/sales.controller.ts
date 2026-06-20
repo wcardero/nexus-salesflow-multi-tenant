@@ -152,7 +152,7 @@ export const createSale = async (req: Request, res: Response) => {
 };
 
 export const markSaleAsPaid = async (req: Request, res: Response) => {
-  const { saleId } = req.params;
+  const { saleId } = req.params as { saleId: string };
   const { paymentMethod, transferSurchargePercent } = req.body;
   const requestingUser = (req as AuthenticatedRequest).user;
 
@@ -204,7 +204,7 @@ export const markSaleAsPaid = async (req: Request, res: Response) => {
 };
 
 export const deleteSale = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const requestingUser = (req as AuthenticatedRequest).user;
 
   try {
