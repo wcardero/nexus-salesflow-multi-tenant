@@ -29,10 +29,11 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY backend/package.json ./backend/
 
 ENV CI=true
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --filter=backend --frozen-lockfile --prod
+
+WORKDIR /app/backend
 
 COPY --from=builder /app/backend/dist ./dist
-
 COPY --from=builder /app/backend/src/init-db.ts ./init-db.ts
 COPY --from=builder /app/backend/migrations ./migrations
 COPY --from=builder /app/backend/db.sql ./db.sql
@@ -45,4 +46,4 @@ USER nexus
 EXPOSE 3001
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/index.cjs"]
