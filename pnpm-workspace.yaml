@@ -2,8 +2,7 @@ packages:
   - '.'
   - 'backend'
 
-allowBuilds:
-  bcrypt: true
-  core-js: false
-  esbuild: false
-onlyBuiltDependencies: '["core-js","esbuild","bcrypt"]'
+onlyBuiltDependencies:
+  - bcrypt
+  - core-js
+  - esbuild
