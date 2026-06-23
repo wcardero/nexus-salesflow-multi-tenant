@@ -29,7 +29,11 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY backend/package.json ./backend/
 
 ENV CI=true
-RUN pnpm install --filter=backend --frozen-lockfile --prod
+# Install production deps; build tools compile native addons (bcrypt), then get removed in same layer
+RUN apk add --no-cache python3 make g++ && \
+    pnpm install --filter=backend --frozen-lockfile --prod && \
+    apk del python3 make g++ && \
+    rm -rf /root/.cache /tmp/*
 
 WORKDIR /app/backend
 
